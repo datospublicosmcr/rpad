@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dataset - RPAD</title>
+  <link rel="icon" type="image/png" href="img/icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Source+Sans+3:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <header class="header">
+    <div class="header-top">
+      <div class="header-brand">
+        <img src="img/logo-2025.png" alt="MCR" class="header-logo">
+        <div>
+          <div class="header-title">RPAD</div>
+          <div class="header-subtitle">Registro Permanente de Actualización de Datasets</div>
+        </div>
+      </div>
+      <div class="header-actions" id="header-actions">
+        <a href="login.html" class="btn btn-outline btn-sm"><span>🔐</span> <span>Ingresar</span></a>
+      </div>
+    </div>
+    <nav class="header-nav">
+      <div class="header-nav-inner">
+        <a href="index.html" class="nav-link"><span>📊</span> Dashboard</a>
+        <a href="datasets.html" class="nav-link active"><span>📁</span> Datasets</a>
+      </div>
+    </nav>
+  </header>
+
+  <main>
+    <div class="breadcrumb">
+      <a href="index.html">Inicio</a>
+      <span class="breadcrumb-separator">/</span>
+      <a href="datasets.html">Datasets</a>
+      <span class="breadcrumb-separator">/</span>
+      <span id="breadcrumb-title">Cargando...</span>
+    </div>
+
+    <div id="message-container"></div>
+
+    <div id="loading" class="loading"><div class="spinner"></div></div>
+
+    <div id="dataset-content" class="hidden">
+      <!-- Header -->
+      <div class="detail-header">
+        <div class="detail-title">
+          <div>
+            <h1 id="dataset-titulo" class="page-title" style="margin-bottom: 0.5rem;"></h1>
+            <p id="dataset-area" class="text-muted"></p>
+          </div>
+          <span id="dataset-estado" class="badge"></span>
+        </div>
+        <div id="dataset-temas" class="temas-tags"></div>
+      </div>
+
+      <!-- Grid -->
+      <div class="detail-grid">
+        <!-- Main Content -->
+        <div class="detail-main">
+          <div class="card">
+            <div class="card-header"><h3>Descripción</h3></div>
+            <div class="card-body">
+              <p id="dataset-descripcion"></p>
+            </div>
+          </div>
+
+          <div id="observaciones-card" class="card hidden">
+            <div class="card-header"><h3>Observaciones</h3></div>
+            <div class="card-body">
+              <p id="dataset-observaciones"></p>
+            </div>
+          </div>
+
+          <div id="url-card" class="card hidden">
+            <div class="card-header"><h3>Acceso al Dataset</h3></div>
+            <div class="card-body">
+              <a id="dataset-url" href="#" target="_blank" class="btn btn-primary">
+                🔗 Ver en Portal de Datos Abiertos
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="detail-sidebar">
+          <div class="sidebar-card">
+            <h4 class="sidebar-card-title">📅 Fechas</h4>
+            <div class="info-row">
+              <span class="info-label">Última actualización</span>
+              <span class="info-value" id="fecha-ultima">-</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Próxima actualización</span>
+              <span class="info-value" id="fecha-proxima">-</span>
+            </div>
+          </div>
+
+          <div class="sidebar-card">
+            <h4 class="sidebar-card-title">📋 Información técnica</h4>
+            <div class="info-row">
+              <span class="info-label">Frecuencia</span>
+              <span class="info-value" id="info-frecuencia">-</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Formatos</span>
+              <span class="info-value" id="info-formatos">-</span>
+            </div>
+          </div>
+
+          <div class="sidebar-card">
+            <h4 class="sidebar-card-title">⚖️ Licencia</h4>
+            <p class="text-small">Creative Commons BY-SA 4.0</p>
+            <p class="text-xs text-muted mt-2">Puede compartir y adaptar el material, dando crédito apropiado.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Not Found -->
+    <div id="not-found" class="empty-state hidden">
+      <div class="empty-state-icon">🔍</div>
+      <h3 class="empty-state-title">Dataset no encontrado</h3>
+      <p>El dataset solicitado no existe o fue eliminado</p>
+      <a href="datasets.html" class="btn btn-primary mt-4">Ver todos los datasets</a>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+      <div class="footer-section">
+        <h4>Dirección de Datos Públicos y Comunicación</h4>
+        <p>Municipalidad de Comodoro Rivadavia</p>
+        <p>Dirección General de Modernización e Investigación Territorial</p>
+      </div>
+      <div class="footer-section">
+        <h4>Contacto</h4>
+        <p>📧 <a href="mailto:datospublicos@comodoro.gov.ar">datospublicos@comodoro.gov.ar</a></p>
+        <p>🌐 <a href="https://datos.comodoro.gov.ar" target="_blank">datos.comodoro.gov.ar</a></p>
+      </div>
+      <div class="footer-section">
+        <h4>Marco Legal</h4>
+        <p>Ordenanza N° 17.662/23 - Artículo 8°</p>
+        <p>Licencia: CC BY-SA 4.0</p>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      © 2025 Municipalidad de Comodoro Rivadavia. RPAD v1.0.0
+    </div>
+  </footer>
+
+  <script src="js/config.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/dataset-detail.js"></script>
+</body>
+</html>
