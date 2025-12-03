@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ingresar - RPAD</title>
+  <link rel="icon" type="image/png" href="img/icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Source+Sans+3:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+  <style>
+    .login-container {
+      min-height: calc(100vh - 200px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem 1rem;
+    }
+    .login-card {
+      background: white;
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow-lg);
+      width: 100%;
+      max-width: 400px;
+      overflow: hidden;
+    }
+    .login-header {
+      background: linear-gradient(135deg, var(--mcr-blue-900) 0%, var(--mcr-blue-700) 100%);
+      color: white;
+      padding: 2rem;
+      text-align: center;
+    }
+    .login-header img {
+      height: 60px;
+      margin-bottom: 1rem;
+    }
+    .login-header h1 {
+      color: white;
+      font-size: 1.5rem;
+      margin-bottom: 0.25rem;
+    }
+    .login-header p {
+      opacity: 0.8;
+      font-size: 0.875rem;
+    }
+    .login-form {
+      padding: 2rem;
+    }
+    .password-toggle {
+      position: relative;
+    }
+    .password-toggle button {
+      position: absolute;
+      right: 0.75rem;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      color: var(--gray-400);
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <header class="header">
+    <div class="header-top">
+      <div class="header-brand">
+        <img src="img/logo-2025-blanco.png" alt="MCR" class="header-logo">
+        <div>
+          <div class="header-title">RPAD</div>
+          <div class="header-subtitle">Registro Permanente de Actualización de Datasets</div>
+        </div>
+      </div>
+    </div>
+    <nav class="header-nav">
+      <div class="header-nav-inner">
+        <a href="index.html" class="nav-link"><span>📊</span> Dashboard</a>
+        <a href="datasets.html" class="nav-link"><span>📁</span> Datasets</a>
+      </div>
+    </nav>
+  </header>
+
+  <div class="login-container">
+    <div class="login-card">
+      <div class="login-header">
+        <img src="img/logo-2025-blanco.png" alt="MCR">
+        <h1>Panel de Administración</h1>
+        <p>Ingrese sus credenciales</p>
+      </div>
+      <form class="login-form" id="login-form">
+        <div id="message-container"></div>
+        
+        <div class="form-group">
+          <label class="form-label" for="username">Usuario</label>
+          <input type="text" id="username" class="form-input" required autocomplete="username">
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label" for="password">Contraseña</label>
+          <div class="password-toggle">
+            <input type="password" id="password" class="form-input" required autocomplete="current-password">
+            <button type="button" onclick="togglePassword()">👁️</button>
+          </div>
+        </div>
+        
+        <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem;" id="submit-btn">
+          Ingresar
+        </button>
+        
+        <p class="text-center text-muted text-small mt-4">
+          <a href="index.html">← Volver al inicio</a>
+        </p>
+      </form>
+    </div>
+  </div>
+
+  <footer class="footer">
+    <div class="footer-inner">
+      <div class="footer-section">
+        <h4>Dirección de Datos Públicos y Comunicación</h4>
+        <p>Municipalidad de Comodoro Rivadavia</p>
+        <p>Dirección General de Modernización e Investigación Territorial</p>
+      </div>
+      <div class="footer-section">
+        <h4>Contacto</h4>
+        <p>📧 <a href="mailto:datospublicos@comodoro.gov.ar">datospublicos@comodoro.gov.ar</a></p>
+        <p>🌐 <a href="https://datos.comodoro.gov.ar" target="_blank">datos.comodoro.gov.ar</a></p>
+      </div>
+      <div class="footer-section">
+        <h4>Marco Legal</h4>
+        <p>Ordenanza N° 17.662/23 - Artículo 8°</p>
+        <p>Licencia: CC BY-SA 4.0</p>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      © 2025 Municipalidad de Comodoro Rivadavia. RPAD v1.0.0
+    </div>
+  </footer>
+
+  <script src="js/config.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/api.js"></script>
+  <script>
+    // Redirect si ya está autenticado
+    if (Auth.isAuthenticated()) {
+      window.location.href = 'admin.html';
+    }
+
+    function togglePassword() {
+      const input = document.getElementById('password');
+      input.type = input.type === 'password' ? 'text' : 'password';
+    }
+
+    document.getElementById('login-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const username = document.getElementById('username').value;
+      const password = document.getElementById('password').value;
+      const submitBtn = document.getElementById('submit-btn');
+      
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Ingresando...';
+      
+      try {
+        await Auth.login(username, password);
+        window.location.href = 'admin.html';
+      } catch (error) {
+        Utils.showError(error.message);
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Ingresar';
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Administración - RPAD</title>
+  <link rel="icon" type="image/png" href="img/icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Source+Sans+3:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <header class="header">
+    <div class="header-top">
+      <div class="header-brand">
+        <img src="img/logo-2025.png" alt="MCR" class="header-logo">
+        <div>
+          <div class="header-title">RPAD</div>
+          <div class="header-subtitle">Panel de Administración</div>
+        </div>
+      </div>
+      <div class="header-actions" id="header-actions">
+        <span id="user-name" class="text-small text-muted"></span>
+        <button onclick="Auth.logout()" class="btn btn-outline btn-sm"><span>🚪</span> Salir</button>
+      </div>
+    </div>
+    <nav class="header-nav">
+      <div class="header-nav-inner">
+        <a href="index.html" class="nav-link"><span>📊</span> Dashboard</a>
+        <a href="datasets.html" class="nav-link"><span>📁</span> Datasets</a>
+        <a href="admin.html" class="nav-link active"><span>⚙️</span> Admin</a>
+      </div>
+    </nav>
+  </header>
+
+  <main>
+    <div class="flex justify-between items-center mb-4">
+      <h1 class="page-title" style="margin-bottom: 0;">Gestión de Datasets</h1>
+      <button onclick="openModal()" class="btn btn-primary">
+        <span>➕</span> Nuevo Dataset
+      </button>
+    </div>
+
+    <div id="message-container"></div>
+
+    <!-- Búsqueda -->
+    <div class="filters-bar" style="margin-bottom: 1rem;">
+      <div class="filter-group search-input" style="flex: 1;">
+        <input type="text" id="search" placeholder="Buscar datasets..." class="form-input">
+      </div>
+    </div>
+
+    <!-- Tabla -->
+    <div class="table-container">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Dataset</th>
+            <th>Estado</th>
+            <th>Próxima Actualización</th>
+            <th style="width: 200px;">Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="datasets-tbody">
+          <tr><td colspan="4" class="loading"><div class="spinner"></div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+
+  <!-- Modal Dataset -->
+  <div class="modal-overlay" id="modal-dataset">
+    <div class="modal" style="max-width: 700px;">
+      <div class="modal-header">
+        <h3 class="modal-title" id="modal-title">Nuevo Dataset</h3>
+        <button class="modal-close" onclick="closeModal()">&times;</button>
+      </div>
+      <form id="dataset-form">
+        <div class="modal-body">
+          <input type="hidden" id="dataset-id">
+          
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label required">Título</label>
+              <input type="text" id="titulo" class="form-input" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label required">Área Responsable</label>
+              <input type="text" id="area_responsable" class="form-input" required>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Descripción</label>
+            <textarea id="descripcion" class="form-textarea" rows="3"></textarea>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label required">Tema Principal</label>
+              <select id="tema_principal_id" class="form-select" required></select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Tema Secundario</label>
+              <select id="tema_secundario_id" class="form-select">
+                <option value="">Ninguno</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label required">Frecuencia</label>
+              <select id="frecuencia_id" class="form-select" required></select>
+            </div>
+            <div class="form-group">
+              <label class="form-label required">Formato Primario</label>
+              <select id="formato_primario" class="form-select" required></select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Formato Secundario</label>
+              <select id="formato_secundario" class="form-select">
+                <option value="">Ninguno</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Última Actualización</label>
+              <input type="date" id="ultima_actualizacion" class="form-input">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Próxima Actualización</label>
+              <input type="date" id="proxima_actualizacion" class="form-input">
+              <span class="form-hint">Dejar vacío para frecuencia "Eventual"</span>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">URL en Portal</label>
+            <input type="url" id="url_dataset" class="form-input" placeholder="https://datos.comodoro.gov.ar/...">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Observaciones</label>
+            <textarea id="observaciones" class="form-textarea" rows="2"></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+          <button type="submit" class="btn btn-primary" id="submit-btn">Guardar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal Confirmar Eliminación -->
+  <div class="modal-overlay" id="modal-delete">
+    <div class="modal" style="max-width: 400px;">
+      <div class="modal-header">
+        <h3 class="modal-title">Confirmar Eliminación</h3>
+        <button class="modal-close" onclick="closeDeleteModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p>¿Está seguro de eliminar el dataset <strong id="delete-dataset-name"></strong>?</p>
+        <p class="text-small text-muted mt-2">Esta acción no se puede deshacer.</p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeDeleteModal()">Cancelar</button>
+        <button class="btn btn-danger" onclick="confirmDelete()">Eliminar</button>
+      </div>
+    </div>
+  </div>
+
+  <footer class="footer">
+    <div class="footer-inner">
+      <div class="footer-section">
+        <h4>Dirección de Datos Públicos y Comunicación</h4>
+        <p>Municipalidad de Comodoro Rivadavia</p>
+        <p>Dirección General de Modernización e Investigación Territorial</p>
+      </div>
+      <div class="footer-section">
+        <h4>Contacto</h4>
+        <p>📧 <a href="mailto:datospublicos@comodoro.gov.ar">datospublicos@comodoro.gov.ar</a></p>
+        <p>🌐 <a href="https://datos.comodoro.gov.ar" target="_blank">datos.comodoro.gov.ar</a></p>
+      </div>
+      <div class="footer-section">
+        <h4>Marco Legal</h4>
+        <p>Ordenanza N° 17.662/23 - Artículo 8°</p>
+        <p>Licencia: CC BY-SA 4.0</p>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      © 2025 Municipalidad de Comodoro Rivadavia. RPAD v1.0.0
+    </div>
+  </footer>
+
+  <script src="js/config.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/admin.js"></script>
+</body>
+</html>

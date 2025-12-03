@@ -1,0 +1,45 @@
+# RPAD - Configuración Apache
+# ============================
+
+# Habilitar mod_rewrite
+RewriteEngine On
+
+# Charset UTF-8
+AddDefaultCharset UTF-8
+
+# Cache para archivos estáticos
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresByType text/css "access plus 1 month"
+    ExpiresByType application/javascript "access plus 1 month"
+    ExpiresByType image/png "access plus 1 year"
+    ExpiresByType image/jpeg "access plus 1 year"
+    ExpiresByType image/svg+xml "access plus 1 year"
+</IfModule>
+
+# Compresión GZIP
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/css application/javascript application/json
+</IfModule>
+
+# Proxy para la API (ajustar el puerto según cPanel)
+# NOTA: El puerto lo asigna cPanel automáticamente a tu app Node.js
+# Verificar en Setup Node.js App cuál es
+<IfModule mod_proxy.c>
+    ProxyPreserveHost On
+    ProxyPass /api http://127.0.0.1:3001/api
+    ProxyPassReverse /api http://127.0.0.1:3001/api
+</IfModule>
+
+# Seguridad básica
+<IfModule mod_headers.c>
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set X-Frame-Options "SAMEORIGIN"
+    Header always set X-XSS-Protection "1; mode=block"
+</IfModule>
+
+# Bloquear acceso a archivos sensibles
+<FilesMatch "(^\.env|\.git|\.htpasswd)">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
