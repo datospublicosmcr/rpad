@@ -10,6 +10,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Source+Sans+3:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/styles.css">
+  <!-- Chart.js via CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 </head>
 <body>
   <!-- Header -->
@@ -31,7 +33,7 @@
     <nav class="header-nav">
       <div class="header-nav-inner">
         <a href="index.html" class="nav-link active">
-          <span>📊</span> Dashboard
+          <span>📊</span> Tablero
         </a>
         <a href="datasets.html" class="nav-link">
           <span>📁</span> Datasets
@@ -42,35 +44,61 @@
 
   <!-- Main Content -->
   <main>
-    <h1 class="page-title">Dashboard de Actualización</h1>
+    <!-- Hero Section -->
+    <section class="hero-section animate-fade-in">
+      <div class="hero-content">
+        <h1 class="hero-title" id="hero-greeting">Tablero de seguimiento</h1>
+        <p class="hero-subtitle">Sistema de seguimiento de datasets - Municipalidad de Comodoro Rivadavia</p>
+      </div>
+      <div class="hero-stats">
+        <div class="hero-stat-item">
+          <span class="hero-stat-label">FECHA ACTUAL</span>
+          <span class="hero-stat-value" id="hero-date">-</span>
+        </div>
+        <div class="hero-stat-item">
+          <span class="hero-stat-label">HORA</span>
+          <span class="hero-stat-value" id="hero-time">-</span>
+        </div>
+        <div class="hero-stat-item">
+          <span class="hero-stat-label">TASA DE ACTUALIZACIÓN</span>
+          <span class="hero-stat-value" id="hero-rate">-</span>
+        </div>
+      </div>
+    </section>
     
     <div id="message-container"></div>
 
     <!-- Stats Cards -->
     <div class="stats-grid" id="stats-grid">
-      <div class="loading"><div class="spinner"></div></div>
+      <div class="stat-card-skeleton"></div>
+      <div class="stat-card-skeleton"></div>
+      <div class="stat-card-skeleton"></div>
+      <div class="stat-card-skeleton"></div>
     </div>
 
     <!-- Dashboard Grid -->
     <div class="dashboard-grid">
       <!-- Estado de Actualización -->
-      <div class="dashboard-section">
+      <div class="dashboard-section animate-slide-up" style="animation-delay: 0.1s;">
         <h3 class="dashboard-section-title">📈 Estado de Actualización</h3>
         <div id="estado-chart">
-          <div class="loading"><div class="spinner"></div></div>
+          <div class="chart-container">
+            <canvas id="donut-chart"></canvas>
+          </div>
+          <div id="chart-legend" class="chart-legend"></div>
         </div>
       </div>
 
-      <!-- Datasets Atrasados -->
-      <div class="dashboard-section">
-        <h3 class="dashboard-section-title">⚠️ Atrasados (requieren Atención)</h3>
+      <!-- Datasets Vencidos -->
+      <div class="dashboard-section animate-slide-up" style="animation-delay: 0.2s;">
+        <h3 class="dashboard-section-title">⚠️ Pendientes de Actualización</h3>
         <div class="alert-list" id="alertas-list">
           <div class="loading"><div class="spinner"></div></div>
         </div>
       </div>
 
       <!-- Próximos a Vencer -->
-      <div class="dashboard-section">
+      <div class="dashboard-section animate-slide-up" style="animation-delay: 0.3s;">
         <h3 class="dashboard-section-title">⏰ Próximos a Vencer (60 días o menos)</h3>
         <div class="alert-list" id="proximos-list">
           <div class="loading"><div class="spinner"></div></div>
@@ -99,7 +127,7 @@
       </div>
     </div>
     <div class="footer-bottom">
-      © 2025 Municipalidad de Comodoro Rivadavia. RPAD v1.0.0
+      © 2025 Municipalidad de Comodoro Rivadavia. RPAD v1.1.0
     </div>
   </footer>
 
