@@ -79,12 +79,12 @@ function renderTable(data) {
   const tbody = document.getElementById('datasets-tbody');
   
   if (!data.length) {
-    tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted" style="padding: 2rem;">No hay datasets</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted" style="padding: 2rem;">No hay datasets</td></tr>';
     return;
   }
 
   tbody.innerHTML = data.map(d => {
-    const estado = Utils.calcularEstado(d.proxima_actualizacion, d.frecuencia_dias);
+    const estado = Utils.calcularEstado(d.proxima_actualizacion, d.frecuencia_dias, d.tipo_gestion);
     const estadoTexto = Utils.getEstadoTexto(estado);
     const estadoClase = Utils.getEstadoClase(estado);
     
@@ -95,6 +95,10 @@ function renderTable(data) {
       proximaTexto = Utils.formatDate(d.proxima_actualizacion);
     }
 
+    // Mostrar tipo de gestión con icono
+    const tipoGestionIcon = d.tipo_gestion === 'interna' ? '🏠' : '📤';
+    const tipoGestionTexto = d.tipo_gestion === 'interna' ? 'Interna' : 'Externa';
+
     return `
       <tr>
         <td>
@@ -102,6 +106,7 @@ function renderTable(data) {
           <div class="text-small text-muted">${Utils.escapeHtml(d.area_responsable || '-')}</div>
         </td>
         <td><span class="badge ${estadoClase}">${estadoTexto}</span></td>
+        <td><span title="${tipoGestionTexto}">${tipoGestionIcon} ${tipoGestionTexto}</span></td>
         <td>${proximaTexto}</td>
         <td>
           <div class="table-actions">
@@ -137,9 +142,9 @@ function openModal(dataset = null) {
     document.getElementById('formato_secundario').value = dataset.formato_secundario || '';
     document.getElementById('ultima_actualizacion').value = dataset.ultima_actualizacion ? dataset.ultima_actualizacion.split('T')[0] : '';
     document.getElementById('proxima_actualizacion').value = dataset.proxima_actualizacion ? dataset.proxima_actualizacion.split('T')[0] : '';
-    // Usar url_dataset (nombre del backend)
     document.getElementById('url_dataset').value = dataset.url_dataset || '';
     document.getElementById('observaciones').value = dataset.observaciones || '';
+    document.getElementById('tipo_gestion').value = dataset.tipo_gestion || '';
   } else {
     title.textContent = 'Nuevo Dataset';
   }
@@ -177,9 +182,9 @@ document.getElementById('dataset-form').addEventListener('submit', async (e) => 
     formato_secundario: document.getElementById('formato_secundario').value || null,
     ultima_actualizacion: document.getElementById('ultima_actualizacion').value || null,
     proxima_actualizacion: document.getElementById('proxima_actualizacion').value || null,
-    // Usar url_dataset (nombre del backend)
     url_dataset: document.getElementById('url_dataset').value || null,
-    observaciones: document.getElementById('observaciones').value || null
+    observaciones: document.getElementById('observaciones').value || null,
+    tipo_gestion: document.getElementById('tipo_gestion').value
   };
 
   try {
