@@ -102,7 +102,8 @@ const Utils = {
   },
 
   // Calcular estado del dataset
-  calcularEstado(proximaActualizacion, frecuenciaDias) {
+  // Ahora considera tipo_gestion para diferenciar 'atrasado' de 'sin-respuesta'
+  calcularEstado(proximaActualizacion, frecuenciaDias, tipoGestion = 'externa') {
     if (frecuenciaDias === null) return 'actualizado'; // Eventual
     if (!proximaActualizacion) return 'sin-fecha';
 
@@ -113,7 +114,10 @@ const Utils = {
 
     const diffDias = Math.floor((proxima - hoy) / (1000 * 60 * 60 * 24));
 
-    if (diffDias < 0) return 'atrasado';
+    if (diffDias < 0) {
+      // Dataset vencido: diferenciar según tipo de gestión
+      return tipoGestion === 'interna' ? 'atrasado' : 'sin-respuesta';
+    }
     if (diffDias <= 60) return 'proximo';
     return 'actualizado';
   },
@@ -128,13 +132,26 @@ const Utils = {
     return Math.floor((proxima - hoy) / (1000 * 60 * 60 * 24));
   },
 
-  // Texto del estado
+  // Texto del estado (versión corta para badges)
   getEstadoTexto(estado) {
     const textos = {
       'actualizado': 'Actualizado',
       'proximo': 'Próximo a vencer',
       'atrasado': 'Atrasado',
+      'sin-respuesta': 'Sin respuesta',
       'sin-fecha': 'Sin fecha'
+    };
+    return textos[estado] || estado;
+  },
+
+  // Texto del estado (versión larga para detalle)
+  getEstadoTextoLargo(estado) {
+    const textos = {
+      'actualizado': 'Actualizado',
+      'proximo': 'Próximo a vencer',
+      'atrasado': 'Atrasado',
+      'sin-respuesta': 'Sin respuesta del área responsable',
+      'sin-fecha': 'Sin fecha programada'
     };
     return textos[estado] || estado;
   },
@@ -145,9 +162,19 @@ const Utils = {
       'actualizado': 'badge-success',
       'proximo': 'badge-warning',
       'atrasado': 'badge-danger',
+      'sin-respuesta': 'badge-sin-respuesta',
       'sin-fecha': 'badge-secondary'
     };
     return clases[estado] || 'badge-secondary';
+  },
+
+  // Texto del tipo de gestión
+  getTipoGestionTexto(tipoGestion) {
+    const textos = {
+      'interna': 'Interna (DGMIT)',
+      'externa': 'Externa (otra área)'
+    };
+    return textos[tipoGestion] || tipoGestion;
   },
 
   // Escapar HTML
