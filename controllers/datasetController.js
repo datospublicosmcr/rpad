@@ -16,7 +16,8 @@ const DATASET_SELECT_QUERY = `
 `;
 
 // Función auxiliar para calcular estado
-function calcularEstado(proximaActualizacion, frecuenciaDias) {
+// Ahora considera tipo_gestion para diferenciar 'atrasado' de 'sin-respuesta'
+function calcularEstado(proximaActualizacion, frecuenciaDias, tipoGestion = 'externa') {
   // Si es frecuencia eventual (sin días definidos), siempre está actualizado
   if (frecuenciaDias === null) {
     return 'actualizado';
@@ -34,7 +35,10 @@ function calcularEstado(proximaActualizacion, frecuenciaDias) {
   
   const diffDias = Math.floor((proxima.getTime() - hoy.getTime()) / (1000 * 60 * 60 * 24));
 
-  if (diffDias < 0) return 'atrasado';
+  if (diffDias < 0) {
+    // Dataset vencido: diferenciar según tipo de gestión
+    return tipoGestion === 'interna' ? 'atrasado' : 'sin-respuesta';
+  }
   if (diffDias <= 60) return 'proximo';
   return 'actualizado';
 }
@@ -74,7 +78,7 @@ export const getDatasets = async (req, res) => {
     // Filtro por estado (se hace en memoria porque depende de la fecha actual)
     if (estado && estado !== 'todos') {
       datasets = datasets.filter(d => {
-        const estadoDataset = calcularEstado(d.proxima_actualizacion, d.frecuencia_dias);
+        const estadoDataset = calcularEstado(d.proxima_actualizacion, d.frecuencia_dias, d.tipo_gestion);
         return estadoDataset === estado;
       });
     }
@@ -127,12 +131,20 @@ export const createDataset = async (req, res) => {
   try {
     const data = req.body;
 
-    // Validaciones básicas
+    // Validaciones básicas (ahora incluye tipo_gestion)
     if (!data.titulo || !data.area_responsable || !data.frecuencia_id || 
-        !data.formato_primario || !data.tema_principal_id) {
+        !data.formato_primario || !data.tema_principal_id || !data.tipo_gestion) {
       return res.status(400).json({
         success: false,
-        error: 'Faltan campos obligatorios: titulo, area_responsable, frecuencia_id, formato_primario, tema_principal_id'
+        error: 'Faltan campos obligatorios: titulo, area_responsable, frecuencia_id, formato_primario, tema_principal_id, tipo_gestion'
+      });
+    }
+
+    // Validar que tipo_gestion sea válido
+    if (!['interna', 'externa'].includes(data.tipo_gestion)) {
+      return res.status(400).json({
+        success: false,
+        error: 'tipo_gestion debe ser "interna" o "externa"'
       });
     }
 
@@ -141,8 +153,8 @@ export const createDataset = async (req, res) => {
         titulo, descripcion, area_responsable, frecuencia_id, 
         formato_primario, formato_secundario, ultima_actualizacion, 
         proxima_actualizacion, tema_principal_id, tema_secundario_id, 
-        url_dataset, observaciones
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        url_dataset, observaciones, tipo_gestion
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         data.titulo,
         data.descripcion || null,
@@ -155,7 +167,8 @@ export const createDataset = async (req, res) => {
         data.tema_principal_id,
         data.tema_secundario_id || null,
         data.url_dataset || null,
-        data.observaciones || null
+        data.observaciones || null,
+        data.tipo_gestion
       ]
     );
 
@@ -195,6 +208,14 @@ export const updateDataset = async (req, res) => {
       return res.status(404).json({
         success: false,
         error: 'Dataset no encontrado'
+      });
+    }
+
+    // Validar tipo_gestion si se proporciona
+    if (data.tipo_gestion !== undefined && !['interna', 'externa'].includes(data.tipo_gestion)) {
+      return res.status(400).json({
+        success: false,
+        error: 'tipo_gestion debe ser "interna" o "externa"'
       });
     }
 
@@ -249,6 +270,10 @@ export const updateDataset = async (req, res) => {
     if (data.observaciones !== undefined) {
       updates.push('observaciones = ?');
       values.push(data.observaciones || null);
+    }
+    if (data.tipo_gestion !== undefined) {
+      updates.push('tipo_gestion = ?');
+      values.push(data.tipo_gestion);
     }
     if (data.activo !== undefined) {
       updates.push('activo = ?');
@@ -328,11 +353,12 @@ export const getEstadisticas = async (req, res) => {
     const hoy = new Date();
     let actualizados = 0;
     let proximos = 0;
-    let atrasados = 0;
+    let atrasados = 0;      // Gestión interna
+    let sinRespuesta = 0;   // Gestión externa
     let totalDiasAtraso = 0;
 
     data.forEach(d => {
-      const estado = calcularEstado(d.proxima_actualizacion, d.frecuencia_dias);
+      const estado = calcularEstado(d.proxima_actualizacion, d.frecuencia_dias, d.tipo_gestion);
       if (estado === 'actualizado') actualizados++;
       else if (estado === 'proximo') proximos++;
       else if (estado === 'atrasado') {
@@ -342,8 +368,18 @@ export const getEstadisticas = async (req, res) => {
           const diasAtraso = Math.floor((hoy.getTime() - proxima.getTime()) / (1000 * 60 * 60 * 24));
           totalDiasAtraso += diasAtraso;
         }
+      } else if (estado === 'sin-respuesta') {
+        sinRespuesta++;
+        if (d.proxima_actualizacion) {
+          const proxima = new Date(d.proxima_actualizacion);
+          const diasAtraso = Math.floor((hoy.getTime() - proxima.getTime()) / (1000 * 60 * 60 * 24));
+          totalDiasAtraso += diasAtraso;
+        }
       }
     });
+
+    // Total de vencidos (atrasados + sin respuesta)
+    const totalVencidos = atrasados + sinRespuesta;
 
     // Datasets por tema
     const [porTema] = await pool.execute(`
@@ -369,9 +405,11 @@ export const getEstadisticas = async (req, res) => {
       total: data.length,
       actualizados,
       proximos,
-      atrasados,
-      tasaActualizacion: data.length > 0 ? Math.round((actualizados / data.length) * 100) : 0,
-      promedioAtraso: atrasados > 0 ? Math.round(totalDiasAtraso / atrasados) : 0,
+      atrasados,         // Solo gestión interna
+      sinRespuesta,      // Solo gestión externa
+      totalVencidos,     // Suma de ambos
+      tasaActualizacion: data.length > 0 ? Math.round(((actualizados + proximos) / data.length) * 100) : 0,
+      promedioAtraso: totalVencidos > 0 ? Math.round(totalDiasAtraso / totalVencidos) : 0,
       porTema,
       porFrecuencia
     };
