@@ -2,6 +2,7 @@
 -- RPAD - Registro Permanente de Actualización de Datos
 -- Municipalidad de Comodoro Rivadavia
 -- Base de datos MySQL
+-- Versión: 1.1.0
 -- =====================================================
 
 -- Crear la base de datos (ejecutar como admin de MySQL)
@@ -50,6 +51,8 @@ CREATE TABLE IF NOT EXISTS frecuencias (
 -- =====================================================
 -- Tabla: datasets
 -- Registro principal de datasets del portal
+-- NOVEDAD v1.1.0: campo tipo_gestion para diferenciar
+-- gestión interna (DGMIT) de externa (otras áreas)
 -- =====================================================
 CREATE TABLE IF NOT EXISTS datasets (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -65,6 +68,7 @@ CREATE TABLE IF NOT EXISTS datasets (
     tema_secundario_id INT,
     url_dataset VARCHAR(500),
     observaciones TEXT,
+    tipo_gestion ENUM('interna', 'externa') NOT NULL DEFAULT 'externa' COMMENT 'interna=DGMIT gestiona, externa=depende de otra área',
     activo BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -132,81 +136,6 @@ INSERT INTO frecuencias (nombre, dias, orden) VALUES
 -- ('admin', '$2b$10$HASH_GENERADO_POR_BCRYPT', 'Administrador RPAD', 'datospublicos@comodoro.gov.ar');
 
 -- =====================================================
--- Datos de ejemplo: Datasets (basados en el CSV proporcionado)
--- =====================================================
-INSERT INTO datasets (titulo, descripcion, area_responsable, frecuencia_id, formato_primario, formato_secundario, ultima_actualizacion, proxima_actualizacion, tema_principal_id, tema_secundario_id, url_dataset, observaciones) VALUES
-(
-    'Presupuesto Municipal',
-    'Presupuesto de gastos de la Municipalidad de Comodoro Rivadavia discriminado por jurisdicción y tipo de gasto. Cumple con las obligaciones de transparencia activa establecidas en el Artículo 6° de la Ordenanza N° 17.662/23 sobre Gobierno Abierto para garantizar el acceso ciudadano a información presupuestaria, facilitar el control sobre el destino de los fondos públicos y fortalecer la rendición de cuentas de la gestión municipal.',
-    'Secretaría de Economía, Finanzas y Control de Gestión',
-    6, -- Anualmente
-    'CSV',
-    'XLSX',
-    '2025-01-25',
-    '2026-03-01',
-    1, -- Economía y Finanzas
-    NULL,
-    'https://datos.comodoro.gov.ar/dataset/presupuesto-municipal',
-    NULL
-),
-(
-    'Gasto Público',
-    'Registro de ejecución del gasto público de la Municipalidad de Comodoro Rivadavia discriminado por jurisdicción y categoría de gasto que incluye personal, funcionamiento, transferencias, obras públicas, bienes de capital, deuda, higiene urbana y otros rubros. Cumple con obligaciones de transparencia activa según Ordenanza N° 17.662/23 para garantizar control ciudadano sobre destino efectivo de fondos públicos y rendición de cuentas municipal.',
-    'Secretaría de Economía, Finanzas y Control de Gestión',
-    5, -- Cada medio año (Semestral)
-    'CSV',
-    'XLSX',
-    '2025-07-13',
-    '2026-03-01',
-    1, -- Economía y Finanzas
-    NULL,
-    'https://datos.comodoro.gov.ar/dataset/gasto-publico',
-    NULL
-),
-(
-    'Funcionarios Públicos',
-    'Nómina oficial de funcionarios de planta política del Poder Ejecutivo Municipal de Comodoro Rivadavia al 30 de junio de cada año, que incluye Intendente, Viceintendente, Secretarios, Subsecretarios y Coordinadores. Datos organizados por secretaría, sector y cargo para transparentar la estructura de conducción gubernamental, garantizar el derecho de acceso a la información pública conforme a la Ordenanza N° 17.662/23 y facilitar el control ciudadano.',
-    'Dirección General de Recursos Humanos',
-    5, -- Cada medio año (Semestral)
-    'CSV',
-    'XLSX',
-    '2025-07-01',
-    '2026-03-01',
-    4, -- Gobierno y Gestión Pública
-    NULL,
-    'https://datos.comodoro.gov.ar/dataset/funcionarios-publicos',
-    NULL
-),
-(
-    'Castraciones de Animales',
-    'Serie estadística mensual de castraciones quirúrgicas realizadas por la Dirección General de Veterinaria de la Municipalidad de Comodoro Rivadavia. El dataset registra intervenciones discriminadas por especie (caninos y felinos) y sexo (macho y hembra). La información permite analizar la demanda del servicio, evaluar cobertura territorial, identificar patrones estacionales y realizar planificación de recursos sanitarios. Los datos constituyen un insumo para políticas de salud pública preventiva.',
-    'Dirección General de Veterinaria',
-    6, -- Anualmente
-    'CSV',
-    'XLSX',
-    '2025-02-13',
-    '2026-03-01',
-    8, -- Población y Sociedad
-    NULL,
-    'https://datos.comodoro.gov.ar/dataset/castraciones-de-animales',
-    NULL
-),
-(
-    'Obra Pública',
-    'Registro de obras públicas ejecutadas en Comodoro Rivadavia, con información sobre procesos de contratación, empresas adjudicatarias y montos involucrados. Incluye datos de licitaciones públicas, concursos privados de precios y contrataciones directas, entre otros tipos de contratación, con detalle de presupuesto oficial y monto del contrato.',
-    'Secretaría de Infraestructura, Obras y Servicios Públicos',
-    5, -- Cada medio año (Semestral)
-    'CSV',
-    'XLSX',
-    '2025-07-15',
-    '2026-03-01',
-    4, -- Gobierno y Gestión Pública
-    5, -- Infraestructura y Equipamiento Urbano
-    'https://datos.comodoro.gov.ar/dataset/obra-publica',
-    NULL
-);
-
--- =====================================================
 -- Índices para optimización de consultas
 -- =====================================================
 CREATE INDEX idx_datasets_tema_principal ON datasets(tema_principal_id);
@@ -214,4 +143,5 @@ CREATE INDEX idx_datasets_tema_secundario ON datasets(tema_secundario_id);
 CREATE INDEX idx_datasets_frecuencia ON datasets(frecuencia_id);
 CREATE INDEX idx_datasets_proxima_actualizacion ON datasets(proxima_actualizacion);
 CREATE INDEX idx_datasets_activo ON datasets(activo);
+CREATE INDEX idx_datasets_tipo_gestion ON datasets(tipo_gestion);
 CREATE INDEX idx_historial_dataset ON historial_actualizaciones(dataset_id);
