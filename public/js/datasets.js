@@ -107,9 +107,16 @@ function applyFilters() {
   }
 
   if (estado) {
-    filtered = filtered.filter(d => 
-      Utils.calcularEstado(d.proxima_actualizacion, d.frecuencia_dias) === estado
-    );
+    filtered = filtered.filter(d => {
+      const estadoDataset = Utils.calcularEstado(d.proxima_actualizacion, d.frecuencia_dias, d.tipo_gestion);
+      
+      // Filtro especial "vencidos" incluye tanto atrasados como sin-respuesta
+      if (estado === 'vencidos') {
+        return estadoDataset === 'atrasado' || estadoDataset === 'sin-respuesta';
+      }
+      
+      return estadoDataset === estado;
+    });
   }
 
   // Actualizar URL
@@ -149,7 +156,7 @@ function renderDatasets(datasets) {
 
   // Usar tema_principal_nombre del backend
   container.innerHTML = datasets.map(d => {
-    const estado = Utils.calcularEstado(d.proxima_actualizacion, d.frecuencia_dias);
+    const estado = Utils.calcularEstado(d.proxima_actualizacion, d.frecuencia_dias, d.tipo_gestion);
     const estadoTexto = Utils.getEstadoTexto(estado);
     const estadoClase = Utils.getEstadoClase(estado);
     
@@ -200,15 +207,24 @@ function exportarCSV() {
   if (busqueda) filtered = filtered.filter(d => d.titulo.toLowerCase().includes(busqueda));
   if (temaId) filtered = filtered.filter(d => d.tema_principal_id == temaId);
   if (frecId) filtered = filtered.filter(d => d.frecuencia_id == frecId);
-  if (estado) filtered = filtered.filter(d => Utils.calcularEstado(d.proxima_actualizacion, d.frecuencia_dias) === estado);
+  if (estado) {
+    filtered = filtered.filter(d => {
+      const estadoDataset = Utils.calcularEstado(d.proxima_actualizacion, d.frecuencia_dias, d.tipo_gestion);
+      if (estado === 'vencidos') {
+        return estadoDataset === 'atrasado' || estadoDataset === 'sin-respuesta';
+      }
+      return estadoDataset === estado;
+    });
+  }
 
-  const headers = ['Título', 'Área', 'Tema', 'Frecuencia', 'Estado', 'Última Actualización', 'Próxima Actualización'];
+  const headers = ['Título', 'Área', 'Tema', 'Frecuencia', 'Tipo Gestión', 'Estado', 'Última Actualización', 'Próxima Actualización'];
   const rows = filtered.map(d => [
     d.titulo,
     d.area_responsable || '',
     d.tema_principal_nombre || '',
     d.frecuencia_nombre || '',
-    Utils.getEstadoTexto(Utils.calcularEstado(d.proxima_actualizacion, d.frecuencia_dias)),
+    Utils.getTipoGestionTexto(d.tipo_gestion),
+    Utils.getEstadoTexto(Utils.calcularEstado(d.proxima_actualizacion, d.frecuencia_dias, d.tipo_gestion)),
     Utils.formatDate(d.ultima_actualizacion),
     Utils.formatDate(d.proxima_actualizacion)
   ]);
