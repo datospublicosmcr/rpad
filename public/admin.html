@@ -27,7 +27,7 @@
     </div>
     <nav class="header-nav">
       <div class="header-nav-inner">
-        <a href="index.html" class="nav-link"><span>📊</span> Dashboard</a>
+        <a href="index.html" class="nav-link"><span>📊</span> Tablero</a>
         <a href="datasets.html" class="nav-link"><span>📁</span> Datasets</a>
         <a href="admin.html" class="nav-link active"><span>⚙️</span> Admin</a>
       </div>
@@ -58,12 +58,13 @@
           <tr>
             <th>Dataset</th>
             <th>Estado</th>
+            <th>Gestión</th>
             <th>Próxima Actualización</th>
             <th style="width: 200px;">Acciones</th>
           </tr>
         </thead>
         <tbody id="datasets-tbody">
-          <tr><td colspan="4" class="loading"><div class="spinner"></div></td></tr>
+          <tr><td colspan="5" class="loading"><div class="spinner"></div></td></tr>
         </tbody>
       </table>
     </div>
@@ -114,6 +115,18 @@
               <label class="form-label required">Frecuencia</label>
               <select id="frecuencia_id" class="form-select" required></select>
             </div>
+            <div class="form-group">
+              <label class="form-label required">Tipo de Gestión</label>
+              <select id="tipo_gestion" class="form-select" required>
+                <option value="">Seleccionar...</option>
+                <option value="interna">Interna (DGMIT gestiona la actualización)</option>
+                <option value="externa">Externa (Depende de respuesta de otra área)</option>
+              </select>
+              <span class="form-hint">Define quién es responsable de actualizar este dataset</span>
+            </div>
+          </div>
+
+          <div class="form-row">
             <div class="form-group">
               <label class="form-label required">Formato Primario</label>
               <select id="formato_primario" class="form-select" required></select>
