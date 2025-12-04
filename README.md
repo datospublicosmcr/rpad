@@ -4,9 +4,36 @@
 
 Sistema de seguimiento y gestión de actualización de datasets para la Municipalidad de Comodoro Rivadavia.
 
+**Versión actual:** 1.1.0
+
 ## Descripción
 
-RPAD permite registrar datasets, asignarles frecuencias de actualización y monitorear su estado. El dashboard muestra estadísticas en tiempo real sobre datasets actualizados, próximos a vencer y atrasados.
+RPAD permite registrar datasets, asignarles frecuencias de actualización y monitorear su estado. El tablero de seguimiento muestra estadísticas en tiempo real sobre datasets actualizados, próximos a vencer y vencidos, diferenciando entre gestión interna y externa.
+
+## Novedades en v1.1.0
+
+### Tablero de Seguimiento rediseñado
+- **Hero section** con gradiente institucional, saludo personalizado según hora del día y nombre del usuario
+- **Fecha y hora en vivo** actualizándose en tiempo real
+- **Tasa de actualización** calculada correctamente: `(actualizados + próximos) / total`
+- **Gráfico de dona animado** con Chart.js mostrando distribución de estados
+- **Stat cards clickeables** que llevan directamente al listado filtrado
+- **Contadores animados** que incrementan de 0 al valor real
+- **Animaciones CSS** de entrada (fade, slide) y efectos hover mejorados
+
+### Diferenciación por tipo de gestión
+- **Nuevo campo `tipo_gestion`** en datasets con valores `interna` o `externa`
+- **Gestión interna (DGMIT):** Muestra "Atrasado" (badge rojo) cuando vence
+- **Gestión externa (otras áreas):** Muestra "Sin respuesta" (badge naranja) cuando vence
+- **Filtro "Vencidos"** que agrupa ambos estados
+- **Filtros específicos** para "Atrasado" y "Sin respuesta" por separado
+
+### Mejoras en la interfaz
+- Borde superior de color en stat cards (en lugar de lateral)
+- Leyenda personalizada en gráfico de dona con porcentajes
+- Botones "Ver más / Ver menos" en listas de alertas
+- Campo tipo de gestión obligatorio en formulario de administración
+- Exportación CSV incluye columna "Tipo Gestión"
 
 ## Tecnologías
 
@@ -14,6 +41,7 @@ RPAD permite registrar datasets, asignarles frecuencias de actualización y moni
 - **Frontend**: HTML5, CSS3, JavaScript vanilla (servido por Express)
 - **Base de datos**: MySQL/MariaDB
 - **Autenticación**: JWT
+- **Gráficos**: Chart.js (via CDN)
 
 ## Estructura del proyecto
 
@@ -39,7 +67,7 @@ rpad/
 ├── scripts/
 │   └── setup-admin.js        # Script para crear usuario admin
 └── public/                   # Frontend (servido por Express)
-    ├── index.html            # Dashboard principal
+    ├── index.html            # Tablero de seguimiento
     ├── datasets.html         # Listado de datasets
     ├── dataset.html          # Detalle de dataset
     ├── login.html            # Formulario de login
@@ -49,13 +77,13 @@ rpad/
     ├── js/
     │   ├── config.js         # Configuración (API_URL)
     │   ├── auth.js           # Manejo de autenticación
-    │   ├── api.js            # Llamadas a la API
-    │   ├── utils.js          # Funciones utilitarias
-    │   ├── dashboard.js      # Lógica del dashboard
+    │   ├── api.js            # Llamadas a la API y utilidades
+    │   ├── dashboard.js      # Lógica del tablero
     │   ├── datasets.js       # Listado de datasets
     │   ├── dataset-detail.js # Detalle de dataset
     │   └── admin.js          # Panel de administración
     └── img/
+        ├── icon.png
         ├── logo-2025.png
         └── logo-2025-blanco.png
 ```
@@ -88,6 +116,16 @@ Esto creará las tablas y cargará los datos iniciales (temas, frecuencias y alg
 | `frecuencias` | Catálogo de frecuencias de actualización |
 | `datasets` | Registro principal de datasets |
 | `historial_actualizaciones` | Log de actualizaciones realizadas |
+
+### Migración de v1.0.0 a v1.1.0
+
+Si ya tenés la versión 1.0.0 instalada, ejecutar en phpMyAdmin:
+
+```sql
+ALTER TABLE `datasets` 
+ADD COLUMN `tipo_gestion` ENUM('interna', 'externa') NOT NULL DEFAULT 'externa'
+AFTER `observaciones`;
+```
 
 ---
 
@@ -176,7 +214,7 @@ Respuesta esperada:
 | GET | `/api/health` | Health check |
 | POST | `/api/auth/login` | Iniciar sesión |
 | GET | `/api/datasets` | Listar datasets (con filtros) |
-| GET | `/api/datasets/estadisticas` | Estadísticas para dashboard |
+| GET | `/api/datasets/estadisticas` | Estadísticas para tablero |
 | GET | `/api/datasets/:id` | Detalle de un dataset |
 | GET | `/api/catalogos/temas` | Listar temas |
 | GET | `/api/catalogos/frecuencias` | Listar frecuencias |
@@ -197,8 +235,22 @@ Respuesta esperada:
 
 - `?tema=ID` - Filtrar por tema
 - `?frecuencia=ID` - Filtrar por frecuencia
-- `?estado=actualizado|proximo|atrasado` - Filtrar por estado
+- `?estado=actualizado|proximo|atrasado|sin-respuesta` - Filtrar por estado
 - `?busqueda=texto` - Buscar en título y descripción
+
+## Estadísticas (`/api/datasets/estadisticas`)
+
+Respuesta incluye:
+- `total` - Total de datasets activos
+- `actualizados` - Datasets al día
+- `proximos` - Datasets que vencen en 60 días o menos
+- `atrasados` - Vencidos de gestión interna
+- `sinRespuesta` - Vencidos de gestión externa
+- `totalVencidos` - Suma de atrasados + sinRespuesta
+- `tasaActualizacion` - Porcentaje de datasets no vencidos
+- `promedioAtraso` - Promedio de días de atraso
+- `porTema` - Distribución por tema
+- `porFrecuencia` - Distribución por frecuencia
 
 ## Troubleshooting
 
@@ -222,6 +274,27 @@ Respuesta esperada:
 ### Frontend no carga estilos/scripts
 - Verificar permisos de carpeta `public/` (755)
 - Verificar permisos de archivos dentro de `public/` (644)
+
+### Gráfico de dona no aparece
+- Verificar conexión a internet (Chart.js se carga via CDN)
+- Comprobar en consola del navegador que no hay errores de red
+
+## Changelog
+
+### v1.1.0 (2025-12-04)
+- Tablero de seguimiento rediseñado con hero section y gráfico de dona
+- Campo `tipo_gestion` para diferenciar datasets internos/externos
+- Estados "Atrasado" y "Sin respuesta" según tipo de gestión
+- Stat cards clickeables con animaciones
+- Tasa de actualización corregida
+- Filtro "Vencidos" que agrupa ambos estados
+
+### v1.0.0 (2025-11-30)
+- Versión inicial
+- CRUD de datasets
+- Dashboard con estadísticas
+- Autenticación JWT
+- Panel de administración
 
 ## Licencia
 
