@@ -54,10 +54,10 @@ function renderDataset(d) {
   document.getElementById('dataset-titulo').textContent = d.titulo;
   document.getElementById('dataset-area').textContent = d.area_responsable || 'Sin área asignada';
 
-  // Estado
-  const estado = Utils.calcularEstado(d.proxima_actualizacion, d.frecuencia_dias);
+  // Estado - usar etiqueta larga en el detalle
+  const estado = Utils.calcularEstado(d.proxima_actualizacion, d.frecuencia_dias, d.tipo_gestion);
   const estadoEl = document.getElementById('dataset-estado');
-  estadoEl.textContent = Utils.getEstadoTexto(estado);
+  estadoEl.textContent = Utils.getEstadoTextoLargo(estado);
   estadoEl.className = `badge ${Utils.getEstadoClase(estado)}`;
 
   // Temas - usar nombres correctos del backend
@@ -99,4 +99,7 @@ function renderDataset(d) {
   if (d.formato_primario) formatos.push(d.formato_primario);
   if (d.formato_secundario) formatos.push(d.formato_secundario);
   document.getElementById('info-formatos').textContent = formatos.join(', ') || '-';
+  
+  // Tipo de gestión
+  document.getElementById('info-tipo-gestion').textContent = Utils.getTipoGestionTexto(d.tipo_gestion);
 }
