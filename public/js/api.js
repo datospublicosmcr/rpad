@@ -85,6 +85,45 @@ const API = {
     const response = await fetch(`${CONFIG.API_URL}/catalogos/formatos`);
     const data = await response.json();
     return data.data || [];
+  },
+
+  // === ANDINO (Portal de Datos Abiertos) ===
+  async fetchFromAndino(url) {
+    const response = await fetch(`${CONFIG.API_URL}/andino/fetch?url=${encodeURIComponent(url)}`);
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || 'Error al consultar el portal');
+    return data.data;
+  },
+
+  // === NOTIFICACIONES ===
+  async verificarSmtp() {
+    const response = await fetch(`${CONFIG.API_URL}/notificaciones/verificar-smtp`, {
+      method: 'GET',
+      headers: Auth.getAuthHeaders()
+    });
+    const data = await response.json();
+    return data;
+  },
+
+  async previewNotificacion(tipo) {
+    const response = await fetch(`${CONFIG.API_URL}/notificaciones/preview/${tipo}`, {
+      method: 'GET',
+      headers: Auth.getAuthHeaders()
+    });
+    if (!response.ok) {
+      const err = await response.json();
+      throw new Error(err.error || 'Error al generar preview');
+    }
+    return await response.text();
+  },
+
+  async enviarNotificacionPrueba(tipo) {
+    const response = await fetch(`${CONFIG.API_URL}/notificaciones/prueba/${tipo}`, {
+      method: 'GET',
+      headers: Auth.getAuthHeaders()
+    });
+    const data = await response.json();
+    return data;
   }
 };
 
