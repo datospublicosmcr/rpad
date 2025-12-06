@@ -1,9 +1,10 @@
-// Admin - Lógica de administración
+// Admin - Lógica de administración con integración Andino
 let datasets = [];
 let temas = [];
 let frecuencias = [];
 let formatos = [];
 let deleteId = null;
+let currentEditDataset = null; // Dataset actual en edición
 
 document.addEventListener('DOMContentLoaded', async () => {
   // Verificar autenticación
@@ -120,17 +121,108 @@ function renderTable(data) {
   }).join('');
 }
 
-// === MODAL DATASET ===
-function openModal(dataset = null) {
+// =====================================================
+// PASO 1: Modal URL del Portal
+// =====================================================
+
+function openStep1Modal() {
+  currentEditDataset = null;
+  document.getElementById('andino-url').value = '';
+  document.getElementById('step1-error').classList.add('hidden');
+  document.getElementById('step1-loading').classList.add('hidden');
+  document.getElementById('btn-siguiente').disabled = false;
+  document.getElementById('modal-step1').classList.add('active');
+  
+  // Focus en el campo URL
+  setTimeout(() => document.getElementById('andino-url').focus(), 100);
+}
+
+function closeStep1Modal() {
+  document.getElementById('modal-step1').classList.remove('active');
+}
+
+// Saltar al paso 2 sin importar (carga manual)
+function skipToManualEntry() {
+  closeStep1Modal();
+  openModal(null);
+}
+
+// Consultar API y continuar al paso 2
+async function fetchAndContinue() {
+  const url = document.getElementById('andino-url').value.trim();
+  const errorDiv = document.getElementById('step1-error');
+  const loadingDiv = document.getElementById('step1-loading');
+  const btnSiguiente = document.getElementById('btn-siguiente');
+
+  // Validar que hay URL
+  if (!url) {
+    errorDiv.textContent = 'Por favor, ingrese la URL del dataset';
+    errorDiv.classList.remove('hidden');
+    return;
+  }
+
+  // Mostrar loading
+  errorDiv.classList.add('hidden');
+  loadingDiv.classList.remove('hidden');
+  btnSiguiente.disabled = true;
+
+  try {
+    const response = await fetch(`${CONFIG.API_URL}/andino/fetch?url=${encodeURIComponent(url)}`);
+    const result = await response.json();
+
+    loadingDiv.classList.add('hidden');
+    btnSiguiente.disabled = false;
+
+    if (!response.ok || !result.success) {
+      // Mostrar error y permitir continuar manualmente
+      errorDiv.innerHTML = `
+        <strong>⚠️ Error de importación</strong><br>
+        ${Utils.escapeHtml(result.error || 'No se pudo obtener información del portal')}<br>
+        <span class="text-small">Puede continuar con la carga manual haciendo clic en "Carga manual".</span>
+      `;
+      errorDiv.classList.remove('hidden');
+      return;
+    }
+
+    // Éxito: cerrar paso 1 y abrir paso 2 con datos pre-llenados
+    closeStep1Modal();
+    openModal(null, result.data);
+
+  } catch (error) {
+    console.error('Error consultando Andino:', error);
+    loadingDiv.classList.add('hidden');
+    btnSiguiente.disabled = false;
+    errorDiv.innerHTML = `
+      <strong>⚠️ Error de conexión</strong><br>
+      No se pudo conectar con el servidor. Puede continuar con la carga manual.
+    `;
+    errorDiv.classList.remove('hidden');
+  }
+}
+
+// =====================================================
+// PASO 2: Modal Formulario Completo
+// =====================================================
+
+/**
+ * Abre el modal del formulario
+ * @param {Object|null} dataset - Dataset existente para editar, o null para nuevo
+ * @param {Object|null} andinoData - Datos importados de Andino para pre-llenar
+ */
+function openModal(dataset = null, andinoData = null) {
   const modal = document.getElementById('modal-dataset');
   const form = document.getElementById('dataset-form');
   const title = document.getElementById('modal-title');
+  const andinoUpdateSection = document.getElementById('andino-update-section');
 
   form.reset();
   document.getElementById('dataset-id').value = '';
+  currentEditDataset = null;
 
   if (dataset) {
+    // MODO EDICIÓN
     title.textContent = 'Editar Dataset';
+    currentEditDataset = dataset;
     document.getElementById('dataset-id').value = dataset.id;
     document.getElementById('titulo').value = dataset.titulo || '';
     document.getElementById('area_responsable').value = dataset.area_responsable || '';
@@ -145,8 +237,25 @@ function openModal(dataset = null) {
     document.getElementById('url_dataset').value = dataset.url_dataset || '';
     document.getElementById('observaciones').value = dataset.observaciones || '';
     document.getElementById('tipo_gestion').value = dataset.tipo_gestion || '';
+    
+    // Mostrar botón de actualizar desde portal si tiene URL
+    if (dataset.url_dataset && dataset.url_dataset.includes('datos.comodoro.gov.ar')) {
+      andinoUpdateSection.classList.remove('hidden');
+    } else {
+      andinoUpdateSection.classList.add('hidden');
+    }
   } else {
-    title.textContent = 'Nuevo Dataset';
+    // MODO NUEVO
+    title.textContent = 'Nuevo Dataset - Paso 2';
+    andinoUpdateSection.classList.add('hidden');
+    
+    // Si hay datos de Andino, pre-llenar
+    if (andinoData) {
+      document.getElementById('titulo').value = andinoData.titulo || '';
+      document.getElementById('descripcion').value = andinoData.descripcion || '';
+      document.getElementById('area_responsable').value = andinoData.area_responsable || '';
+      document.getElementById('url_dataset').value = andinoData.url_dataset || '';
+    }
   }
 
   modal.classList.add('active');
@@ -154,6 +263,7 @@ function openModal(dataset = null) {
 
 function closeModal() {
   document.getElementById('modal-dataset').classList.remove('active');
+  currentEditDataset = null;
 }
 
 async function editDataset(id) {
@@ -162,6 +272,75 @@ async function editDataset(id) {
     openModal(dataset);
   }
 }
+
+// =====================================================
+// ACTUALIZAR DESDE PORTAL (en modo edición)
+// =====================================================
+
+function updateFromAndino() {
+  // Verificar que hay URL del dataset
+  const url = document.getElementById('url_dataset').value.trim();
+  if (!url || !url.includes('datos.comodoro.gov.ar')) {
+    Utils.showError('No hay una URL válida del portal para actualizar');
+    return;
+  }
+
+  // Abrir modal de confirmación
+  document.getElementById('confirm-update-error').classList.add('hidden');
+  document.getElementById('confirm-update-loading').classList.add('hidden');
+  document.getElementById('btn-confirm-update').disabled = false;
+  document.getElementById('modal-confirm-update').classList.add('active');
+}
+
+function closeConfirmUpdateModal() {
+  document.getElementById('modal-confirm-update').classList.remove('active');
+}
+
+async function confirmUpdateFromAndino() {
+  const url = document.getElementById('url_dataset').value.trim();
+  const errorDiv = document.getElementById('confirm-update-error');
+  const loadingDiv = document.getElementById('confirm-update-loading');
+  const btnConfirm = document.getElementById('btn-confirm-update');
+
+  loadingDiv.classList.remove('hidden');
+  errorDiv.classList.add('hidden');
+  btnConfirm.disabled = true;
+
+  try {
+    const response = await fetch(`${CONFIG.API_URL}/andino/fetch?url=${encodeURIComponent(url)}`);
+    const result = await response.json();
+
+    loadingDiv.classList.add('hidden');
+
+    if (!response.ok || !result.success) {
+      errorDiv.textContent = result.error || 'No se pudo obtener información del portal';
+      errorDiv.classList.remove('hidden');
+      btnConfirm.disabled = false;
+      return;
+    }
+
+    // Actualizar los campos en el formulario
+    document.getElementById('titulo').value = result.data.titulo || '';
+    document.getElementById('descripcion').value = result.data.descripcion || '';
+    document.getElementById('area_responsable').value = result.data.area_responsable || '';
+
+    // Cerrar modal de confirmación
+    closeConfirmUpdateModal();
+    
+    Utils.showSuccess('Datos actualizados desde el portal. Recuerde guardar los cambios.');
+
+  } catch (error) {
+    console.error('Error actualizando desde Andino:', error);
+    loadingDiv.classList.add('hidden');
+    btnConfirm.disabled = false;
+    errorDiv.textContent = 'Error de conexión. Intente nuevamente.';
+    errorDiv.classList.remove('hidden');
+  }
+}
+
+// =====================================================
+// SUBMIT FORMULARIO
+// =====================================================
 
 document.getElementById('dataset-form').addEventListener('submit', async (e) => {
   e.preventDefault();
@@ -205,7 +384,10 @@ document.getElementById('dataset-form').addEventListener('submit', async (e) => 
   }
 });
 
-// === MARCAR ACTUALIZADO ===
+// =====================================================
+// MARCAR ACTUALIZADO
+// =====================================================
+
 async function marcarActualizado(id) {
   try {
     await API.registrarActualizacion(id);
@@ -216,7 +398,10 @@ async function marcarActualizado(id) {
   }
 }
 
-// === MODAL ELIMINAR ===
+// =====================================================
+// MODAL ELIMINAR
+// =====================================================
+
 function openDeleteModal(id, nombre) {
   deleteId = id;
   document.getElementById('delete-dataset-name').textContent = nombre;
@@ -238,5 +423,67 @@ async function confirmDelete() {
     await loadDatasets();
   } catch (error) {
     Utils.showError(error.message);
+  }
+}
+
+// =====================================================
+// SISTEMA DE NOTIFICACIONES
+// =====================================================
+
+async function verificarConexionSMTP() {
+  const statusEl = document.getElementById('smtp-status');
+  statusEl.textContent = 'Verificando...';
+  statusEl.style.color = '#6c757d';
+
+  try {
+    const res = await API.verificarSmtp();
+    if (res.success) {
+      statusEl.textContent = '✅ Conexión SMTP exitosa';
+      statusEl.style.color = '#28a745';
+      Utils.showSuccess('Conexión SMTP verificada correctamente');
+    } else {
+      const errorMsg = res.error || res.message || 'Error desconocido';
+      const errorCode = res.code ? ` (${res.code})` : '';
+      statusEl.textContent = '❌ Error: ' + errorMsg + errorCode;
+      statusEl.style.color = '#dc3545';
+      Utils.showError('Error SMTP: ' + errorMsg + errorCode);
+    }
+  } catch (error) {
+    statusEl.textContent = '❌ Error de conexión';
+    statusEl.style.color = '#dc3545';
+    Utils.showError('Error: ' + error.message);
+  }
+}
+
+async function verPreviewEmail() {
+  const tipo = document.getElementById('tipo-notificacion').value;
+  try {
+    const htmlContent = await API.previewNotificacion(tipo);
+    const win = window.open('', '_blank');
+    win.document.write(htmlContent);
+    win.document.close();
+  } catch (error) {
+    Utils.showError('Error al generar preview: ' + error.message);
+  }
+}
+
+async function enviarEmailPrueba() {
+  const tipo = document.getElementById('tipo-notificacion').value;
+  const tipoTexto = document.getElementById('tipo-notificacion').selectedOptions[0].text;
+  
+  if (!confirm(`⚠️ Esto enviará un email REAL a los destinatarios configurados.\n\nTipo: ${tipoTexto}\n\n¿Continuar?`)) {
+    return;
+  }
+
+  try {
+    Utils.showSuccess('Enviando email...');
+    const res = await API.enviarNotificacionPrueba(tipo);
+    if (res.success) {
+      Utils.showSuccess(`✅ Email enviado. Datasets encontrados: ${res.datasetsEncontrados}`);
+    } else {
+      Utils.showError(res.message || 'Error al enviar email');
+    }
+  } catch (error) {
+    Utils.showError('Error: ' + error.message);
   }
 }
