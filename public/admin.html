@@ -37,12 +37,51 @@
   <main>
     <div class="flex justify-between items-center mb-4">
       <h1 class="page-title" style="margin-bottom: 0;">Gestión de Datasets</h1>
-      <button onclick="openModal()" class="btn btn-primary">
+      <button onclick="openStep1Modal()" class="btn btn-primary">
         <span>➕</span> Nuevo Dataset
       </button>
     </div>
 
     <div id="message-container"></div>
+
+    <!-- Panel de Notificaciones -->
+    <div class="card" style="margin-bottom: 1.5rem; border: 1px solid #e9ecef; border-radius: 8px;">
+      <div style="padding: 1rem 1.5rem; border-bottom: 1px solid #e9ecef; background: #f8f9fa; border-radius: 8px 8px 0 0;">
+        <h3 style="margin: 0; font-size: 1rem; font-weight: 600;">📧 Sistema de Notificaciones</h3>
+      </div>
+      <div style="padding: 1.5rem;">
+        <!-- Verificar SMTP -->
+        <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem; padding-bottom: 1.5rem; border-bottom: 1px solid #e9ecef;">
+          <button onclick="verificarConexionSMTP()" class="btn btn-secondary btn-sm">
+            📡 Verificar Conexión SMTP
+          </button>
+          <span id="smtp-status" class="text-small text-muted">Estado: Sin verificar</span>
+        </div>
+        
+        <!-- Probar alertas -->
+        <div>
+          <p class="text-small" style="margin-bottom: 0.5rem; font-weight: 500;">Probar alertas específicas:</p>
+          <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
+            <select id="tipo-notificacion" class="form-select" style="max-width: 260px;">
+              <optgroup label="Gestión Interna">
+                <option value="interno-60">Planificación (-60 días)</option>
+                <option value="interno-30">Vencimiento (-30 días)</option>
+                <option value="interno-vencido">Atrasados (Resumen mensual)</option>
+              </optgroup>
+              <optgroup label="Gestión Externa">
+                <option value="externo-60">Redacción de Notas (-60 días)</option>
+                <option value="externo-40">Distribución (-40 días)</option>
+                <option value="externo-5">Último Aviso (-5 días)</option>
+                <option value="externo-vencido">Sin Respuesta (Resumen mensual)</option>
+              </optgroup>
+            </select>
+            <button onclick="verPreviewEmail()" class="btn btn-outline btn-sm">👁️ Preview</button>
+            <button onclick="enviarEmailPrueba()" class="btn btn-primary btn-sm">📨 Enviar Email Real</button>
+          </div>
+          <p class="text-small text-muted" style="margin-top: 0.5rem;">El preview usa datos reales o de ejemplo si no hay datasets en esa fecha.</p>
+        </div>
+      </div>
+    </div>
 
     <!-- Búsqueda -->
     <div class="filters-bar" style="margin-bottom: 1rem;">
@@ -70,17 +109,62 @@
     </div>
   </main>
 
-  <!-- Modal Dataset -->
+  <!-- Modal Paso 1: URL del Portal -->
+  <div class="modal-overlay" id="modal-step1">
+    <div class="modal" style="max-width: 500px;">
+      <div class="modal-header">
+        <h3 class="modal-title">Nuevo Dataset - Paso 1</h3>
+        <button class="modal-close" onclick="closeStep1Modal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="alert alert-info" style="margin-bottom: 1rem;">
+          <strong>💡 Importar desde el Portal de Datos Abiertos</strong><br>
+          <span class="text-small">Pegue la URL del dataset para importar automáticamente el título, descripción y área responsable.</span>
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label required">URL del Dataset en el Portal</label>
+          <input type="url" id="andino-url" class="form-input" 
+                 placeholder="https://datos.comodoro.gov.ar/dataset/nombre-del-dataset"
+                 autocomplete="off">
+          <span class="form-hint">Ejemplo: https://datos.comodoro.gov.ar/dataset/presupuesto-municipal</span>
+        </div>
+
+        <div id="step1-error" class="alert alert-error hidden"></div>
+        <div id="step1-loading" class="loading hidden"><div class="spinner"></div></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="skipToManualEntry()">
+          Carga manual
+        </button>
+        <button type="button" class="btn btn-primary" onclick="fetchAndContinue()" id="btn-siguiente">
+          <span>📥</span> Siguiente
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Paso 2: Formulario completo -->
   <div class="modal-overlay" id="modal-dataset">
     <div class="modal" style="max-width: 700px;">
       <div class="modal-header">
-        <h3 class="modal-title" id="modal-title">Nuevo Dataset</h3>
+        <h3 class="modal-title" id="modal-title">Nuevo Dataset - Paso 2</h3>
         <button class="modal-close" onclick="closeModal()">&times;</button>
       </div>
       <form id="dataset-form">
         <div class="modal-body">
           <input type="hidden" id="dataset-id">
           
+          <!-- Botón actualizar desde portal (solo visible en edición) -->
+          <div id="andino-update-section" class="hidden" style="margin-bottom: 1rem;">
+            <button type="button" class="btn btn-outline btn-sm" onclick="updateFromAndino()">
+              <span>🔄</span> Actualizar desde portal
+            </button>
+            <span class="text-small text-muted" style="margin-left: 0.5rem;">
+              Sincronizar título, descripción y área responsable
+            </span>
+          </div>
+
           <div class="form-row">
             <div class="form-group">
               <label class="form-label required">Título</label>
@@ -187,6 +271,33 @@
     </div>
   </div>
 
+  <!-- Modal Confirmar Actualización desde Portal -->
+  <div class="modal-overlay" id="modal-confirm-update">
+    <div class="modal" style="max-width: 450px;">
+      <div class="modal-header">
+        <h3 class="modal-title">Confirmar Actualización</h3>
+        <button class="modal-close" onclick="closeConfirmUpdateModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p>¿Está seguro de actualizar los datos desde el portal?</p>
+        <p class="text-small text-muted mt-2">
+          <strong>Se reemplazarán los siguientes campos:</strong><br>
+          • Título<br>
+          • Descripción<br>
+          • Área responsable
+        </p>
+        <div id="confirm-update-loading" class="loading hidden"><div class="spinner"></div></div>
+        <div id="confirm-update-error" class="alert alert-error hidden mt-2"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeConfirmUpdateModal()">Cancelar</button>
+        <button class="btn btn-primary" onclick="confirmUpdateFromAndino()" id="btn-confirm-update">
+          <span>🔄</span> Actualizar
+        </button>
+      </div>
+    </div>
+  </div>
+
   <footer class="footer">
     <div class="footer-inner">
       <div class="footer-section">
@@ -206,7 +317,7 @@
       </div>
     </div>
     <div class="footer-bottom">
-      © 2025 Municipalidad de Comodoro Rivadavia. RPAD v1.0.0
+      © 2025 Municipalidad de Comodoro Rivadavia. RPAD v1.2.0
     </div>
   </footer>
 
