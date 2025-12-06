@@ -4,44 +4,56 @@
 
 Sistema de seguimiento y gestión de actualización de datasets para la Municipalidad de Comodoro Rivadavia.
 
-**Versión actual:** 1.1.0
+**Versión actual:** 1.2.0
 
 ## Descripción
 
 RPAD permite registrar datasets, asignarles frecuencias de actualización y monitorear su estado. El tablero de seguimiento muestra estadísticas en tiempo real sobre datasets actualizados, próximos a vencer y vencidos, diferenciando entre gestión interna y externa.
 
-## Novedades en v1.1.0
+## Novedades en v1.2.0
 
-### Tablero de Seguimiento rediseñado
-- **Hero section** con gradiente institucional, saludo personalizado según hora del día y nombre del usuario
-- **Fecha y hora en vivo** actualizándose en tiempo real
-- **Tasa de actualización** calculada correctamente: `(actualizados + próximos) / total`
-- **Gráfico de dona animado** con Chart.js mostrando distribución de estados
-- **Stat cards clickeables** que llevan directamente al listado filtrado
-- **Contadores animados** que incrementan de 0 al valor real
-- **Animaciones CSS** de entrada (fade, slide) y efectos hover mejorados
+### Integración con Portal de Datos Abiertos (Andino)
+- **Importación automática** de metadatos desde datos.comodoro.gov.ar
+- **Flujo de 2 pasos** para crear datasets: primero importar desde el portal, luego completar datos adicionales
+- **Botón "Actualizar desde portal"** en edición para sincronizar título, descripción y área responsable
+- **Vinculación directa** con el dataset en el portal mediante URL
 
-### Diferenciación por tipo de gestión
-- **Nuevo campo `tipo_gestion`** en datasets con valores `interna` o `externa`
-- **Gestión interna (DGMIT):** Muestra "Atrasado" (badge rojo) cuando vence
-- **Gestión externa (otras áreas):** Muestra "Sin respuesta" (badge naranja) cuando vence
-- **Filtro "Vencidos"** que agrupa ambos estados
-- **Filtros específicos** para "Atrasado" y "Sin respuesta" por separado
+### Sistema de Notificaciones por Email
+- **Alertas automáticas** según tipo de gestión y días restantes hasta vencimiento
+- **Panel de notificaciones** en administración para verificar SMTP, previsualizar y enviar emails de prueba
+- **Cron job** para ejecución automática diaria a las 8:00 AM
+- **Plantillas HTML** con diseño institucional para cada tipo de alerta
 
-### Mejoras en la interfaz
-- Borde superior de color en stat cards (en lugar de lateral)
-- Leyenda personalizada en gráfico de dona con porcentajes
-- Botones "Ver más / Ver menos" en listas de alertas
-- Campo tipo de gestión obligatorio en formulario de administración
-- Exportación CSV incluye columna "Tipo Gestión"
+#### Calendario de alertas
+
+**Gestión Interna (DGMIT):**
+| Días | Alerta | Acción |
+|------|--------|--------|
+| -60 | Planificación | Iniciar planificación |
+| -30 | Vencimiento próximo | Priorizar procesamiento |
+| Día 1° | Resumen mensual | Regularizar vencidos |
+
+**Gestión Externa (otras áreas):**
+| Días | Alerta | Acción |
+|------|--------|--------|
+| -60 | Redacción de notas | Redactar solicitudes formales |
+| -40 | Distribución | Distribuir pedidos a las áreas |
+| -5 | Último aviso | Contacto telefónico/email |
+| Día 1° | Resumen mensual | Reclamo/reiteración |
+
+### Mejoras anteriores (v1.1.0)
+- **Tablero rediseñado** con hero section, gráfico de dona animado y stat cards clickeables
+- **Campo `tipo_gestion`** para diferenciar datasets internos/externos
+- **Estados diferenciados:** "Atrasado" (interno) y "Sin respuesta" (externo)
 
 ## Tecnologías
 
 - **Backend**: Node.js + Express (JavaScript ES Modules)
-- **Frontend**: HTML5, CSS3, JavaScript vanilla (servido por Express)
+- **Frontend**: HTML5, CSS3, JavaScript vanilla
 - **Base de datos**: MySQL/MariaDB
 - **Autenticación**: JWT
 - **Gráficos**: Chart.js (via CDN)
+- **Email**: Nodemailer
 
 ## Estructura del proyecto
 
@@ -51,13 +63,17 @@ rpad/
 ├── package.json
 ├── .env                      # Variables de entorno (no incluido en repo)
 ├── .env.example              # Template de variables
-├── .gitignore
 ├── config/
 │   └── database.js           # Pool de conexiones MySQL
 ├── controllers/
 │   ├── authController.js     # Login, verificación, cambio password
 │   ├── catalogController.js  # Temas, frecuencias, formatos
-│   └── datasetController.js  # CRUD datasets, estadísticas
+│   ├── datasetController.js  # CRUD datasets, estadísticas
+│   ├── andinoController.js   # Integración con portal de datos
+│   └── notificacionesController.js  # Sistema de alertas por email
+├── services/
+│   ├── emailService.js       # Configuración SMTP y envío
+│   └── emailTemplates.js     # Plantillas HTML para emails
 ├── database/
 │   └── schema.sql            # Estructura y datos iniciales de la BD
 ├── middleware/
@@ -66,7 +82,7 @@ rpad/
 │   └── index.js              # Definición de rutas API
 ├── scripts/
 │   └── setup-admin.js        # Script para crear usuario admin
-└── public/                   # Frontend (servido por Express)
+└── public/                   # Frontend
     ├── index.html            # Tablero de seguimiento
     ├── datasets.html         # Listado de datasets
     ├── dataset.html          # Detalle de dataset
@@ -105,8 +121,6 @@ Desde **phpMyAdmin** en cPanel:
 3. Subir el archivo `database/schema.sql`
 4. Click en **Ejecutar**
 
-Esto creará las tablas y cargará los datos iniciales (temas, frecuencias y algunos datasets de ejemplo).
-
 ### Estructura de tablas
 
 | Tabla | Descripción |
@@ -117,7 +131,7 @@ Esto creará las tablas y cargará los datos iniciales (temas, frecuencias y alg
 | `datasets` | Registro principal de datasets |
 | `historial_actualizaciones` | Log de actualizaciones realizadas |
 
-### Migración de v1.0.0 a v1.1.0
+### Migración desde v1.0.0
 
 Si ya tenés la versión 1.0.0 instalada, ejecutar en phpMyAdmin:
 
@@ -147,16 +161,30 @@ Copiar `.env.example` a `.env` y completar:
 cp .env.example .env
 ```
 
-Editar `.env` con los datos de tu servidor:
+Editar `.env`:
 ```
+# Base de datos
 DB_HOST=localhost
 DB_USER=tu_usuario_mysql
 DB_PASSWORD=tu_password
 DB_NAME=tu_base_de_datos
+
+# Seguridad
 JWT_SECRET=una_clave_secreta_larga
+CRON_SECRET=clave_para_cron_job
+
+# Servidor
 PORT=3001
 CORS_ORIGIN=https://tu-dominio.com
+
+# SMTP (para notificaciones)
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=tu_cuenta@gmail.com
+SMTP_PASS=xxxx-xxxx-xxxx-xxxx
 ```
+
+> **Nota sobre SMTP:** Si el hosting bloquea conexiones SMTP salientes (error ECONNREFUSED), usar Gmail con [contraseña de aplicación](https://myaccount.google.com/apppasswords).
 
 ### 3. Configurar Node.js App en cPanel
 
@@ -179,7 +207,7 @@ npm install
 
 ### 5. Configurar variables de entorno en cPanel
 
-En la sección **Environment variables** de la app (**Setup Node.js App**), agregar cada variable del `.env`.
+En la sección **Environment variables** de la app, agregar cada variable del `.env`.
 
 ### 6. Crear usuario administrador
 
@@ -187,15 +215,12 @@ En la sección **Environment variables** de la app (**Setup Node.js App**), agre
 npm run setup-admin
 ```
 
-Seguir las instrucciones interactivas.
-
 ### 7. Iniciar la aplicación
 
 Click en **Restart** en el panel de Node.js App.
 
 ### 8. Verificar funcionamiento
 
-Acceder a:
 ```
 https://tu-dominio.com/api/health
 ```
@@ -204,6 +229,31 @@ Respuesta esperada:
 ```json
 {"status":"ok","timestamp":"...","service":"RPAD API"}
 ```
+
+---
+
+## Configurar Cron Job (Notificaciones automáticas)
+
+### 1. Verificar que funciona manualmente
+
+```
+https://tu-dominio.com/api/cron/notificaciones?secret=TU_CRON_SECRET
+```
+
+### 2. Configurar en cPanel → Cron Jobs
+
+| Campo | Valor |
+|-------|-------|
+| Minuto | 0 |
+| Hora | 8 |
+| Día | * |
+| Mes | * |
+| Día semana | * |
+| Comando | `curl -s "https://tu-dominio.com/api/cron/notificaciones?secret=TU_CRON_SECRET" > /dev/null` |
+
+Esto ejecuta las notificaciones todos los días a las 8:00 AM.
+
+---
 
 ## API Endpoints
 
@@ -219,6 +269,7 @@ Respuesta esperada:
 | GET | `/api/catalogos/temas` | Listar temas |
 | GET | `/api/catalogos/frecuencias` | Listar frecuencias |
 | GET | `/api/catalogos/formatos` | Listar formatos disponibles |
+| GET | `/api/andino/fetch?url=...` | Obtener metadatos desde el portal |
 
 ### Protegidos (requieren JWT)
 
@@ -230,64 +281,66 @@ Respuesta esperada:
 | PUT | `/api/datasets/:id` | Actualizar dataset |
 | DELETE | `/api/datasets/:id` | Eliminar dataset (soft delete) |
 | POST | `/api/datasets/:id/actualizar` | Registrar actualización |
+| GET | `/api/notificaciones/ejecutar` | Ejecutar proceso de notificaciones |
+| GET | `/api/notificaciones/prueba/:tipo` | Enviar email de prueba |
+| GET | `/api/notificaciones/verificar-smtp` | Verificar conexión SMTP |
+| GET | `/api/notificaciones/preview/:tipo` | Previsualizar email |
 
-## Filtros disponibles en `/api/datasets`
+### Cron (requiere secret)
+
+| Método | Ruta | Descripción |
+|--------|------|-------------|
+| GET | `/api/cron/notificaciones?secret=...` | Ejecutar notificaciones (para cron) |
+
+### Filtros disponibles en `/api/datasets`
 
 - `?tema=ID` - Filtrar por tema
 - `?frecuencia=ID` - Filtrar por frecuencia
 - `?estado=actualizado|proximo|atrasado|sin-respuesta` - Filtrar por estado
 - `?busqueda=texto` - Buscar en título y descripción
 
-## Estadísticas (`/api/datasets/estadisticas`)
-
-Respuesta incluye:
-- `total` - Total de datasets activos
-- `actualizados` - Datasets al día
-- `proximos` - Datasets que vencen en 60 días o menos
-- `atrasados` - Vencidos de gestión interna
-- `sinRespuesta` - Vencidos de gestión externa
-- `totalVencidos` - Suma de atrasados + sinRespuesta
-- `tasaActualizacion` - Porcentaje de datasets no vencidos
-- `promedioAtraso` - Promedio de días de atraso
-- `porTema` - Distribución por tema
-- `porFrecuencia` - Distribución por frecuencia
+---
 
 ## Troubleshooting
 
 ### Error de conexión a MySQL
 - Verificar credenciales en `.env`
 - Verificar que el usuario MySQL tiene permisos sobre la base de datos
-- Comprobar que la base de datos existe
 
 ### Error 503 / App no inicia
-- Revisar logs en cPanel → Setup Node.js App → Logs
+- Revisar logs en cPanel → Setup Node.js App
 - Verificar que `app.js` existe y está configurado como startup file
-- Comprobar que las variables de entorno están configuradas
 
-### Error de módulos no encontrados
-- Ejecutar `npm install` desde la terminal virtual de la app
+### Error SMTP ECONNREFUSED
+- El hosting bloquea conexiones SMTP salientes
+- Solución: Usar Gmail con contraseña de aplicación
 
 ### Token inválido o expirado
 - Cerrar sesión y volver a iniciar
-- Verificar que JWT_SECRET está configurado correctamente
 
-### Frontend no carga estilos/scripts
-- Verificar permisos de carpeta `public/` (755)
-- Verificar permisos de archivos dentro de `public/` (644)
+### Notificaciones no se envían
+- Verificar conexión SMTP desde panel Admin
+- Revisar que CRON_SECRET coincide en `.env` y cron job
 
-### Gráfico de dona no aparece
-- Verificar conexión a internet (Chart.js se carga via CDN)
-- Comprobar en consola del navegador que no hay errores de red
+---
 
 ## Changelog
+
+### v1.2.0 (2025-12-05)
+- Integración con API de Andino (portal de datos abiertos)
+- Flujo de 2 pasos para crear datasets con importación automática
+- Botón "Actualizar desde portal" en edición
+- Sistema de notificaciones por email
+- Alertas automáticas según tipo de gestión y días restantes
+- Panel de notificaciones en administración
+- Endpoint de cron para ejecución automática
+- Plantillas HTML institucionales para emails
 
 ### v1.1.0 (2025-12-04)
 - Tablero de seguimiento rediseñado con hero section y gráfico de dona
 - Campo `tipo_gestion` para diferenciar datasets internos/externos
 - Estados "Atrasado" y "Sin respuesta" según tipo de gestión
 - Stat cards clickeables con animaciones
-- Tasa de actualización corregida
-- Filtro "Vencidos" que agrupa ambos estados
 
 ### v1.0.0 (2025-11-30)
 - Versión inicial
@@ -295,6 +348,8 @@ Respuesta incluye:
 - Dashboard con estadísticas
 - Autenticación JWT
 - Panel de administración
+
+---
 
 ## Licencia
 
