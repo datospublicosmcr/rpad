@@ -4,47 +4,12 @@
 
 Sistema de seguimiento y gestión de actualización de datasets para la Municipalidad de Comodoro Rivadavia.
 
-**Versión actual:** 1.2.0
+**Versión actual:** 1.3.0
 
 ## Descripción
 
 RPAD permite registrar datasets, asignarles frecuencias de actualización y monitorear su estado. El tablero de seguimiento muestra estadísticas en tiempo real sobre datasets actualizados, próximos a vencer y vencidos, diferenciando entre gestión interna y externa.
 
-## Novedades en v1.2.0
-
-### Integración con Portal de Datos Abiertos (Andino)
-- **Importación automática** de metadatos desde datos.comodoro.gov.ar
-- **Flujo de 2 pasos** para crear datasets: primero importar desde el portal, luego completar datos adicionales
-- **Botón "Actualizar desde portal"** en edición para sincronizar título, descripción y área responsable
-- **Vinculación directa** con el dataset en el portal mediante URL
-
-### Sistema de Notificaciones por Email
-- **Alertas automáticas** según tipo de gestión y días restantes hasta vencimiento
-- **Panel de notificaciones** en administración para verificar SMTP, previsualizar y enviar emails de prueba
-- **Cron job** para ejecución automática diaria a las 8:00 AM
-- **Plantillas HTML** con diseño institucional para cada tipo de alerta
-
-#### Calendario de alertas
-
-**Gestión Interna (DGMIT):**
-| Días | Alerta | Acción |
-|------|--------|--------|
-| -60 | Planificación | Iniciar planificación |
-| -30 | Vencimiento próximo | Priorizar procesamiento |
-| Día 1° | Resumen mensual | Regularizar vencidos |
-
-**Gestión Externa (otras áreas):**
-| Días | Alerta | Acción |
-|------|--------|--------|
-| -60 | Redacción de notas | Redactar solicitudes formales |
-| -40 | Distribución | Distribuir pedidos a las áreas |
-| -5 | Último aviso | Contacto telefónico/email |
-| Día 1° | Resumen mensual | Reclamo/reiteración |
-
-### Mejoras anteriores (v1.1.0)
-- **Tablero rediseñado** con hero section, gráfico de dona animado y stat cards clickeables
-- **Campo `tipo_gestion`** para diferenciar datasets internos/externos
-- **Estados diferenciados:** "Atrasado" (interno) y "Sin respuesta" (externo)
 
 ## Tecnologías
 
@@ -54,50 +19,57 @@ RPAD permite registrar datasets, asignarles frecuencias de actualización y moni
 - **Autenticación**: JWT
 - **Gráficos**: Chart.js (via CDN)
 - **Email**: Nodemailer
+- **PDFs**: PDFKit
 
 ## Estructura del proyecto
 
 ```
 rpad/
-├── app.js                    # Entry point - Express server
+├── app.js                         # Entry point - Express server
 ├── package.json
-├── .env                      # Variables de entorno (no incluido en repo)
-├── .env.example              # Template de variables
+├── .env                           # Variables de entorno (no incluido en repo)
+├── .env.example                   # Template de variables
 ├── config/
-│   └── database.js           # Pool de conexiones MySQL
+│   └── database.js                # Pool de conexiones MySQL
 ├── controllers/
-│   ├── authController.js     # Login, verificación, cambio password
-│   ├── catalogController.js  # Temas, frecuencias, formatos
-│   ├── datasetController.js  # CRUD datasets, estadísticas
-│   ├── andinoController.js   # Integración con portal de datos
-│   └── notificacionesController.js  # Sistema de alertas por email
+│   ├── authController.js          # Login, verificación, cambio password
+│   ├── catalogController.js       # Temas, frecuencias, formatos
+│   ├── datasetController.js       # CRUD datasets, estadísticas
+│   ├── areasController.js         # CRUD áreas responsables
+│   ├── andinoController.js        # Integración con portal de datos
+│   ├── notificacionesController.js  # Sistema de alertas por email
+│   └── reportesController.js      # Generación de reportes PDF
 ├── services/
-│   ├── emailService.js       # Configuración SMTP y envío
-│   └── emailTemplates.js     # Plantillas HTML para emails
+│   ├── emailService.js            # Configuración SMTP y envío
+│   └── emailTemplates.js          # Plantillas HTML para emails
 ├── database/
-│   └── schema.sql            # Estructura y datos iniciales de la BD
+│   └── schema.sql                 # Estructura y datos iniciales de la BD
 ├── middleware/
-│   └── auth.js               # JWT middleware
+│   └── auth.js                    # JWT middleware
 ├── routes/
-│   └── index.js              # Definición de rutas API
+│   └── index.js                   # Definición de rutas API
 ├── scripts/
-│   └── setup-admin.js        # Script para crear usuario admin
-└── public/                   # Frontend
-    ├── index.html            # Tablero de seguimiento
-    ├── datasets.html         # Listado de datasets
-    ├── dataset.html          # Detalle de dataset
-    ├── login.html            # Formulario de login
-    ├── admin.html            # Panel de administración
+│   └── setup-admin.js             # Script para crear usuario admin
+└── public/                        # FRONTEND
+    ├── index.html                 # Tablero de seguimiento
+    ├── datasets.html              # Listado de datasets
+    ├── dataset.html               # Detalle de dataset
+    ├── login.html                 # Formulario de login
+    ├── admin.html                 # Panel de administración de datasets y correos
+    ├── areas.html                 # Panel de administración de áreas
+    ├── reportes.html              # Generador de reportes
     ├── css/
     │   └── styles.css
     ├── js/
-    │   ├── config.js         # Configuración (API_URL)
-    │   ├── auth.js           # Manejo de autenticación
-    │   ├── api.js            # Llamadas a la API y utilidades
-    │   ├── dashboard.js      # Lógica del tablero
-    │   ├── datasets.js       # Listado de datasets
-    │   ├── dataset-detail.js # Detalle de dataset
-    │   └── admin.js          # Panel de administración
+    │   ├── config.js              # Configuración (API_URL)
+    │   ├── auth.js                # Manejo de autenticación
+    │   ├── api.js                 # Llamadas a la API y utilidades
+    │   ├── dashboard.js           # Lógica del tablero
+    │   ├── datasets.js            # Listado de datasets
+    │   ├── dataset-detail.js      # Detalle de dataset
+    │   ├── admin.js               # Panel de administración
+    │   ├── areas.js               # Gestión de áreas responsables
+    │   └── reportes.js            # Generación de reportes PDF
     └── img/
         ├── icon.png
         ├── logo-2025.png
@@ -128,18 +100,68 @@ Desde **phpMyAdmin** en cPanel:
 | `usuarios` | Administradores del sistema |
 | `temas` | Catálogo de temas para clasificación |
 | `frecuencias` | Catálogo de frecuencias de actualización |
+| `areas` | Áreas responsables con contactos y emails |
 | `datasets` | Registro principal de datasets |
 | `historial_actualizaciones` | Log de actualizaciones realizadas |
+| `notificaciones_log` | Registro de notificaciones enviadas |
+
+### Migración desde v1.2.0 a v1.3.0
+
+Si ya tenés la versión 1.2.0 instalada, ejecutar en phpMyAdmin:
+
+```sql
+-- Crear tabla de áreas
+CREATE TABLE IF NOT EXISTS `areas` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `nombre` VARCHAR(255) NOT NULL,
+  `contacto` VARCHAR(255) DEFAULT NULL,
+  `emails` VARCHAR(500) DEFAULT NULL,
+  `activo` TINYINT(1) DEFAULT 1,
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY `unique_nombre` (`nombre`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Migrar áreas existentes desde datasets
+INSERT IGNORE INTO `areas` (`nombre`)
+SELECT DISTINCT `area_responsable` FROM `datasets` 
+WHERE `area_responsable` IS NOT NULL AND `area_responsable` != '';
+
+-- Agregar columna area_id a datasets
+ALTER TABLE `datasets` ADD COLUMN `area_id` INT DEFAULT NULL AFTER `area_responsable`;
+ALTER TABLE `datasets` ADD CONSTRAINT `fk_dataset_area` FOREIGN KEY (`area_id`) REFERENCES `areas`(`id`) ON DELETE SET NULL;
+
+-- Vincular datasets con áreas migradas
+UPDATE `datasets` d 
+JOIN `areas` a ON d.`area_responsable` = a.`nombre` 
+SET d.`area_id` = a.`id`;
+
+-- Crear tabla de log de notificaciones
+CREATE TABLE IF NOT EXISTS `notificaciones_log` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `tipo` ENUM('interno-60','interno-30','interno-vencido','externo-60','externo-40','externo-5','externo-vencido','area-aviso-40') NOT NULL,
+  `area_id` INT DEFAULT NULL,
+  `destinatarios` VARCHAR(500) NOT NULL,
+  `datasets_ids` VARCHAR(500) NOT NULL,
+  `cantidad_datasets` INT NOT NULL,
+  `enviado_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  `success` TINYINT(1) DEFAULT 1,
+  `error_message` TEXT DEFAULT NULL,
+  FOREIGN KEY (`area_id`) REFERENCES `areas`(`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+```
 
 ### Migración desde v1.0.0
 
-Si ya tenés la versión 1.0.0 instalada, ejecutar en phpMyAdmin:
+Si tenés la versión 1.0.0, ejecutar primero:
 
 ```sql
 ALTER TABLE `datasets` 
 ADD COLUMN `tipo_gestion` ENUM('interna', 'externa') NOT NULL DEFAULT 'externa'
 AFTER `observaciones`;
 ```
+
+Y luego ejecutar la migración de v1.2.0 a v1.3.0.
 
 ---
 
@@ -269,6 +291,8 @@ Esto ejecuta las notificaciones todos los días a las 8:00 AM.
 | GET | `/api/catalogos/temas` | Listar temas |
 | GET | `/api/catalogos/frecuencias` | Listar frecuencias |
 | GET | `/api/catalogos/formatos` | Listar formatos disponibles |
+| GET | `/api/areas` | Listar áreas activas |
+| GET | `/api/areas/:id` | Detalle de un área |
 | GET | `/api/andino/fetch?url=...` | Obtener metadatos desde el portal |
 
 ### Protegidos (requieren JWT)
@@ -281,10 +305,17 @@ Esto ejecuta las notificaciones todos los días a las 8:00 AM.
 | PUT | `/api/datasets/:id` | Actualizar dataset |
 | DELETE | `/api/datasets/:id` | Eliminar dataset (soft delete) |
 | POST | `/api/datasets/:id/actualizar` | Registrar actualización |
+| POST | `/api/areas` | Crear área |
+| PUT | `/api/areas/:id` | Actualizar área |
+| DELETE | `/api/areas/:id` | Eliminar área |
 | GET | `/api/notificaciones/ejecutar` | Ejecutar proceso de notificaciones |
 | GET | `/api/notificaciones/prueba/:tipo` | Enviar email de prueba |
 | GET | `/api/notificaciones/verificar-smtp` | Verificar conexión SMTP |
 | GET | `/api/notificaciones/preview/:tipo` | Previsualizar email |
+| GET | `/api/reportes/estado-general` | Descargar reporte PDF general |
+| GET | `/api/reportes/historial-notificaciones` | Descargar historial de notificaciones |
+| GET | `/api/reportes/por-area/:areaId` | Descargar reporte de un área |
+| GET | `/api/reportes/cumplimiento` | Descargar reporte de cumplimiento |
 
 ### Cron (requiere secret)
 
@@ -298,6 +329,7 @@ Esto ejecuta las notificaciones todos los días a las 8:00 AM.
 - `?frecuencia=ID` - Filtrar por frecuencia
 - `?estado=actualizado|proximo|atrasado|sin-respuesta` - Filtrar por estado
 - `?busqueda=texto` - Buscar en título y descripción
+- `?area=ID` - Filtrar por área responsable
 
 ---
 
@@ -322,9 +354,23 @@ Esto ejecuta las notificaciones todos los días a las 8:00 AM.
 - Verificar conexión SMTP desde panel Admin
 - Revisar que CRON_SECRET coincide en `.env` y cron job
 
+### PDFs con páginas en blanco
+- Actualizar a v1.3.0 (corregido con `bufferPages: true`)
+
 ---
 
 ## Changelog
+
+### v1.3.0 (2025-12-07)
+- Sistema de gestión de áreas con CRUD completo
+- Tabla `areas` estructurada con contacto y emails múltiples
+- Notificaciones diferenciadas para gestión interna vs externa
+- Nuevo tipo de notificación `area-aviso-40` para avisar a las áreas
+- Sistema de reportes PDF con 4 tipos de reporte
+- Tarjetas visuales en reportes Por Área e Historial
+- Calendario de vencimientos en dashboard (próximos 12 meses)
+- Tabla `notificaciones_log` para registro de emails enviados
+- Fix área en detalle dataset: muestra correctamente el nombre
 
 ### v1.2.0 (2025-12-05)
 - Integración con API de Andino (portal de datos abiertos)
