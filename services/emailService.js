@@ -18,7 +18,7 @@ const transporter = nodemailer.createTransport({
   }
 });
 
-// Destinatarios por defecto
+// Destinatarios por defecto (DGMIT)
 const DEFAULT_RECIPIENTS = [
   'datospublicos@comodoro.gov.ar',
   'mit@comodoro.gov.ar',
@@ -26,7 +26,7 @@ const DEFAULT_RECIPIENTS = [
 ];
 
 /**
- * Envía un email
+ * Envía un email a los destinatarios por defecto (DGMIT)
  * @param {Object} options - Opciones del email
  * @param {string} options.subject - Asunto
  * @param {string} options.html - Contenido HTML
@@ -45,6 +45,34 @@ export const sendEmail = async ({ subject, html, to = DEFAULT_RECIPIENTS }) => {
     return { success: true, messageId: info.messageId };
   } catch (error) {
     console.error('❌ Error enviando email:', error.message);
+    return { success: false, error: error.message };
+  }
+};
+
+/**
+ * Envía un email a un área específica (para avisos de -40 días)
+ * @param {Object} options - Opciones del email
+ * @param {string} options.subject - Asunto
+ * @param {string} options.html - Contenido HTML
+ * @param {string[]} options.to - Destinatarios del área
+ */
+export const sendEmailToArea = async ({ subject, html, to }) => {
+  if (!to || to.length === 0) {
+    return { success: false, error: 'No hay destinatarios' };
+  }
+
+  try {
+    const info = await transporter.sendMail({
+      from: `"RPAD - Datos Abiertos MCR" <${process.env.SMTP_USER}>`,
+      to: to.join(', '),
+      subject,
+      html
+    });
+
+    console.log(`✉️ Email a área enviado: ${subject} → ${to.join(', ')} (${info.messageId})`);
+    return { success: true, messageId: info.messageId };
+  } catch (error) {
+    console.error('❌ Error enviando email a área:', error.message);
     return { success: false, error: error.message };
   }
 };
