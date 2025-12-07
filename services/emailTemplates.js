@@ -18,6 +18,18 @@ const COLORS = {
 const RPAD_URL = 'https://rpad.mcrmodernizacion.gob.ar';
 
 /**
+ * Escapa caracteres HTML
+ */
+const escapeHtml = (text) => {
+  if (!text) return '';
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+};
+
+/**
  * Genera el HTML base del email
  */
 const baseTemplate = ({ title, subtitle, actionText, datasets, accentColor }) => `
@@ -85,7 +97,8 @@ const baseTemplate = ({ title, subtitle, actionText, datasets, accentColor }) =>
                   <tr>
                     <td style="padding: 12px;">
                       <p style="margin: 0; color: ${COLORS.dark}; font-size: 14px; font-weight: 600;">${i + 1}. ${escapeHtml(d.titulo)}</p>
-                      <p style="margin: 6px 0 0 0; color: ${COLORS.muted}; font-size: 13px;">🏢 ${escapeHtml(d.area_responsable)}</p>
+                      <p style="margin: 4px 0 0 0; color: ${COLORS.muted}; font-size: 12px;">🔄 Frecuencia de actualización: ${escapeHtml(d.frecuencia_nombre || 'Sin definir')}</p>
+                      <p style="margin: 6px 0 0 0; color: ${COLORS.muted}; font-size: 13px;">🏢 ${escapeHtml(d.area_nombre || d.area_responsable)}</p>
                       ${d.url_dataset ? `<p style="margin: 6px 0 0 0;"><a href="${d.url_dataset}" style="color: ${COLORS.primary}; font-size: 13px; text-decoration: none;">🔗 Ver en Portal de Datos Abiertos</a></p>` : ''}
                     </td>
                   </tr>
@@ -121,15 +134,373 @@ const baseTemplate = ({ title, subtitle, actionText, datasets, accentColor }) =>
 `;
 
 /**
- * Escapa caracteres HTML
+ * Template para externos -40 días (con datos de contacto del área)
  */
-const escapeHtml = (text) => {
-  if (!text) return '';
-  return text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
+const externo40diasTemplate = (datasets) => {
+  const datasetsHtml = datasets.map((d, i) => {
+    // Construir líneas de contacto del área
+    const contactLines = [];
+    if (d.area_superior) contactLines.push(`📍 ${escapeHtml(d.area_superior)}`);
+    if (d.email_principal) contactLines.push(`📧 ${escapeHtml(d.email_principal)}`);
+    if (d.email_secundario) contactLines.push(`📧 ${escapeHtml(d.email_secundario)}`);
+    if (d.telefono_area) contactLines.push(`📞 ${escapeHtml(d.telefono_area)}`);
+    if (d.celular_area) contactLines.push(`📱 ${escapeHtml(d.celular_area)}`);
+    if (d.nombre_contacto) {
+      let contactoStr = `👤 ${escapeHtml(d.nombre_contacto)}`;
+      if (d.telefono_contacto) contactoStr += ` - ${escapeHtml(d.telefono_contacto)}`;
+      if (d.email_contacto) contactoStr += ` - ${escapeHtml(d.email_contacto)}`;
+      contactLines.push(contactoStr);
+    }
+
+    return `
+      <table role="presentation" style="width: 100%; margin-bottom: 16px; background-color: #ffffff; border: 1px solid ${COLORS.border}; border-radius: 6px;">
+        <tr>
+          <td style="padding: 16px;">
+            <p style="margin: 0; color: ${COLORS.dark}; font-size: 15px; font-weight: 600;">${i + 1}. ${escapeHtml(d.titulo)}</p>
+            <p style="margin: 4px 0 0 0; color: ${COLORS.muted}; font-size: 12px;">🔄 Frecuencia de actualización: ${escapeHtml(d.frecuencia_nombre || 'Sin definir')}</p>
+            <p style="margin: 8px 0 4px 0; color: ${COLORS.dark}; font-size: 14px; font-weight: 500;">🏢 ${escapeHtml(d.area_nombre)}</p>
+            ${contactLines.length > 0 ? `
+              <div style="margin: 8px 0 0 0; padding: 10px; background-color: ${COLORS.light}; border-radius: 4px;">
+                ${contactLines.map(line => `<p style="margin: 4px 0; color: ${COLORS.muted}; font-size: 13px;">${line}</p>`).join('')}
+              </div>
+            ` : `<p style="margin: 8px 0 0 0; color: ${COLORS.orange}; font-size: 13px;">⚠️ Sin datos de contacto configurados</p>`}
+            ${d.url_dataset ? `<p style="margin: 10px 0 0 0;"><a href="${d.url_dataset}" style="color: ${COLORS.primary}; font-size: 13px; text-decoration: none;">🔗 Ver en Portal de Datos Abiertos</a></p>` : ''}
+          </td>
+        </tr>
+      </table>
+    `;
+  }).join('');
+
+  return `
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Logística: Distribución de Notas</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: ${COLORS.light};">
+  <table role="presentation" style="width: 100%; border-collapse: collapse;">
+    <tr>
+      <td style="padding: 20px;">
+        <table role="presentation" style="max-width: 650px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+          
+          <!-- Header -->
+          <tr>
+            <td style="background: linear-gradient(135deg, ${COLORS.dark} 0%, ${COLORS.primary} 100%); padding: 24px; text-align: center;">
+              <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: 600;">📊 RPAD</h1>
+              <p style="color: rgba(255,255,255,0.8); margin: 8px 0 0 0; font-size: 14px;">Sistema de Notificaciones</p>
+            </td>
+          </tr>
+
+          <!-- Accent Bar -->
+          <tr>
+            <td style="background-color: ${COLORS.warning}; height: 4px;"></td>
+          </tr>
+
+          <!-- Title -->
+          <tr>
+            <td style="padding: 24px 24px 16px 24px;">
+              <h2 style="color: ${COLORS.dark}; margin: 0; font-size: 20px; font-weight: 600;">Fase de distribución</h2>
+              <p style="color: ${COLORS.muted}; margin: 8px 0 0 0; font-size: 14px;">Faltan 40 días para el vencimiento. La etapa de redacción debería estar finalizada</p>
+            </td>
+          </tr>
+
+          <!-- Action Box -->
+          <tr>
+            <td style="padding: 0 24px;">
+              <table role="presentation" style="width: 100%; background-color: ${COLORS.light}; border-radius: 6px; border-left: 4px solid ${COLORS.warning};">
+                <tr>
+                  <td style="padding: 16px;">
+                    <p style="margin: 0; color: ${COLORS.dark}; font-size: 14px;"><strong>Acción recomendada:</strong></p>
+                    <p style="margin: 8px 0 0 0; color: ${COLORS.muted}; font-size: 14px;">Gestionar la logística y entrega de los pedidos a las áreas correspondientes. Debajo encontrará los datos de contacto de cada área para facilitar el seguimiento.</p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Divider -->
+          <tr>
+            <td style="padding: 24px;">
+              <hr style="border: none; border-top: 1px solid ${COLORS.border}; margin: 0;">
+            </td>
+          </tr>
+
+          <!-- Datasets List with Contact Info -->
+          <tr>
+            <td style="padding: 0 24px;">
+              <p style="margin: 0 0 16px 0; color: ${COLORS.dark}; font-size: 14px; font-weight: 600;">Datasets y datos de contacto:</p>
+              ${datasetsHtml}
+            </td>
+          </tr>
+
+          <!-- RPAD Link -->
+          <tr>
+            <td style="padding: 24px; text-align: center;">
+              <a href="${RPAD_URL}" style="display: inline-block; background-color: ${COLORS.primary}; color: #ffffff; padding: 12px 24px; border-radius: 6px; text-decoration: none; font-size: 14px; font-weight: 500;">Ver todos los datasets en RPAD</a>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background-color: ${COLORS.light}; padding: 16px 24px; text-align: center; border-top: 1px solid ${COLORS.border};">
+              <p style="margin: 0; color: ${COLORS.muted}; font-size: 12px;">
+                Sistema de Notificaciones RPAD<br>
+                Dirección de Datos Públicos y Comunicación<br>
+                Municipalidad de Comodoro Rivadavia
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+`;
+};
+
+/**
+ * Genera HTML de datasets con datos de contacto completos
+ * Reutilizable para todos los templates de gestión externa
+ */
+const generarDatasetsConContacto = (datasets) => {
+  return datasets.map((d, i) => {
+    const contactLines = [];
+    if (d.area_superior) contactLines.push(`📍 ${escapeHtml(d.area_superior)}`);
+    if (d.email_principal) contactLines.push(`📧 ${escapeHtml(d.email_principal)}`);
+    if (d.email_secundario) contactLines.push(`📧 ${escapeHtml(d.email_secundario)}`);
+    if (d.telefono_area) contactLines.push(`📞 ${escapeHtml(d.telefono_area)}`);
+    if (d.celular_area) contactLines.push(`📱 ${escapeHtml(d.celular_area)}`);
+    if (d.nombre_contacto) {
+      let contactoStr = `👤 ${escapeHtml(d.nombre_contacto)}`;
+      if (d.telefono_contacto) contactoStr += ` - ${escapeHtml(d.telefono_contacto)}`;
+      if (d.email_contacto) contactoStr += ` - ${escapeHtml(d.email_contacto)}`;
+      contactLines.push(contactoStr);
+    }
+
+    return `
+      <table role="presentation" style="width: 100%; margin-bottom: 16px; background-color: #ffffff; border: 1px solid ${COLORS.border}; border-radius: 6px;">
+        <tr>
+          <td style="padding: 16px;">
+            <p style="margin: 0; color: ${COLORS.dark}; font-size: 15px; font-weight: 600;">${i + 1}. ${escapeHtml(d.titulo)}</p>
+            <p style="margin: 4px 0 0 0; color: ${COLORS.muted}; font-size: 12px;">🔄 Frecuencia de actualización: ${escapeHtml(d.frecuencia_nombre || 'Sin definir')}</p>
+            <p style="margin: 8px 0 4px 0; color: ${COLORS.dark}; font-size: 14px; font-weight: 500;">🏢 ${escapeHtml(d.area_nombre)}</p>
+            ${contactLines.length > 0 ? `
+              <div style="margin: 8px 0 0 0; padding: 10px; background-color: ${COLORS.light}; border-radius: 4px;">
+                ${contactLines.map(line => `<p style="margin: 4px 0; color: ${COLORS.muted}; font-size: 13px;">${line}</p>`).join('')}
+              </div>
+            ` : `<p style="margin: 8px 0 0 0; color: ${COLORS.orange}; font-size: 13px;">⚠️ Sin datos de contacto configurados</p>`}
+            ${d.url_dataset ? `<p style="margin: 10px 0 0 0;"><a href="${d.url_dataset}" style="color: ${COLORS.primary}; font-size: 13px; text-decoration: none;">🔗 Ver en Portal de Datos Abiertos</a></p>` : ''}
+          </td>
+        </tr>
+      </table>
+    `;
+  }).join('');
+};
+
+/**
+ * Template base para externos con datos de contacto
+ */
+const baseExternoConContacto = ({ title, subtitle, actionText, datasets, accentColor }) => `
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${title}</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: ${COLORS.light};">
+  <table role="presentation" style="width: 100%; border-collapse: collapse;">
+    <tr>
+      <td style="padding: 20px;">
+        <table role="presentation" style="max-width: 650px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+          
+          <!-- Header -->
+          <tr>
+            <td style="background: linear-gradient(135deg, ${COLORS.dark} 0%, ${COLORS.primary} 100%); padding: 24px; text-align: center;">
+              <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: 600;">📊 RPAD</h1>
+              <p style="color: rgba(255,255,255,0.8); margin: 8px 0 0 0; font-size: 14px;">Sistema de Notificaciones</p>
+            </td>
+          </tr>
+
+          <!-- Accent Bar -->
+          <tr>
+            <td style="background-color: ${accentColor}; height: 4px;"></td>
+          </tr>
+
+          <!-- Title -->
+          <tr>
+            <td style="padding: 24px 24px 16px 24px;">
+              <h2 style="color: ${COLORS.dark}; margin: 0; font-size: 20px; font-weight: 600;">${title}</h2>
+              <p style="color: ${COLORS.muted}; margin: 8px 0 0 0; font-size: 14px;">${subtitle}</p>
+            </td>
+          </tr>
+
+          <!-- Action Box -->
+          <tr>
+            <td style="padding: 0 24px;">
+              <table role="presentation" style="width: 100%; background-color: ${COLORS.light}; border-radius: 6px; border-left: 4px solid ${accentColor};">
+                <tr>
+                  <td style="padding: 16px;">
+                    <p style="margin: 0; color: ${COLORS.dark}; font-size: 14px;"><strong>Acción recomendada:</strong></p>
+                    <p style="margin: 8px 0 0 0; color: ${COLORS.muted}; font-size: 14px;">${actionText}</p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Divider -->
+          <tr>
+            <td style="padding: 24px;">
+              <hr style="border: none; border-top: 1px solid ${COLORS.border}; margin: 0;">
+            </td>
+          </tr>
+
+          <!-- Datasets List con datos de contacto -->
+          <tr>
+            <td style="padding: 0 24px;">
+              <p style="margin: 0 0 16px 0; color: ${COLORS.dark}; font-size: 14px; font-weight: 600;">Datasets y datos de contacto:</p>
+              ${generarDatasetsConContacto(datasets)}
+            </td>
+          </tr>
+
+          <!-- RPAD Link -->
+          <tr>
+            <td style="padding: 24px; text-align: center;">
+              <a href="${RPAD_URL}" style="display: inline-block; background-color: ${COLORS.primary}; color: #ffffff; padding: 12px 24px; border-radius: 6px; text-decoration: none; font-size: 14px; font-weight: 500;">Ver todos los datasets en RPAD</a>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background-color: ${COLORS.light}; padding: 16px 24px; text-align: center; border-top: 1px solid ${COLORS.border};">
+              <p style="margin: 0; color: ${COLORS.muted}; font-size: 12px;">
+                Sistema de Notificaciones RPAD<br>
+                Dirección de Datos Públicos y Comunicación<br>
+                Municipalidad de Comodoro Rivadavia
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+`;
+
+/**
+ * Template para aviso a áreas externas (-40 días)
+ * Se envía directamente al email del área
+ */
+const areaAviso40diasTemplate = (areaData) => {
+  const datasetsHtml = areaData.datasets.map((d, i) => `
+    <tr>
+      <td style="padding: 12px; border-bottom: 1px solid ${COLORS.border};">
+        <p style="margin: 0; color: ${COLORS.dark}; font-size: 14px; font-weight: 500;">${i + 1}. ${escapeHtml(d.titulo)}</p>
+        <p style="margin: 4px 0 0 0; color: ${COLORS.muted}; font-size: 12px;">🔄 Frecuencia de actualización: ${escapeHtml(d.frecuencia_nombre || 'Sin definir')}</p>
+        ${d.url_dataset ? `<p style="margin: 6px 0 0 0;"><a href="${d.url_dataset}" style="color: ${COLORS.primary}; font-size: 13px; text-decoration: none;">🔗 Ver dataset en el portal</a></p>` : ''}
+      </td>
+    </tr>
+  `).join('');
+
+  return `
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aviso de Solicitud de Actualización de Datos</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: ${COLORS.light};">
+  <table role="presentation" style="width: 100%; border-collapse: collapse;">
+    <tr>
+      <td style="padding: 20px;">
+        <table role="presentation" style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+          
+          <!-- Header institucional -->
+          <tr>
+            <td style="background: linear-gradient(135deg, ${COLORS.dark} 0%, ${COLORS.primary} 100%); padding: 24px; text-align: center;">
+              <h1 style="color: #ffffff; margin: 0; font-size: 20px; font-weight: 600;">Municipalidad de Comodoro Rivadavia</h1>
+              <p style="color: rgba(255,255,255,0.8); margin: 8px 0 0 0; font-size: 14px;">Dirección General de Modernización e Investigación Territorial</p>
+            </td>
+          </tr>
+
+          <!-- Accent Bar -->
+          <tr>
+            <td style="background-color: ${COLORS.primary}; height: 4px;"></td>
+          </tr>
+
+          <!-- Saludo -->
+          <tr>
+            <td style="padding: 28px 24px 20px 24px;">
+              <p style="margin: 0; color: ${COLORS.dark}; font-size: 15px; line-height: 1.6;">
+                Estimados/as:
+              </p>
+              <p style="margin: 16px 0 0 0; color: ${COLORS.dark}; font-size: 15px; line-height: 1.6;">
+                Nos comunicamos desde la <strong>Dirección General de Modernización e Investigación Territorial</strong> de la Municipalidad de Comodoro Rivadavia para informarles que próximamente recibirán una nota formal solicitando la actualización de los siguientes datasets publicados en el Portal de Datos Abiertos:
+              </p>
+            </td>
+          </tr>
+
+          <!-- Lista de datasets -->
+          <tr>
+            <td style="padding: 0 24px;">
+              <table role="presentation" style="width: 100%; background-color: ${COLORS.light}; border-radius: 6px; border: 1px solid ${COLORS.border};">
+                ${datasetsHtml}
+              </table>
+            </td>
+          </tr>
+
+          <!-- Cierre -->
+          <tr>
+            <td style="padding: 24px;">
+              <p style="margin: 0; color: ${COLORS.dark}; font-size: 15px; line-height: 1.6;">
+                Mantener estos datos al día, además de dar cumplimiento a las obligaciones establecidas en la Ordenanza N.º 17.662/23 de Gobierno Abierto, facilita el acceso de la ciudadanía a información actualizada y agiliza los procesos internos del Municipio al reducir la necesidad de solicitarla por canales tradicionales. Quedamos a disposición para cualquier consulta. ¡Muchas gracias!
+              </p>
+            </td>
+          </tr>
+
+          <!-- Firma -->
+          <tr>
+            <td style="padding: 0 24px 24px 24px;">
+              <table role="presentation" style="width: 100%; background-color: ${COLORS.light}; border-radius: 6px; padding: 16px; border-left: 4px solid ${COLORS.primary};">
+                <tr>
+                  <td style="padding: 16px;">
+                    <p style="margin: 0; color: ${COLORS.dark}; font-size: 14px; font-weight: 600;">Dirección de Datos Públicos y Comunicación</p>
+                    <p style="margin: 4px 0 0 0; color: ${COLORS.muted}; font-size: 13px;">Dirección General de Modernización e Investigación Territorial</p>
+                    <p style="margin: 12px 0 0 0; color: ${COLORS.muted}; font-size: 13px;">
+                      📱 Whatsapp: 297 4056894<br>
+                      📧 E-mail: <a href="mailto:datospublicos@comodoro.gov.ar" style="color: ${COLORS.primary}; text-decoration: none;">datospublicos@comodoro.gov.ar</a>
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background-color: ${COLORS.light}; padding: 16px 24px; text-align: center; border-top: 1px solid ${COLORS.border};">
+              <p style="margin: 0; color: ${COLORS.muted}; font-size: 11px;">
+                Este es un mensaje automático del sistema RPAD.<br>
+                Portal de Datos Abiertos: <a href="https://datos.comodoro.gov.ar" style="color: ${COLORS.primary}; text-decoration: none;">datos.comodoro.gov.ar</a>
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+`;
 };
 
 // =====================================================
@@ -175,10 +546,10 @@ export const internoVencido = (datasets) => ({
 
 export const externo60dias = (datasets) => ({
   subject: 'Gestión Administrativa: Redacción de Notas',
-  html: baseTemplate({
+  html: baseExternoConContacto({
     title: 'Inicio del proceso administrativo',
     subtitle: 'Faltan 60 días para el vencimiento',
-    actionText: 'Redactar las notas de solicitud formal dirigidas a las áreas responsables listadas abajo.',
+    actionText: 'Redactar las notas de solicitud formal dirigidas a las áreas responsables listadas abajo. Debajo encontrará los datos de contacto de cada área.',
     datasets,
     accentColor: COLORS.primary
   })
@@ -186,21 +557,15 @@ export const externo60dias = (datasets) => ({
 
 export const externo40dias = (datasets) => ({
   subject: 'Logística: Distribución de Notas',
-  html: baseTemplate({
-    title: 'Fase de distribución',
-    subtitle: 'Faltan 40 días para el vencimiento. La etapa de redacción debería estar finalizada',
-    actionText: 'Gestionar la logística y entrega de los pedidos a las áreas correspondientes para asegurar la recepción de datos a tiempo.',
-    datasets,
-    accentColor: COLORS.warning
-  })
+  html: externo40diasTemplate(datasets)
 });
 
 export const externo5dias = (datasets) => ({
   subject: 'Seguimiento: Vencimiento Inminente',
-  html: baseTemplate({
+  html: baseExternoConContacto({
     title: 'Alerta de plazo',
     subtitle: 'Quedan solo 5 días',
-    actionText: 'Si no se ha recibido respuesta, recomendamos contactar telefónicamente o vía email al enlace del área responsable para agilizar el envío.',
+    actionText: 'Si no se ha recibido respuesta, recomendamos contactar telefónicamente o vía email al enlace del área responsable para agilizar el envío. Debajo encontrará los datos de contacto.',
     datasets,
     accentColor: COLORS.orange
   })
@@ -208,11 +573,20 @@ export const externo5dias = (datasets) => ({
 
 export const externoVencido = (datasets) => ({
   subject: 'Resumen Mensual: Sin Respuesta (Externos)',
-  html: baseTemplate({
+  html: baseExternoConContacto({
     title: 'Reporte de estado: Sin Respuesta',
     subtitle: 'Hoy es día 1º del mes',
-    actionText: 'Aún aguardamos datos de las siguientes áreas externas. Se recomienda iniciar las acciones de reclamo o reiteración de solicitud.',
+    actionText: 'Aún aguardamos datos de las siguientes áreas externas. Se recomienda iniciar las acciones de reclamo o reiteración de solicitud. Debajo encontrará los datos de contacto.',
     datasets,
     accentColor: COLORS.danger
   })
+});
+
+// =====================================================
+// PLANTILLA PARA AVISO A ÁREAS (-40 días)
+// =====================================================
+
+export const areaAviso40dias = (areaData) => ({
+  subject: `Aviso: Solicitud próxima de actualización de datos - ${areaData.area_nombre}`,
+  html: areaAviso40diasTemplate(areaData)
 });
