@@ -15,11 +15,24 @@ import {
 import { getTemas, getFrecuencias, getFormatos } from '../controllers/catalogController.js';
 import { fetchFromAndino } from '../controllers/andinoController.js';
 import { 
+  getAreas, 
+  getAreaById, 
+  createArea, 
+  updateArea, 
+  deleteArea 
+} from '../controllers/areasController.js';
+import { 
   ejecutarNotificacionesDiarias, 
   pruebaNotificacion, 
   verificarSMTP,
   previewEmail 
 } from '../controllers/notificacionesController.js';
+import {
+  reporteEstadoGeneral,
+  reporteHistorialNotificaciones,
+  reportePorArea,
+  reporteCumplimiento
+} from '../controllers/reportesController.js';
 
 const router = Router();
 
@@ -40,6 +53,10 @@ router.get('/catalogos/temas', getTemas);
 router.get('/catalogos/frecuencias', getFrecuencias);
 router.get('/catalogos/formatos', getFormatos);
 
+// Áreas (lectura pública para selects)
+router.get('/areas', getAreas);
+router.get('/areas/:id', getAreaById);
+
 // Andino (Portal de Datos Abiertos)
 router.get('/andino/fetch', fetchFromAndino);
 
@@ -57,6 +74,11 @@ router.put('/datasets/:id', authMiddleware, updateDataset);
 router.delete('/datasets/:id', authMiddleware, deleteDataset);
 router.post('/datasets/:id/actualizar', authMiddleware, registrarActualizacion);
 
+// Áreas (escritura)
+router.post('/areas', authMiddleware, createArea);
+router.put('/areas/:id', authMiddleware, updateArea);
+router.delete('/areas/:id', authMiddleware, deleteArea);
+
 // =====================================================
 // Notificaciones (protegidas)
 // =====================================================
@@ -64,6 +86,14 @@ router.get('/notificaciones/ejecutar', authMiddleware, ejecutarNotificacionesDia
 router.get('/notificaciones/prueba/:tipo', authMiddleware, pruebaNotificacion);
 router.get('/notificaciones/verificar-smtp', authMiddleware, verificarSMTP);
 router.get('/notificaciones/preview/:tipo', authMiddleware, previewEmail);
+
+// =====================================================
+// Reportes PDF (protegidas)
+// =====================================================
+router.get('/reportes/estado-general', authMiddleware, reporteEstadoGeneral);
+router.get('/reportes/historial-notificaciones', authMiddleware, reporteHistorialNotificaciones);
+router.get('/reportes/por-area/:areaId', authMiddleware, reportePorArea);
+router.get('/reportes/cumplimiento', authMiddleware, reporteCumplimiento);
 
 // =====================================================
 // Cron (protegido por clave secreta)
