@@ -87,6 +87,51 @@ const API = {
     return data.data || [];
   },
 
+  // === ÁREAS ===
+  async getAreas() {
+    const response = await fetch(`${CONFIG.API_URL}/areas`);
+    const data = await response.json();
+    return data.data || [];
+  },
+
+  async getArea(id) {
+    const response = await fetch(`${CONFIG.API_URL}/areas/${id}`);
+    const data = await response.json();
+    return data.data;
+  },
+
+  async createArea(area) {
+    const response = await fetch(`${CONFIG.API_URL}/areas`, {
+      method: 'POST',
+      headers: Auth.getAuthHeaders(),
+      body: JSON.stringify(area)
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || 'Error al crear área');
+    return data.data;
+  },
+
+  async updateArea(id, area) {
+    const response = await fetch(`${CONFIG.API_URL}/areas/${id}`, {
+      method: 'PUT',
+      headers: Auth.getAuthHeaders(),
+      body: JSON.stringify(area)
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || 'Error al actualizar área');
+    return data.data;
+  },
+
+  async deleteArea(id) {
+    const response = await fetch(`${CONFIG.API_URL}/areas/${id}`, {
+      method: 'DELETE',
+      headers: Auth.getAuthHeaders()
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || 'Error al eliminar área');
+    return data;
+  },
+
   // === ANDINO (Portal de Datos Abiertos) ===
   async fetchFromAndino(url) {
     const response = await fetch(`${CONFIG.API_URL}/andino/fetch?url=${encodeURIComponent(url)}`);
@@ -124,6 +169,30 @@ const API = {
     });
     const data = await response.json();
     return data;
+  },
+
+  // === REPORTES PDF ===
+  getReporteEstadoGeneralUrl() {
+    const token = Auth.getToken();
+    return `${CONFIG.API_URL}/reportes/estado-general?token=${token}`;
+  },
+
+  getReporteHistorialUrl(desde, hasta) {
+    const token = Auth.getToken();
+    let url = `${CONFIG.API_URL}/reportes/historial-notificaciones?token=${token}`;
+    if (desde) url += `&desde=${desde}`;
+    if (hasta) url += `&hasta=${hasta}`;
+    return url;
+  },
+
+  getReportePorAreaUrl(areaId) {
+    const token = Auth.getToken();
+    return `${CONFIG.API_URL}/reportes/por-area/${areaId}?token=${token}`;
+  },
+
+  getReporteCumplimientoUrl(periodo) {
+    const token = Auth.getToken();
+    return `${CONFIG.API_URL}/reportes/cumplimiento?token=${token}&periodo=${periodo}`;
   }
 };
 
