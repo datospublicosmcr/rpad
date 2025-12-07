@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reportes - RPAD</title>
+  <link rel="icon" type="image/png" href="img/icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Source+Sans+3:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <header class="header">
+    <div class="header-top">
+      <div class="header-brand">
+        <img src="img/logo-2025.png" alt="MCR" class="header-logo">
+        <div>
+          <div class="header-title">RPAD</div>
+          <div class="header-subtitle">Generación de Reportes</div>
+        </div>
+      </div>
+      <div class="header-actions" id="header-actions">
+        <span id="user-name" class="text-small text-muted"></span>
+        <button onclick="Auth.logout()" class="btn btn-outline btn-sm"><span>🚪</span> Salir</button>
+      </div>
+    </div>
+    <nav class="header-nav">
+      <div class="header-nav-inner">
+        <a href="index.html" class="nav-link"><span>📊</span> Tablero</a>
+        <a href="datasets.html" class="nav-link"><span>📁</span> Datasets</a>
+        <a href="areas.html" class="nav-link"><span>🏢</span> Áreas</a>
+        <a href="admin.html" class="nav-link"><span>⚙️</span> Admin</a>
+        <a href="reportes.html" class="nav-link active"><span>📄</span> Reportes</a>
+      </div>
+    </nav>
+  </header>
+
+  <main>
+    <h1 class="page-title">Generación de Reportes</h1>
+    
+    <div id="message-container"></div>
+
+    <!-- Grid de reportes -->
+    <div class="stats-grid" style="grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));">
+      
+      <!-- Reporte Estado General -->
+      <div class="card">
+        <div class="card-header">
+          <h3 class="section-title" style="margin: 0;">📊 Estado General de Datasets</h3>
+        </div>
+        <div class="card-body">
+          <p class="text-muted text-small" style="margin-bottom: 1rem;">
+            Resumen completo del estado de todos los datasets: actualizados, próximos a vencer y vencidos. Incluye tabla detallada con información de cada dataset.
+          </p>
+          <button onclick="generarReporteEstadoGeneral()" class="btn btn-primary" style="width: 100%;">
+            <span>📥</span> Generar PDF
+          </button>
+        </div>
+      </div>
+
+      <!-- Reporte Historial Notificaciones -->
+      <div class="card">
+        <div class="card-header">
+          <h3 class="section-title" style="margin: 0;">📧 Historial de Notificaciones</h3>
+        </div>
+        <div class="card-body">
+          <p class="text-muted text-small" style="margin-bottom: 1rem;">
+            Registro de todas las notificaciones enviadas por el sistema, con filtro por rango de fechas.
+          </p>
+          <div class="form-row" style="margin-bottom: 1rem;">
+            <div class="form-group" style="flex: 1;">
+              <label class="form-label">Desde</label>
+              <input type="date" id="historial-desde" class="form-input">
+            </div>
+            <div class="form-group" style="flex: 1;">
+              <label class="form-label">Hasta</label>
+              <input type="date" id="historial-hasta" class="form-input">
+            </div>
+          </div>
+          <button onclick="generarReporteHistorial()" class="btn btn-primary" style="width: 100%;">
+            <span>📥</span> Generar PDF
+          </button>
+        </div>
+      </div>
+
+      <!-- Reporte por Área -->
+      <div class="card">
+        <div class="card-header">
+          <h3 class="section-title" style="margin: 0;">🏢 Reporte por Área</h3>
+        </div>
+        <div class="card-body">
+          <p class="text-muted text-small" style="margin-bottom: 1rem;">
+            Informe detallado de los datasets de un área específica, incluyendo datos de contacto y estado de actualización.
+          </p>
+          <div class="form-group" style="margin-bottom: 1rem;">
+            <label class="form-label">Seleccionar Área</label>
+            <select id="area-select" class="form-input">
+              <option value="">Cargando áreas...</option>
+            </select>
+          </div>
+          <button onclick="generarReportePorArea()" class="btn btn-primary" style="width: 100%;">
+            <span>📥</span> Generar PDF
+          </button>
+        </div>
+      </div>
+
+      <!-- Reporte Cumplimiento -->
+      <div class="card">
+        <div class="card-header">
+          <h3 class="section-title" style="margin: 0;">📈 Reporte de Cumplimiento</h3>
+        </div>
+        <div class="card-body">
+          <p class="text-muted text-small" style="margin-bottom: 1rem;">
+            Análisis del porcentaje de cumplimiento de actualización por área, ordenado de mayor a menor.
+          </p>
+          <div class="form-group" style="margin-bottom: 1rem;">
+            <label class="form-label">Período</label>
+            <select id="periodo-select" class="form-input">
+              <option value="mensual">Mensual</option>
+              <option value="trimestral">Trimestral</option>
+            </select>
+          </div>
+          <button onclick="generarReporteCumplimiento()" class="btn btn-primary" style="width: 100%;">
+            <span>📥</span> Generar PDF
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+      <div class="footer-section">
+        <h4>Dirección de Datos Públicos y Comunicación</h4>
+        <p>Municipalidad de Comodoro Rivadavia</p>
+        <p>Dirección General de Modernización e Investigación Territorial</p>
+      </div>
+      <div class="footer-section">
+        <h4>Contacto</h4>
+        <p>📧 <a href="mailto:datospublicos@comodoro.gov.ar">datospublicos@comodoro.gov.ar</a></p>
+        <p>🌐 <a href="https://datos.comodoro.gov.ar" target="_blank">datos.comodoro.gov.ar</a></p>
+      </div>
+      <div class="footer-section">
+        <h4>Marco Legal</h4>
+        <p>Ordenanza N° 17.662/23 - Artículo 8°</p>
+        <p>Licencia: CC BY-SA 4.0</p>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      © 2025 Municipalidad de Comodoro Rivadavia. RPAD v1.3.0
+    </div>
+  </footer>
+
+  <script src="js/config.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/reportes.js"></script>
+</body>
+</html>
