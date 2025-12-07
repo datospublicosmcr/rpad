@@ -3,8 +3,10 @@ let datasets = [];
 let temas = [];
 let frecuencias = [];
 let formatos = [];
+let areas = [];
 let deleteId = null;
-let currentEditDataset = null; // Dataset actual en edición
+let currentEditDataset = null;
+let andinoAreaReferencia = null; // Área de referencia importada de Andino
 
 document.addEventListener('DOMContentLoaded', async () => {
   // Verificar autenticación
@@ -26,10 +28,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 async function loadCatalogos() {
   try {
-    [temas, frecuencias, formatos] = await Promise.all([
+    [temas, frecuencias, formatos, areas] = await Promise.all([
       API.getTemas(),
       API.getFrecuencias(),
-      API.getFormatos()
+      API.getFormatos(),
+      API.getAreas()
     ]);
 
     // Llenar selects de temas
@@ -45,9 +48,17 @@ async function loadCatalogos() {
     const formatoOptions = formatos.map(f => `<option value="${f}">${f}</option>`).join('');
     document.getElementById('formato_primario').innerHTML = '<option value="">Seleccionar...</option>' + formatoOptions;
     document.getElementById('formato_secundario').innerHTML = '<option value="">Ninguno</option>' + formatoOptions;
+
+    // Llenar select de áreas
+    actualizarSelectAreas();
   } catch (error) {
     console.error('Error cargando catálogos:', error);
   }
+}
+
+function actualizarSelectAreas() {
+  const areaOptions = areas.map(a => `<option value="${a.id}">${Utils.escapeHtml(a.nombre)}</option>`).join('');
+  document.getElementById('area_id').innerHTML = '<option value="">Seleccionar...</option>' + areaOptions;
 }
 
 async function loadDatasets() {
@@ -69,7 +80,7 @@ function setupSearch() {
       const term = searchInput.value.toLowerCase();
       const filtered = datasets.filter(d => 
         d.titulo.toLowerCase().includes(term) ||
-        (d.area_responsable && d.area_responsable.toLowerCase().includes(term))
+        (d.area_nombre && d.area_nombre.toLowerCase().includes(term))
       );
       renderTable(filtered);
     }, 300);
@@ -104,7 +115,7 @@ function renderTable(data) {
       <tr>
         <td>
           <div style="font-weight: 500;">${Utils.escapeHtml(d.titulo)}</div>
-          <div class="text-small text-muted">${Utils.escapeHtml(d.area_responsable || '-')}</div>
+          <div class="text-small text-muted">${Utils.escapeHtml(d.area_nombre || '-')}</div>
         </td>
         <td><span class="badge ${estadoClase}">${estadoTexto}</span></td>
         <td><span title="${tipoGestionTexto}">${tipoGestionIcon} ${tipoGestionTexto}</span></td>
@@ -127,6 +138,7 @@ function renderTable(data) {
 
 function openStep1Modal() {
   currentEditDataset = null;
+  andinoAreaReferencia = null;
   document.getElementById('andino-url').value = '';
   document.getElementById('step1-error').classList.add('hidden');
   document.getElementById('step1-loading').classList.add('hidden');
@@ -143,6 +155,7 @@ function closeStep1Modal() {
 
 // Saltar al paso 2 sin importar (carga manual)
 function skipToManualEntry() {
+  andinoAreaReferencia = null;
   closeStep1Modal();
   openModal(null);
 }
@@ -184,6 +197,9 @@ async function fetchAndContinue() {
       return;
     }
 
+    // Guardar área de referencia de Andino
+    andinoAreaReferencia = result.data.area_responsable_texto || null;
+
     // Éxito: cerrar paso 1 y abrir paso 2 con datos pre-llenados
     closeStep1Modal();
     openModal(null, result.data);
@@ -214,10 +230,14 @@ function openModal(dataset = null, andinoData = null) {
   const form = document.getElementById('dataset-form');
   const title = document.getElementById('modal-title');
   const andinoUpdateSection = document.getElementById('andino-update-section');
+  const andinoRefSection = document.getElementById('andino-area-referencia');
 
   form.reset();
   document.getElementById('dataset-id').value = '';
   currentEditDataset = null;
+
+  // Ocultar sección de referencia de Andino por defecto
+  andinoRefSection.classList.add('hidden');
 
   if (dataset) {
     // MODO EDICIÓN
@@ -225,7 +245,7 @@ function openModal(dataset = null, andinoData = null) {
     currentEditDataset = dataset;
     document.getElementById('dataset-id').value = dataset.id;
     document.getElementById('titulo').value = dataset.titulo || '';
-    document.getElementById('area_responsable').value = dataset.area_responsable || '';
+    document.getElementById('area_id').value = dataset.area_id || '';
     document.getElementById('descripcion').value = dataset.descripcion || '';
     document.getElementById('tema_principal_id').value = dataset.tema_principal_id || '';
     document.getElementById('tema_secundario_id').value = dataset.tema_secundario_id || '';
@@ -253,8 +273,13 @@ function openModal(dataset = null, andinoData = null) {
     if (andinoData) {
       document.getElementById('titulo').value = andinoData.titulo || '';
       document.getElementById('descripcion').value = andinoData.descripcion || '';
-      document.getElementById('area_responsable').value = andinoData.area_responsable || '';
       document.getElementById('url_dataset').value = andinoData.url_dataset || '';
+      
+      // Mostrar área de referencia de Andino
+      if (andinoAreaReferencia) {
+        document.getElementById('andino-area-texto').textContent = andinoAreaReferencia;
+        andinoRefSection.classList.remove('hidden');
+      }
     }
   }
 
@@ -264,6 +289,7 @@ function openModal(dataset = null, andinoData = null) {
 function closeModal() {
   document.getElementById('modal-dataset').classList.remove('active');
   currentEditDataset = null;
+  andinoAreaReferencia = null;
 }
 
 async function editDataset(id) {
@@ -319,10 +345,9 @@ async function confirmUpdateFromAndino() {
       return;
     }
 
-    // Actualizar los campos en el formulario
+    // Actualizar solo título y descripción (área no se actualiza automáticamente)
     document.getElementById('titulo').value = result.data.titulo || '';
     document.getElementById('descripcion').value = result.data.descripcion || '';
-    document.getElementById('area_responsable').value = result.data.area_responsable || '';
 
     // Cerrar modal de confirmación
     closeConfirmUpdateModal();
@@ -335,6 +360,58 @@ async function confirmUpdateFromAndino() {
     btnConfirm.disabled = false;
     errorDiv.textContent = 'Error de conexión. Intente nuevamente.';
     errorDiv.classList.remove('hidden');
+  }
+}
+
+// =====================================================
+// MODAL CREAR ÁREA RÁPIDA
+// =====================================================
+
+function openQuickAreaModal() {
+  document.getElementById('quick-area-nombre').value = '';
+  document.getElementById('quick-area-error').classList.add('hidden');
+  document.getElementById('modal-quick-area').classList.add('active');
+  setTimeout(() => document.getElementById('quick-area-nombre').focus(), 100);
+}
+
+function closeQuickAreaModal() {
+  document.getElementById('modal-quick-area').classList.remove('active');
+}
+
+async function saveQuickArea() {
+  const nombre = document.getElementById('quick-area-nombre').value.trim();
+  const errorDiv = document.getElementById('quick-area-error');
+  const btnGuardar = document.getElementById('btn-quick-area-save');
+
+  if (!nombre) {
+    errorDiv.textContent = 'El nombre del área es obligatorio';
+    errorDiv.classList.remove('hidden');
+    return;
+  }
+
+  btnGuardar.disabled = true;
+  btnGuardar.textContent = 'Guardando...';
+  errorDiv.classList.add('hidden');
+
+  try {
+    const nuevaArea = await API.createArea({ nombre });
+    
+    // Agregar al array local y actualizar select
+    areas.push(nuevaArea);
+    areas.sort((a, b) => a.nombre.localeCompare(b.nombre));
+    actualizarSelectAreas();
+    
+    // Seleccionar la nueva área
+    document.getElementById('area_id').value = nuevaArea.id;
+    
+    closeQuickAreaModal();
+    Utils.showSuccess('Área creada correctamente');
+  } catch (error) {
+    errorDiv.textContent = error.message;
+    errorDiv.classList.remove('hidden');
+  } finally {
+    btnGuardar.disabled = false;
+    btnGuardar.textContent = 'Guardar';
   }
 }
 
@@ -352,7 +429,7 @@ document.getElementById('dataset-form').addEventListener('submit', async (e) => 
   const id = document.getElementById('dataset-id').value;
   const data = {
     titulo: document.getElementById('titulo').value,
-    area_responsable: document.getElementById('area_responsable').value,
+    area_id: parseInt(document.getElementById('area_id').value),
     descripcion: document.getElementById('descripcion').value,
     tema_principal_id: parseInt(document.getElementById('tema_principal_id').value),
     tema_secundario_id: document.getElementById('tema_secundario_id').value ? parseInt(document.getElementById('tema_secundario_id').value) : null,
@@ -479,7 +556,7 @@ async function enviarEmailPrueba() {
     Utils.showSuccess('Enviando email...');
     const res = await API.enviarNotificacionPrueba(tipo);
     if (res.success) {
-      Utils.showSuccess(`✅ Email enviado. Datasets encontrados: ${res.datasetsEncontrados}`);
+      Utils.showSuccess(`✅ Email enviado. Datasets encontrados: ${res.datasetsEncontrados || res.areasNotificadas?.length || 0}`);
     } else {
       Utils.showError(res.message || 'Error al enviar email');
     }
