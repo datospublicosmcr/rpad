@@ -52,7 +52,7 @@ function renderDataset(d) {
   document.title = `${d.titulo} - RPAD`;
   document.getElementById('breadcrumb-title').textContent = d.titulo;
   document.getElementById('dataset-titulo').textContent = d.titulo;
-  document.getElementById('dataset-area').textContent = d.area_responsable || 'Sin área asignada';
+  document.getElementById('dataset-area').textContent = d.area_nombre || 'Sin área asignada';
 
   // Estado - usar etiqueta larga en el detalle
   const estado = Utils.calcularEstado(d.proxima_actualizacion, d.frecuencia_dias, d.tipo_gestion);
