@@ -1057,7 +1057,7 @@ h4 { font-size: 1.125rem; }
 
 /* Agregar al final de styles.css */
 
-/* Botón Ver más para listas */
+/* BotÃ³n Ver mÃ¡s para listas */
 .btn-ver-mas {
   width: 100%;
   padding: 0.75rem;
@@ -1253,6 +1253,35 @@ h4 { font-size: 1.125rem; }
   color: var(--gray-900);
 }
 
+/* === CALENDARIO DE VENCIMIENTOS === */
+.calendar-section {
+  background: white;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.calendar-section .dashboard-section-title {
+  margin-bottom: 1rem;
+}
+
+.calendar-chart-container {
+  position: relative;
+  height: 180px;
+  width: 100%;
+}
+
+@media (max-width: 768px) {
+  .calendar-chart-container {
+    height: 150px;
+  }
+  
+  .calendar-section {
+    padding: 1rem;
+  }
+}
+
 /* === ALERT ITEMS MEJORADOS === */
 .alert-item {
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
@@ -1359,4 +1388,10 @@ h4 { font-size: 1.125rem; }
   .hero-subtitle {
     font-size: 0.875rem;
   }
+}
+
+/* Badge para estado "Sin respuesta" (gesti¨®n externa vencida) */
+.badge-sin-respuesta {
+  background-color: #6f42c1;
+  color: white;
 }
