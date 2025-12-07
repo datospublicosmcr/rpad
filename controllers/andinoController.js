@@ -58,7 +58,7 @@ export const fetchFromAndino = async (req, res) => {
       method: 'GET',
       headers: {
         'Accept': 'application/json',
-        'User-Agent': 'RPAD-MCR/1.1.0'
+        'User-Agent': 'RPAD-MCR/1.3.0'
       },
       timeout: 10000 // 10 segundos de timeout
     });
@@ -85,10 +85,11 @@ export const fetchFromAndino = async (req, res) => {
     const dataset = data.result;
 
     // Mapear campos de Andino a RPAD
+    // area_responsable_texto es solo referencia, no se usa directamente
     const mappedData = {
       titulo: dataset.title || '',
       descripcion: dataset.notes || '',
-      area_responsable: dataset.author || '',
+      area_responsable_texto: dataset.author || '', // Solo como referencia para el usuario
       url_dataset: url.trim()
     };
 
