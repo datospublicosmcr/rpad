@@ -32,12 +32,8 @@
     </div>
     <nav class="header-nav">
       <div class="header-nav-inner">
-        <a href="index.html" class="nav-link active">
-          <span>📊</span> Tablero
-        </a>
-        <a href="datasets.html" class="nav-link">
-          <span>📁</span> Datasets
-        </a>
+        <a href="index.html" class="nav-link active"><span>📊</span> Tablero</a>
+        <a href="datasets.html" class="nav-link"><span>📋</span> Datasets</a>
       </div>
     </nav>
   </header>
@@ -74,6 +70,14 @@
       <div class="stat-card-skeleton"></div>
       <div class="stat-card-skeleton"></div>
       <div class="stat-card-skeleton"></div>
+    </div>
+
+    <!-- Calendario de Vencimientos -->
+    <div class="calendar-section animate-slide-up" style="animation-delay: 0.25s;">
+      <h3 class="dashboard-section-title">📅 Calendario de Vencimientos (Próximos 12 Meses)</h3>
+      <div class="calendar-chart-container">
+        <canvas id="calendar-chart"></canvas>
+      </div>
     </div>
 
     <!-- Dashboard Grid -->
@@ -127,7 +131,7 @@
       </div>
     </div>
     <div class="footer-bottom">
-      © 2025 Municipalidad de Comodoro Rivadavia. RPAD v1.1.0
+      © 2025 Municipalidad de Comodoro Rivadavia. RPAD v1.3.0
     </div>
   </footer>
 
