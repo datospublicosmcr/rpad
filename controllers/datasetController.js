@@ -7,11 +7,21 @@ const DATASET_SELECT_QUERY = `
     f.nombre AS frecuencia_nombre,
     f.dias AS frecuencia_dias,
     tp.nombre AS tema_principal_nombre,
-    ts.nombre AS tema_secundario_nombre
+    ts.nombre AS tema_secundario_nombre,
+    a.nombre AS area_nombre,
+    a.area_superior AS area_superior,
+    a.email_principal AS area_email_principal,
+    a.email_secundario AS area_email_secundario,
+    a.telefono_area AS area_telefono,
+    a.celular_area AS area_celular,
+    a.nombre_contacto AS area_contacto_nombre,
+    a.telefono_contacto AS area_contacto_telefono,
+    a.email_contacto AS area_contacto_email
   FROM datasets d
   LEFT JOIN frecuencias f ON d.frecuencia_id = f.id
   LEFT JOIN temas tp ON d.tema_principal_id = tp.id
   LEFT JOIN temas ts ON d.tema_secundario_id = ts.id
+  LEFT JOIN areas a ON d.area_id = a.id
   WHERE d.activo = TRUE
 `;
 
@@ -65,7 +75,7 @@ export const getDatasets = async (req, res) => {
 
     // Filtro por búsqueda
     if (busqueda) {
-      query += ' AND (d.titulo LIKE ? OR d.area_responsable LIKE ? OR d.descripcion LIKE ?)';
+      query += ' AND (d.titulo LIKE ? OR a.nombre LIKE ? OR d.descripcion LIKE ?)';
       const searchTerm = `%${busqueda}%`;
       params.push(searchTerm, searchTerm, searchTerm);
     }
@@ -131,12 +141,12 @@ export const createDataset = async (req, res) => {
   try {
     const data = req.body;
 
-    // Validaciones básicas (ahora incluye tipo_gestion)
-    if (!data.titulo || !data.area_responsable || !data.frecuencia_id || 
+    // Validaciones básicas (ahora incluye area_id y tipo_gestion)
+    if (!data.titulo || !data.area_id || !data.frecuencia_id || 
         !data.formato_primario || !data.tema_principal_id || !data.tipo_gestion) {
       return res.status(400).json({
         success: false,
-        error: 'Faltan campos obligatorios: titulo, area_responsable, frecuencia_id, formato_primario, tema_principal_id, tipo_gestion'
+        error: 'Faltan campos obligatorios: titulo, area_id, frecuencia_id, formato_primario, tema_principal_id, tipo_gestion'
       });
     }
 
@@ -150,7 +160,7 @@ export const createDataset = async (req, res) => {
 
     const [result] = await pool.execute(
       `INSERT INTO datasets (
-        titulo, descripcion, area_responsable, frecuencia_id, 
+        titulo, descripcion, area_id, frecuencia_id, 
         formato_primario, formato_secundario, ultima_actualizacion, 
         proxima_actualizacion, tema_principal_id, tema_secundario_id, 
         url_dataset, observaciones, tipo_gestion
@@ -158,7 +168,7 @@ export const createDataset = async (req, res) => {
       [
         data.titulo,
         data.descripcion || null,
-        data.area_responsable,
+        data.area_id,
         data.frecuencia_id,
         data.formato_primario,
         data.formato_secundario || null,
@@ -231,9 +241,9 @@ export const updateDataset = async (req, res) => {
       updates.push('descripcion = ?');
       values.push(data.descripcion || null);
     }
-    if (data.area_responsable !== undefined) {
-      updates.push('area_responsable = ?');
-      values.push(data.area_responsable);
+    if (data.area_id !== undefined) {
+      updates.push('area_id = ?');
+      values.push(data.area_id);
     }
     if (data.frecuencia_id !== undefined) {
       updates.push('frecuencia_id = ?');
