@@ -1,5 +1,6 @@
 // Dashboard - Lógica principal con animaciones y gráficos
 let donutChart = null;
+let calendarChart = null;
 
 document.addEventListener('DOMContentLoaded', async () => {
   updateAuthUI();
@@ -59,6 +60,7 @@ async function loadDashboard() {
 
     renderStats(estadisticas);
     renderDonutChart(estadisticas);
+    renderCalendarChart(datasets);
     renderAlertas(datasets);
     
     const tasa = estadisticas.tasaActualizacion || 0;
@@ -349,4 +351,133 @@ function toggleProximos() {
   });
   
   btn.textContent = estanOcultos ? 'Ver menos' : `Ver más (${items.length - mostrarInicial} restantes)`;
+}
+
+// === CALENDARIO DE VENCIMIENTOS ===
+function renderCalendarChart(datasets) {
+  const canvas = document.getElementById('calendar-chart');
+  if (!canvas) return; // Si no existe el elemento, salir sin error
+  
+  const ctx = canvas.getContext('2d');
+  
+  // Generar los próximos 12 meses (desde el mes siguiente)
+  const meses = [];
+  const hoy = new Date();
+  const mesActual = hoy.getMonth();
+  const anioActual = hoy.getFullYear();
+  
+  for (let i = 1; i <= 12; i++) {
+    const fecha = new Date(anioActual, mesActual + i, 1);
+    meses.push({
+      mes: fecha.getMonth(),
+      anio: fecha.getFullYear(),
+      label: fecha.toLocaleDateString('es-AR', { month: 'short' }).replace('.', '') + ' ' + fecha.getFullYear().toString().slice(-2),
+      inicio: new Date(fecha.getFullYear(), fecha.getMonth(), 1),
+      fin: new Date(fecha.getFullYear(), fecha.getMonth() + 1, 0, 23, 59, 59)
+    });
+  }
+  
+  // Contar vencimientos por mes (solo datasets con frecuencia definida)
+  const vencimientosPorMes = meses.map(m => {
+    return datasets.filter(d => {
+      if (!d.proxima_actualizacion || d.frecuencia_dias === null) return false;
+      const fechaVenc = new Date(d.proxima_actualizacion);
+      return fechaVenc >= m.inicio && fechaVenc <= m.fin;
+    }).length;
+  });
+  
+  // Colores según cantidad (gradiente de verde a rojo)
+  const maxVencimientos = Math.max(...vencimientosPorMes, 1);
+  const colores = vencimientosPorMes.map(v => {
+    if (v === 0) return '#22c55e'; // Verde si no hay vencimientos
+    const ratio = v / maxVencimientos;
+    if (ratio <= 0.33) return '#22c55e'; // Verde
+    if (ratio <= 0.66) return '#f59e0b'; // Amarillo
+    return '#ef4444'; // Rojo
+  });
+  
+  const data = {
+    labels: meses.map(m => m.label),
+    datasets: [{
+      label: 'Datasets a vencer',
+      data: vencimientosPorMes,
+      backgroundColor: colores,
+      borderColor: colores.map(c => c),
+      borderWidth: 1,
+      borderRadius: 6,
+      borderSkipped: false,
+    }]
+  };
+  
+  const options = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+        titleFont: { size: 14, weight: '600' },
+        bodyFont: { size: 13 },
+        padding: 12,
+        cornerRadius: 8,
+        callbacks: {
+          title: function(context) {
+            const idx = context[0].dataIndex;
+            const m = meses[idx];
+            return new Date(m.anio, m.mes, 1).toLocaleDateString('es-AR', { month: 'long', year: 'numeric' });
+          },
+          label: function(context) {
+            const value = context.raw;
+            return value === 1 ? ' 1 dataset vence' : ` ${value} datasets vencen`;
+          }
+        }
+      }
+    },
+    scales: {
+      y: {
+        beginAtZero: true,
+        ticks: {
+          stepSize: 1,
+          font: { size: 11 },
+          color: '#6b7280'
+        },
+        grid: {
+          color: 'rgba(0, 0, 0, 0.05)'
+        }
+      },
+      x: {
+        ticks: {
+          font: { size: 11, weight: '500' },
+          color: '#374151'
+        },
+        grid: {
+          display: false
+        }
+      }
+    },
+    animation: {
+      duration: 1000,
+      easing: 'easeOutQuart'
+    },
+    onClick: (event, elements) => {
+      if (elements.length > 0) {
+        const idx = elements[0].index;
+        const m = meses[idx];
+        // Filtrar por mes específico (formato YYYY-MM)
+        const mesParam = `${m.anio}-${String(m.mes + 1).padStart(2, '0')}`;
+        window.location.href = `datasets.html?mes=${mesParam}`;
+      }
+    },
+    onHover: (event, elements) => {
+      event.native.target.style.cursor = elements.length > 0 ? 'pointer' : 'default';
+    }
+  };
+  
+  if (calendarChart) calendarChart.destroy();
+  
+  calendarChart = new Chart(ctx, {
+    type: 'bar',
+    data: data,
+    options: options
+  });
 }
