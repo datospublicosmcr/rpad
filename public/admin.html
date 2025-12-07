@@ -29,7 +29,9 @@
       <div class="header-nav-inner">
         <a href="index.html" class="nav-link"><span>📊</span> Tablero</a>
         <a href="datasets.html" class="nav-link"><span>📁</span> Datasets</a>
-        <a href="admin.html" class="nav-link active"><span>⚙️</span> Admin</a>
+        <a href="areas.html" class="nav-link"><span>🏢</span> Áreas</a>
+        <a href="admin.html" class="nav-link"><span>⚙️</span> Admin</a>
+        <a href="reportes.html" class="nav-link active"><span>📄</span> Reportes</a>
       </div>
     </nav>
   </header>
@@ -62,7 +64,7 @@
         <div>
           <p class="text-small" style="margin-bottom: 0.5rem; font-weight: 500;">Probar alertas específicas:</p>
           <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
-            <select id="tipo-notificacion" class="form-select" style="max-width: 260px;">
+            <select id="tipo-notificacion" class="form-select" style="max-width: 280px;">
               <optgroup label="Gestión Interna">
                 <option value="interno-60">Planificación (-60 días)</option>
                 <option value="interno-30">Vencimiento (-30 días)</option>
@@ -73,6 +75,9 @@
                 <option value="externo-40">Distribución (-40 días)</option>
                 <option value="externo-5">Último Aviso (-5 días)</option>
                 <option value="externo-vencido">Sin Respuesta (Resumen mensual)</option>
+              </optgroup>
+              <optgroup label="Aviso a Áreas">
+                <option value="area-aviso-40">Aviso a Áreas (-40 días)</option>
               </optgroup>
             </select>
             <button onclick="verPreviewEmail()" class="btn btn-outline btn-sm">👁️ Preview</button>
@@ -119,7 +124,7 @@
       <div class="modal-body">
         <div class="alert alert-info" style="margin-bottom: 1rem;">
           <strong>💡 Importar desde el Portal de Datos Abiertos</strong><br>
-          <span class="text-small">Pegue la URL del dataset para importar automáticamente el título, descripción y área responsable.</span>
+          <span class="text-small">Pegue la URL del dataset para importar automáticamente el título y descripción.</span>
         </div>
         
         <div class="form-group">
@@ -161,18 +166,31 @@
               <span>🔄</span> Actualizar desde portal
             </button>
             <span class="text-small text-muted" style="margin-left: 0.5rem;">
-              Sincronizar título, descripción y área responsable
+              Sincronizar título y descripción
             </span>
           </div>
 
-          <div class="form-row">
-            <div class="form-group">
-              <label class="form-label required">Título</label>
-              <input type="text" id="titulo" class="form-input" required>
+          <div class="form-group">
+            <label class="form-label required">Título</label>
+            <input type="text" id="titulo" class="form-input" required>
+          </div>
+
+          <!-- Área de referencia de Andino (solo informativo) -->
+          <div id="andino-area-referencia" class="hidden" style="margin-bottom: 1rem;">
+            <div style="padding: 0.75rem; background: #f8f9fa; border-radius: 6px; border-left: 3px solid #6c757d;">
+              <span class="text-small text-muted">📍 Área según portal:</span>
+              <span id="andino-area-texto" class="text-small" style="font-style: italic;"></span>
             </div>
-            <div class="form-group">
-              <label class="form-label required">Área Responsable</label>
-              <input type="text" id="area_responsable" class="form-input" required>
+          </div>
+
+          <!-- Área Responsable (select + botón +) -->
+          <div class="form-group">
+            <label class="form-label required">Área Responsable</label>
+            <div style="display: flex; gap: 0.5rem;">
+              <select id="area_id" class="form-select" required style="flex: 1;"></select>
+              <button type="button" class="btn btn-secondary" onclick="openQuickAreaModal()" title="Agregar nueva área">
+                <span>➕</span>
+              </button>
             </div>
           </div>
 
@@ -283,8 +301,7 @@
         <p class="text-small text-muted mt-2">
           <strong>Se reemplazarán los siguientes campos:</strong><br>
           • Título<br>
-          • Descripción<br>
-          • Área responsable
+          • Descripción
         </p>
         <div id="confirm-update-loading" class="loading hidden"><div class="spinner"></div></div>
         <div id="confirm-update-error" class="alert alert-error hidden mt-2"></div>
@@ -294,6 +311,28 @@
         <button class="btn btn-primary" onclick="confirmUpdateFromAndino()" id="btn-confirm-update">
           <span>🔄</span> Actualizar
         </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Crear Área Rápida -->
+  <div class="modal-overlay" id="modal-quick-area">
+    <div class="modal" style="max-width: 400px;">
+      <div class="modal-header">
+        <h3 class="modal-title">Nueva Área</h3>
+        <button class="modal-close" onclick="closeQuickAreaModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="text-small text-muted mb-4">Crear área rápidamente. Puede completar los datos de contacto más tarde en la sección "Áreas".</p>
+        <div class="form-group">
+          <label class="form-label required">Nombre del Área</label>
+          <input type="text" id="quick-area-nombre" class="form-input" placeholder="Ej: Dirección General de...">
+        </div>
+        <div id="quick-area-error" class="alert alert-error hidden"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeQuickAreaModal()">Cancelar</button>
+        <button class="btn btn-primary" onclick="saveQuickArea()" id="btn-quick-area-save">Guardar</button>
       </div>
     </div>
   </div>
@@ -317,7 +356,7 @@
       </div>
     </div>
     <div class="footer-bottom">
-      © 2025 Municipalidad de Comodoro Rivadavia. RPAD v1.2.0
+      © 2025 Municipalidad de Comodoro Rivadavia. RPAD v1.3.0
     </div>
   </footer>
 
