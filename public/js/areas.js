@@ -15,6 +15,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('user-name').textContent = `👤 ${user.nombre_completo || user.username}`;
   }
 
+  // Ocultar botón Nueva Área si es lector
+  if (!Auth.isAdmin()) {
+    document.getElementById('btn-nueva-area').style.display = 'none';
+  }
+
   await loadAreas();
   setupSearch();
 });
@@ -76,8 +81,10 @@ function renderTable(data) {
         </td>
         <td>
           <div class="table-actions">
+            ${Auth.isAdmin() ? `
             <button onclick="editArea(${a.id})" class="btn btn-secondary btn-sm" title="Editar">✏️</button>
             <button onclick="openDeleteModal(${a.id}, '${Utils.escapeHtml(a.nombre).replace(/'/g, "\\'")}')" class="btn btn-danger btn-sm" title="Eliminar" ${a.cantidad_datasets > 0 ? 'disabled' : ''}>🗑️</button>
+            ` : '<span class="text-muted text-small">Solo lectura</span>'}
           </div>
         </td>
       </tr>
