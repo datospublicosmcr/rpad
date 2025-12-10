@@ -193,6 +193,20 @@ const API = {
   getReporteCumplimientoUrl(periodo) {
     const token = Auth.getToken();
     return `${CONFIG.API_URL}/reportes/cumplimiento?token=${token}&periodo=${periodo}`;
+  },
+
+  // === NOTAS DOCX ===
+  async generarNota(datos) {
+    const response = await fetch(`${CONFIG.API_URL}/notas/generar`, {
+      method: 'POST',
+      headers: Auth.getAuthHeaders(),
+      body: JSON.stringify(datos)
+    });
+    if (!response.ok) {
+      const err = await response.json();
+      throw new Error(err.error || 'Error al generar la nota');
+    }
+    return await response.blob();
   }
 };
 
