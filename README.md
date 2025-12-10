@@ -4,12 +4,11 @@
 
 Sistema de seguimiento y gestión de actualización de datasets para la Municipalidad de Comodoro Rivadavia.
 
-**Versión actual:** 1.3.0
+**Versión actual:** 1.4.0
 
 ## Descripción
 
 RPAD permite registrar datasets, asignarles frecuencias de actualización y monitorear su estado. El tablero de seguimiento muestra estadísticas en tiempo real sobre datasets actualizados, próximos a vencer y vencidos, diferenciando entre gestión interna y externa.
-
 
 ## Tecnologías
 
@@ -20,6 +19,7 @@ RPAD permite registrar datasets, asignarles frecuencias de actualización y moni
 - **Gráficos**: Chart.js (via CDN)
 - **Email**: Nodemailer
 - **PDFs**: PDFKit
+- **DOCX:** docx (generación programática de documentos Word)
 
 ## Estructura del proyecto
 
@@ -38,12 +38,16 @@ rpad/
 │   ├── areasController.js         # CRUD áreas responsables
 │   ├── andinoController.js        # Integración con portal de datos
 │   ├── notificacionesController.js  # Sistema de alertas por email
+│   ├── notasController.js         # Generador de notas DOCX
 │   └── reportesController.js      # Generación de reportes PDF
 ├── services/
 │   ├── emailService.js            # Configuración SMTP y envío
 │   └── emailTemplates.js          # Plantillas HTML para emails
 ├── database/
-│   └── schema.sql                 # Estructura y datos iniciales de la BD
+│   ├── schema.sql                 # Estructura y datos iniciales de la BD
+│   └── updates/                   # Scripts de migración
+│       ├── migracion-v1.2.0-v1.3.0.sql
+│       └── migracion-v1.3.0-v1.4.0.sql
 ├── middleware/
 │   └── auth.js                    # JWT middleware
 ├── routes/
@@ -58,6 +62,7 @@ rpad/
     ├── admin.html                 # Panel de administración de datasets y correos
     ├── areas.html                 # Panel de administración de áreas
     ├── reportes.html              # Generador de reportes
+    ├── notas.html                 # Generador de notas administrativas DOCX
     ├── css/
     │   └── styles.css
     ├── js/
@@ -69,7 +74,8 @@ rpad/
     │   ├── dataset-detail.js      # Detalle de dataset
     │   ├── admin.js               # Panel de administración
     │   ├── areas.js               # Gestión de áreas responsables
-    │   └── reportes.js            # Generación de reportes PDF
+    │   ├── reportes.js            # Generación de reportes PDF
+    │   └── notas.js               # Generador de notas administrativas
     └── img/
         ├── icon.png
         ├── logo-2025.png
@@ -100,58 +106,26 @@ Desde **phpMyAdmin** en cPanel:
 | `usuarios` | Administradores del sistema |
 | `temas` | Catálogo de temas para clasificación |
 | `frecuencias` | Catálogo de frecuencias de actualización |
+| `formatos` | Catálogo de formatos de archivo (CSV, XLSX, etc.) con distinción de habituales |
 | `areas` | Áreas responsables con contactos y emails |
-| `datasets` | Registro principal de datasets |
+| `datasets` | Registro principal de datasets (sin columnas de formato fijas) |
+| `dataset_formatos` | Tabla intermedia para la relación muchos-a-muchos entre datasets y formatos |
 | `historial_actualizaciones` | Log de actualizaciones realizadas |
 | `notificaciones_log` | Registro de notificaciones enviadas |
 
+### Migración desde v1.3.0 a v1.4.0
+
+⚠️ Requisito: Ejecutar esto si su sistema está en la versión 1.3.0.
+
+Si ya tenés la versión 1.3.0 instalada, importar el script ubicado en /database/updates/migracion-v1.3.0-v1.4.0.sql 
+
 ### Migración desde v1.2.0 a v1.3.0
 
-Si ya tenés la versión 1.2.0 instalada, ejecutar en phpMyAdmin:
+⚠️ Requisito: Ejecutar esto si su sistema está en la versión 1.2.0.
 
-```sql
--- Crear tabla de áreas
-CREATE TABLE IF NOT EXISTS `areas` (
-  `id` INT AUTO_INCREMENT PRIMARY KEY,
-  `nombre` VARCHAR(255) NOT NULL,
-  `contacto` VARCHAR(255) DEFAULT NULL,
-  `emails` VARCHAR(500) DEFAULT NULL,
-  `activo` TINYINT(1) DEFAULT 1,
-  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  UNIQUE KEY `unique_nombre` (`nombre`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+Si ya tenés la versión 1.2.0 instalada, importar el script ubicado en /database/updates/migracion-v1.2.0-v1.3.0.sql 
 
--- Migrar áreas existentes desde datasets
-INSERT IGNORE INTO `areas` (`nombre`)
-SELECT DISTINCT `area_responsable` FROM `datasets` 
-WHERE `area_responsable` IS NOT NULL AND `area_responsable` != '';
-
--- Agregar columna area_id a datasets
-ALTER TABLE `datasets` ADD COLUMN `area_id` INT DEFAULT NULL AFTER `area_responsable`;
-ALTER TABLE `datasets` ADD CONSTRAINT `fk_dataset_area` FOREIGN KEY (`area_id`) REFERENCES `areas`(`id`) ON DELETE SET NULL;
-
--- Vincular datasets con áreas migradas
-UPDATE `datasets` d 
-JOIN `areas` a ON d.`area_responsable` = a.`nombre` 
-SET d.`area_id` = a.`id`;
-
--- Crear tabla de log de notificaciones
-CREATE TABLE IF NOT EXISTS `notificaciones_log` (
-  `id` INT AUTO_INCREMENT PRIMARY KEY,
-  `tipo` ENUM('interno-60','interno-30','interno-vencido','externo-60','externo-40','externo-5','externo-vencido','area-aviso-40') NOT NULL,
-  `area_id` INT DEFAULT NULL,
-  `destinatarios` VARCHAR(500) NOT NULL,
-  `datasets_ids` VARCHAR(500) NOT NULL,
-  `cantidad_datasets` INT NOT NULL,
-  `enviado_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  `success` TINYINT(1) DEFAULT 1,
-  `error_message` TEXT DEFAULT NULL,
-  FOREIGN KEY (`area_id`) REFERENCES `areas`(`id`) ON DELETE SET NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-```
-
-### Migración desde v1.0.0
+### Migración desde v1.0.0 a v1.2.0
 
 Si tenés la versión 1.0.0, ejecutar primero:
 
@@ -360,6 +334,17 @@ Esto ejecuta las notificaciones todos los días a las 8:00 AM.
 ---
 
 ## Changelog
+
+### v1.4.0 (2025-12-10)
+- Migración del sistema de formatos a relación Many-to-Many (N:M).
+- Soporte para múltiples formatos por dataset (sin límite).
+- Sistema de "chips" en la interfaz de administración para selección rápida de formatos.
+- Normalización automática de nombres de formatos al importar desde Andino.
+- Eliminación de columnas `formato_primario` y `formato_secundario`.
+- Generador de notas administrativas en formato DOCX para solicitud de actualización de datasets.
+- Soporte para notas internas (a Subsecretaría) y externas (a organismos).
+- Selección múltiple de datasets con períodos pendientes en el generador.
+- Formato de notas según Resolución 2820/22.
 
 ### v1.3.0 (2025-12-07)
 - Sistema de gestión de áreas con CRUD completo
