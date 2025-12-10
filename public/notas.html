@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Generador de Notas - RPAD</title>
+  <link rel="icon" type="image/png" href="img/icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Source+Sans+3:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <header class="header">
+    <div class="header-top">
+      <div class="header-brand">
+        <img src="img/logo-2025.png" alt="MCR" class="header-logo">
+        <div>
+          <div class="header-title">RPAD</div>
+          <div class="header-subtitle">Generador de Notas Administrativas</div>
+        </div>
+      </div>
+      <div class="header-actions" id="header-actions">
+        <span id="user-name" class="text-small text-muted"></span>
+        <button onclick="Auth.logout()" class="btn btn-outline btn-sm"><span>🚪</span> Salir</button>
+      </div>
+    </div>
+    <nav class="header-nav">
+      <div class="header-nav-inner">
+        <a href="index.html" class="nav-link"><span>📊</span> Tablero</a>
+        <a href="calendario.html" class="nav-link"><span>📅</span> Calendario</a>
+        <a href="datasets.html" class="nav-link"><span>📁</span> Datasets</a>
+        <a href="admin.html" class="nav-link"><span>⚙️</span> Administrador</a>
+        <a href="areas.html" class="nav-link"><span>🏢</span> Áreas</a>
+        <a href="reportes.html" class="nav-link"><span>📄</span> Reportes</a>
+        <a href="notas.html" class="nav-link active"><span>📝</span> Notas</a>
+      </div>
+    </nav>
+  </header>
+
+  <main>
+    <h1 class="page-title">Generador de Notas Administrativas</h1>
+    
+    <div id="message-container"></div>
+
+    <div class="card" style="max-width: 800px;">
+      <div class="card-header">
+        <h3 class="section-title" style="margin: 0;">
+          <span id="step-indicator">Paso 1 de 2</span> - <span id="step-title">Datos de la Nota</span>
+        </h3>
+      </div>
+      <div class="card-body">
+        
+        <!-- PASO 1: Datos básicos -->
+        <div id="step1">
+          <p class="text-muted text-small" style="margin-bottom: 1.5rem;">
+            Generar notas administrativas para solicitar actualización de datasets a las áreas responsables, 
+            conforme a la Resolución 2820/22 y en cumplimiento de la Ordenanza N° 17.662/23.
+          </p>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label required">Fecha de la Nota</label>
+              <input type="date" id="nota-fecha" class="form-input" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label required">Número de Nota</label>
+              <input type="text" id="nota-numero" class="form-input" placeholder="Ej: 125/25" required>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label required">Destinatario (Área)</label>
+            <select id="nota-area" class="form-select" required>
+              <option value="">Seleccionar área...</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label required">Tipo de Nota</label>
+            <div style="display: flex; gap: 1.5rem; margin-top: 0.5rem;">
+              <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                <input type="radio" name="tipo-nota" value="interna" checked>
+                <span><strong>Interna</strong> - Dirigida a Subsecretaría</span>
+              </label>
+              <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                <input type="radio" name="tipo-nota" value="externa">
+                <span><strong>Externa</strong> - Dirigida al organismo</span>
+              </label>
+            </div>
+            <span class="form-hint">Las notas internas se dirigen a la Subsecretaría para que gestione ante el área. Las externas van directamente al organismo.</span>
+          </div>
+
+          <div style="display: flex; justify-content: flex-end; margin-top: 1.5rem;">
+            <button type="button" class="btn btn-primary" onclick="irAPaso2()" id="btn-siguiente">
+              Siguiente <span>→</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- PASO 2: Selección de datasets -->
+        <div id="step2" class="hidden">
+          <div id="area-info" class="alert alert-info" style="margin-bottom: 1rem;"></div>
+          
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+            <p class="text-small text-muted" style="margin: 0;">
+              Seleccione los datasets a incluir en la solicitud e indique los períodos requeridos.
+            </p>
+            <button type="button" class="btn btn-outline btn-sm" onclick="seleccionarTodos()">
+              ☑️ Seleccionar todos
+            </button>
+          </div>
+
+          <div id="datasets-container">
+            <div class="loading"><div class="spinner"></div></div>
+          </div>
+
+          <div id="no-datasets-msg" class="hidden" style="text-align: center; padding: 2rem; color: var(--gray-500);">
+            <p>⚠️ Esta área no tiene datasets registrados en el sistema.</p>
+          </div>
+
+          <div style="display: flex; justify-content: space-between; margin-top: 1.5rem;">
+            <button type="button" class="btn btn-secondary" onclick="volverAPaso1()">
+              <span>←</span> Volver
+            </button>
+            <button type="button" class="btn btn-primary" onclick="generarNota()" id="btn-generar" disabled>
+              <span>📄</span> Generar DOCX
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+      <div class="footer-section">
+        <h4>Dirección de Datos Públicos y Comunicación</h4>
+        <p>Municipalidad de Comodoro Rivadavia</p>
+        <p>Dirección General de Modernización e Investigación Territorial</p>
+      </div>
+      <div class="footer-section">
+        <h4>Contacto</h4>
+        <p>📧 <a href="mailto:datospublicos@comodoro.gov.ar">datospublicos@comodoro.gov.ar</a></p>
+        <p>🌐 <a href="https://datos.comodoro.gov.ar" target="_blank">datos.comodoro.gov.ar</a></p>
+      </div>
+      <div class="footer-section">
+        <h4>Marco Legal</h4>
+        <p>Ordenanza N° 17.662/23 - Artículo 8°</p>
+        <p>Licencia: CC BY-SA 4.0</p>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      © 2025 Municipalidad de Comodoro Rivadavia. RPAD v1.5.0
+    </div>
+  </footer>
+
+  <script src="js/config.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/notas.js"></script>
+</body>
+</html>
