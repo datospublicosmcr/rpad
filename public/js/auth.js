@@ -11,6 +11,17 @@ const Auth = {
     return user ? JSON.parse(user) : null;
   },
 
+  // Obtener rol del usuario
+  getRole() {
+    const user = this.getUser();
+    return user?.rol || null;
+  },
+
+  // Verificar si es administrador
+  isAdmin() {
+    return this.getRole() === 'admin';
+  },
+
   // Verificar si está autenticado
   isAuthenticated() {
     return !!this.getToken();
