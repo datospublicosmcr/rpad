@@ -42,7 +42,8 @@ export const login = async (req, res) => {
     // Generar token
     const token = generateToken({
       userId: usuario.id,
-      username: usuario.username
+      username: usuario.username,
+      rol: usuario.rol
     });
 
     res.json({
@@ -53,7 +54,8 @@ export const login = async (req, res) => {
           id: usuario.id,
           username: usuario.username,
           nombre_completo: usuario.nombre_completo,
-          email: usuario.email
+          email: usuario.email,
+          rol: usuario.rol
         }
       }
     });
@@ -70,7 +72,7 @@ export const login = async (req, res) => {
 export const verifySession = async (req, res) => {
   try {
     const [rows] = await pool.execute(
-      'SELECT id, username, nombre_completo, email FROM usuarios WHERE id = ? AND activo = TRUE',
+      'SELECT id, username, nombre_completo, email, rol FROM usuarios WHERE id = ? AND activo = TRUE',
       [req.user?.userId]
     );
 
