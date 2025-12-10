@@ -16,12 +16,15 @@ const DATASET_SELECT_QUERY = `
     a.celular_area AS area_celular,
     a.nombre_contacto AS area_contacto_nombre,
     a.telefono_contacto AS area_contacto_telefono,
-    a.email_contacto AS area_contacto_email
+    a.email_contacto AS area_contacto_email,
+    GROUP_CONCAT(DISTINCT fmt.nombre ORDER BY fmt.nombre SEPARATOR ', ') AS formatos
   FROM datasets d
   LEFT JOIN frecuencias f ON d.frecuencia_id = f.id
   LEFT JOIN temas tp ON d.tema_principal_id = tp.id
   LEFT JOIN temas ts ON d.tema_secundario_id = ts.id
   LEFT JOIN areas a ON d.area_id = a.id
+  LEFT JOIN dataset_formatos df ON d.id = df.dataset_id
+  LEFT JOIN formatos fmt ON df.formato_id = fmt.id
   WHERE d.activo = TRUE
 `;
 
@@ -80,7 +83,7 @@ export const getDatasets = async (req, res) => {
       params.push(searchTerm, searchTerm, searchTerm);
     }
 
-    query += ' ORDER BY d.proxima_actualizacion ASC, d.titulo ASC';
+    query += ' GROUP BY d.id ORDER BY d.proxima_actualizacion ASC, d.titulo ASC';
 
     const [rows] = await pool.execute(query, params);
     let datasets = rows;
@@ -112,7 +115,7 @@ export const getDatasetById = async (req, res) => {
     const { id } = req.params;
 
     const [rows] = await pool.execute(
-      DATASET_SELECT_QUERY + ' AND d.id = ?',
+      DATASET_SELECT_QUERY + ' AND d.id = ? GROUP BY d.id',
       [id]
     );
 
@@ -123,9 +126,23 @@ export const getDatasetById = async (req, res) => {
       });
     }
 
+    const dataset = rows[0];
+    
+    // Obtener formatos como array de objetos (para edición)
+    const [formatosRows] = await pool.execute(
+      `SELECT f.id, f.nombre 
+       FROM dataset_formatos df
+       JOIN formatos f ON df.formato_id = f.id
+       WHERE df.dataset_id = ?
+       ORDER BY f.nombre`,
+      [id]
+    );
+    
+    dataset.formatos_array = formatosRows;
+
     res.json({
       success: true,
-      data: rows[0]
+      data: dataset
     });
   } catch (error) {
     console.error('Error obteniendo dataset:', error);
@@ -138,40 +155,64 @@ export const getDatasetById = async (req, res) => {
 
 // Crear nuevo dataset
 export const createDataset = async (req, res) => {
+  const connection = await pool.getConnection();
+  
   try {
     const data = req.body;
 
-    // Validaciones básicas (ahora incluye area_id y tipo_gestion)
+    // Validaciones básicas
     if (!data.titulo || !data.area_id || !data.frecuencia_id || 
-        !data.formato_primario || !data.tema_principal_id || !data.tipo_gestion) {
+        !data.formatos || !Array.isArray(data.formatos) || data.formatos.length === 0 ||
+        !data.tema_principal_id || !data.tipo_gestion) {
+      connection.release();
       return res.status(400).json({
         success: false,
-        error: 'Faltan campos obligatorios: titulo, area_id, frecuencia_id, formato_primario, tema_principal_id, tipo_gestion'
+        error: 'Faltan campos obligatorios: titulo, area_id, frecuencia_id, formatos (array con al menos 1), tema_principal_id, tipo_gestion'
       });
     }
 
     // Validar que tipo_gestion sea válido
     if (!['interna', 'externa'].includes(data.tipo_gestion)) {
+      connection.release();
       return res.status(400).json({
         success: false,
         error: 'tipo_gestion debe ser "interna" o "externa"'
       });
     }
 
-    const [result] = await pool.execute(
+    // Extraer IDs de formatos (pueden venir como objetos o números)
+    const formatoIds = data.formatos.map(f => typeof f === 'object' ? f.id : f);
+    
+    // Validar que los formatos existan
+    const [formatosExistentes] = await connection.execute(
+      `SELECT id FROM formatos WHERE id IN (${formatoIds.map(() => '?').join(',')}) AND activo = 1`,
+      formatoIds
+    );
+    
+    if (formatosExistentes.length !== formatoIds.length) {
+      connection.release();
+      return res.status(400).json({
+        success: false,
+        error: 'Uno o más formatos no son válidos'
+      });
+    }
+
+    // Iniciar transacción
+    await connection.beginTransaction();
+
+    // Insertar dataset
+    const [result] = await connection.execute(
       `INSERT INTO datasets (
         titulo, descripcion, area_id, frecuencia_id, 
-        formato_primario, formato_secundario, ultima_actualizacion, 
-        proxima_actualizacion, tema_principal_id, tema_secundario_id, 
+        ultima_actualizacion, proxima_actualizacion, 
+        tema_principal_id, tema_secundario_id, 
         url_dataset, observaciones, tipo_gestion
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         data.titulo,
         data.descripcion || null,
         data.area_id,
         data.frecuencia_id,
-        data.formato_primario,
-        data.formato_secundario || null,
         data.ultima_actualizacion || null,
         data.proxima_actualizacion || null,
         data.tema_principal_id,
@@ -182,10 +223,24 @@ export const createDataset = async (req, res) => {
       ]
     );
 
+    const datasetId = result.insertId;
+
+    // Insertar relaciones con formatos
+    for (const formatoId of formatoIds) {
+      await connection.execute(
+        'INSERT INTO dataset_formatos (dataset_id, formato_id) VALUES (?, ?)',
+        [datasetId, formatoId]
+      );
+    }
+
+    // Confirmar transacción
+    await connection.commit();
+    connection.release();
+
     // Obtener el dataset creado con todos los datos
     const [rows] = await pool.execute(
-      DATASET_SELECT_QUERY + ' AND d.id = ?',
-      [result.insertId]
+      DATASET_SELECT_QUERY + ' AND d.id = ? GROUP BY d.id',
+      [datasetId]
     );
 
     res.status(201).json({
@@ -194,6 +249,10 @@ export const createDataset = async (req, res) => {
       message: 'Dataset creado correctamente'
     });
   } catch (error) {
+    // Rollback en caso de error
+    await connection.rollback();
+    connection.release();
+    
     console.error('Error creando dataset:', error);
     res.status(500).json({
       success: false,
@@ -204,17 +263,20 @@ export const createDataset = async (req, res) => {
 
 // Actualizar dataset
 export const updateDataset = async (req, res) => {
+  const connection = await pool.getConnection();
+  
   try {
     const { id } = req.params;
     const data = req.body;
 
     // Verificar que el dataset existe
-    const [existing] = await pool.execute(
+    const [existing] = await connection.execute(
       'SELECT id FROM datasets WHERE id = ? AND activo = TRUE',
       [id]
     );
 
     if (existing.length === 0) {
+      connection.release();
       return res.status(404).json({
         success: false,
         error: 'Dataset no encontrado'
@@ -223,13 +285,14 @@ export const updateDataset = async (req, res) => {
 
     // Validar tipo_gestion si se proporciona
     if (data.tipo_gestion !== undefined && !['interna', 'externa'].includes(data.tipo_gestion)) {
+      connection.release();
       return res.status(400).json({
         success: false,
         error: 'tipo_gestion debe ser "interna" o "externa"'
       });
     }
 
-    // Construir query dinámico
+    // Construir query dinámico para campos del dataset
     const updates = [];
     const values = [];
 
@@ -248,14 +311,6 @@ export const updateDataset = async (req, res) => {
     if (data.frecuencia_id !== undefined) {
       updates.push('frecuencia_id = ?');
       values.push(data.frecuencia_id);
-    }
-    if (data.formato_primario !== undefined) {
-      updates.push('formato_primario = ?');
-      values.push(data.formato_primario);
-    }
-    if (data.formato_secundario !== undefined) {
-      updates.push('formato_secundario = ?');
-      values.push(data.formato_secundario || null);
     }
     if (data.ultima_actualizacion !== undefined) {
       updates.push('ultima_actualizacion = ?');
@@ -290,23 +345,67 @@ export const updateDataset = async (req, res) => {
       values.push(data.activo);
     }
 
-    if (updates.length === 0) {
-      return res.status(400).json({
-        success: false,
-        error: 'No hay datos para actualizar'
-      });
+    // Validar formatos si se proporcionan
+    let formatoIds = null;
+    if (data.formatos !== undefined) {
+      if (!Array.isArray(data.formatos) || data.formatos.length === 0) {
+        connection.release();
+        return res.status(400).json({
+          success: false,
+          error: 'formatos debe ser un array con al menos 1 elemento'
+        });
+      }
+      
+      formatoIds = data.formatos.map(f => typeof f === 'object' ? f.id : f);
+      
+      // Validar que los formatos existan
+      const [formatosExistentes] = await connection.execute(
+        `SELECT id FROM formatos WHERE id IN (${formatoIds.map(() => '?').join(',')}) AND activo = 1`,
+        formatoIds
+      );
+      
+      if (formatosExistentes.length !== formatoIds.length) {
+        connection.release();
+        return res.status(400).json({
+          success: false,
+          error: 'Uno o más formatos no son válidos'
+        });
+      }
     }
 
-    values.push(Number(id));
+    // Iniciar transacción
+    await connection.beginTransaction();
 
-    await pool.execute(
-      `UPDATE datasets SET ${updates.join(', ')} WHERE id = ?`,
-      values
-    );
+    // Actualizar dataset si hay cambios
+    if (updates.length > 0) {
+      values.push(Number(id));
+      await connection.execute(
+        `UPDATE datasets SET ${updates.join(', ')} WHERE id = ?`,
+        values
+      );
+    }
+
+    // Actualizar formatos si se proporcionaron
+    if (formatoIds !== null) {
+      // Eliminar relaciones existentes
+      await connection.execute('DELETE FROM dataset_formatos WHERE dataset_id = ?', [id]);
+      
+      // Insertar nuevas relaciones
+      for (const formatoId of formatoIds) {
+        await connection.execute(
+          'INSERT INTO dataset_formatos (dataset_id, formato_id) VALUES (?, ?)',
+          [id, formatoId]
+        );
+      }
+    }
+
+    // Confirmar transacción
+    await connection.commit();
+    connection.release();
 
     // Obtener el dataset actualizado
     const [rows] = await pool.execute(
-      DATASET_SELECT_QUERY.replace('WHERE d.activo = TRUE', 'WHERE 1=1') + ' AND d.id = ?',
+      DATASET_SELECT_QUERY.replace('WHERE d.activo = TRUE', 'WHERE 1=1') + ' AND d.id = ? GROUP BY d.id',
       [id]
     );
 
@@ -316,6 +415,10 @@ export const updateDataset = async (req, res) => {
       message: 'Dataset actualizado correctamente'
     });
   } catch (error) {
+    // Rollback en caso de error
+    await connection.rollback();
+    connection.release();
+    
     console.error('Error actualizando dataset:', error);
     res.status(500).json({
       success: false,
@@ -357,7 +460,7 @@ export const deleteDataset = async (req, res) => {
 // Obtener estadísticas para el dashboard
 export const getEstadisticas = async (req, res) => {
   try {
-    const [datasets] = await pool.execute(DATASET_SELECT_QUERY);
+    const [datasets] = await pool.execute(DATASET_SELECT_QUERY + ' GROUP BY d.id');
     const data = datasets;
 
     const hoy = new Date();
@@ -488,7 +591,7 @@ export const registrarActualizacion = async (req, res) => {
 
     // Obtener el dataset actualizado
     const [rows] = await pool.execute(
-      DATASET_SELECT_QUERY + ' AND d.id = ?',
+      DATASET_SELECT_QUERY + ' AND d.id = ? GROUP BY d.id',
       [id]
     );
 
