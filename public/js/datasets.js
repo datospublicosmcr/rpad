@@ -47,6 +47,8 @@ async function loadCatalogos() {
 async function loadDatasets() {
   try {
     allDatasets = await API.getDatasets();
+    // Ordenar alfabéticamente por título
+    allDatasets.sort((a, b) => a.titulo.localeCompare(b.titulo));
     renderDatasets(allDatasets);
   } catch (error) {
     console.error('Error cargando datasets:', error);
@@ -160,9 +162,8 @@ function renderDatasets(datasets) {
     const estadoTexto = Utils.getEstadoTexto(estado);
     const estadoClase = Utils.getEstadoClase(estado);
     
-    const formatos = [];
-    if (d.formato_primario) formatos.push(d.formato_primario);
-    if (d.formato_secundario) formatos.push(d.formato_secundario);
+    // Formatos vienen como string concatenado "CSV, XLSX, KML" desde el backend
+    const formatos = d.formatos ? d.formatos.split(', ') : [];
 
     return `
       <div class="dataset-card">
