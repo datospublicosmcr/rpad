@@ -28,10 +28,13 @@
     <nav class="header-nav">
       <div class="header-nav-inner">
         <a href="index.html" class="nav-link"><span>📊</span> Tablero</a>
+        <a href="calendario.html" class="nav-link"><span>📅</span> Calendario</a>
         <a href="datasets.html" class="nav-link"><span>📁</span> Datasets</a>
-        <a href="areas.html" class="nav-link"><span>🏢</span> Áreas</a>
-        <a href="admin.html" class="nav-link"><span>⚙️</span> Admin</a>
-        <a href="reportes.html" class="nav-link active"><span>📄</span> Reportes</a>
+        <a href="admin.html" class="nav-link"><span>⚙️</span> Administrador</a>
+        <a href="areas.html" class="nav-link active"><span>🏢</span> Áreas</a>
+        <a href="reportes.html" class="nav-link"><span>📄</span> Reportes</a>
+        <a href="notas.html" class="nav-link"><span>📝</span> Notas</a>
+
       </div>
     </nav>
   </header>
@@ -39,7 +42,7 @@
   <main>
     <div class="flex justify-between items-center mb-4">
       <h1 class="page-title" style="margin-bottom: 0;">Áreas Responsables</h1>
-      <button onclick="openAreaModal()" class="btn btn-primary">
+      <button onclick="openAreaModal()" class="btn btn-primary" id="btn-nueva-area">
         <span>➕</span> Nueva Área
       </button>
     </div>
@@ -176,7 +179,7 @@
       </div>
       <div class="footer-section">
         <h4>Contacto</h4>
-        <p>📧 <a href="mailto:datospublicos@comodoro.gov.ar">datospublicos@comodoro.gov.ar</a></p>
+        <p>📧 <a href="/cdn-cgi/l/email-protection#254144514a56555047494c464a5665464a484a414a574a0b424a530b4457"><span class="__cf_email__" data-cfemail="533732273c202326313f3a303c2013303c3e3c373c213c7d343c257d3221">[email&#160;protected]</span></a></p>
         <p>🌐 <a href="https://datos.comodoro.gov.ar" target="_blank">datos.comodoro.gov.ar</a></p>
       </div>
       <div class="footer-section">
@@ -186,7 +189,7 @@
       </div>
     </div>
     <div class="footer-bottom">
-      © 2025 Municipalidad de Comodoro Rivadavia. RPAD v1.3.0
+      © 2025 Municipalidad de Comodoro Rivadavia. RPAD v1.4.0
     </div>
   </footer>
 
