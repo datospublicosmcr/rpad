@@ -17,9 +17,21 @@ RPAD permite registrar datasets, asignarles frecuencias de actualización y moni
 - **Base de datos**: MySQL/MariaDB
 - **Autenticación**: JWT
 - **Gráficos**: Chart.js (via CDN)
+- **Calendario**: FullCalendar.js (via CDN)
 - **Email**: Nodemailer
 - **PDFs**: PDFKit
 - **DOCX:** docx (generación programática de documentos Word)
+
+## Roles de Usuario
+
+El sistema cuenta con dos roles de usuario:
+
+| Rol | Descripción | Permisos |
+|-----|-------------|----------|
+| `admin` | Administrador completo | Crear, editar, eliminar datasets y áreas. Configurar notificaciones SMTP. Generar reportes y notas. |
+| `lector` | Solo lectura | Ver todas las secciones (tablero, calendario, datasets, áreas, reportes, notas) sin poder modificar datos. |
+
+Los usuarios con rol `lector` ven el mensaje "Solo lectura" en lugar de los botones de acción.
 
 ## Estructura del proyecto
 
@@ -62,6 +74,7 @@ rpad/
     ├── admin.html                 # Panel de administración de datasets y correos
     ├── areas.html                 # Panel de administración de áreas
     ├── reportes.html              # Generador de reportes
+    ├── calendario.html            # Calendario interactivo de vencimientos
     ├── notas.html                 # Generador de notas administrativas DOCX
     ├── css/
     │   └── styles.css
@@ -75,6 +88,7 @@ rpad/
     │   ├── admin.js               # Panel de administración
     │   ├── areas.js               # Gestión de áreas responsables
     │   ├── reportes.js            # Generación de reportes PDF
+    │   ├── calendario.js          # Calendario interactivo de vencimientos
     │   └── notas.js               # Generador de notas administrativas
     └── img/
         ├── icon.png
@@ -345,6 +359,16 @@ Esto ejecuta las notificaciones todos los días a las 8:00 AM.
 - Soporte para notas internas (a Subsecretaría) y externas (a organismos).
 - Selección múltiple de datasets con períodos pendientes en el generador.
 - Formato de notas según Resolución 2820/22.
+- Sistema de roles de usuario: `admin` (acceso completo) y `lector` (solo lectura).
+- Usuarios con rol `lector` pueden ver todas las secciones pero no crear, editar ni eliminar.
+- Middleware `adminOnly` para proteger rutas de escritura en el backend.
+- Ocultamiento automático de botones de acción en frontend según rol.
+- Calendario interactivo de vencimientos con FullCalendar.js.
+- Vista mensual con navegación y colores por estado (verde/amarillo/rojo).
+- Modal con listado de datasets al hacer clic en un día.
+- Filtros por área y tema en el calendario.
+- Exportación a iCal (.ics) compatible con Google Calendar, Outlook y Apple Calendar.
+- Script `setup-admin.js` actualizado para solicitar rol al crear usuarios.
 
 ### v1.3.0 (2025-12-07)
 - Sistema de gestión de áreas con CRUD completo
