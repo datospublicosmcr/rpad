@@ -565,16 +565,25 @@ const drawDatasetCard = (doc, dataset, startY) => {
   const padding = 12;
   const lineHeight = 14;
   
-  // Calcular altura necesaria para la descripción (máximo 3 líneas)
+  // Calcular altura necesaria para la descripción (máximo 9 líneas según tu archivo)
   doc.fontSize(9);
   const descripcionCorta = dataset.descripcion ? 
-    (dataset.descripcion.length > 300 ? dataset.descripcion.substring(0, 300) + '...' : dataset.descripcion) : 
+    (dataset.descripcion.length > 500 ? dataset.descripcion.substring(0, 500) + '...' : dataset.descripcion) : 
     'Sin descripción';
   const descripcionHeight = doc.heightOfString(descripcionCorta, { width: cardWidth - (padding * 2), lineGap: 2 });
-  const descHeight = Math.min(descripcionHeight, lineHeight * 4); // Máximo 4 líneas
+  const descHeight = Math.min(descripcionHeight, lineHeight * 9); 
+
+  // --- NUEVO: Calcular altura para la URL ---
+  let urlHeight = 0;
+  if (dataset.url_dataset) {
+    // Usamos fontSize 8 y Helvetica para el cálculo, igual que la línea de fechas
+    doc.fontSize(8).font('Helvetica');
+    urlHeight = doc.heightOfString(dataset.url_dataset, { width: cardWidth - (padding * 2) });
+  }
   
-  // Altura total de la tarjeta
-  const cardHeight = padding + 18 + 14 + descHeight + 14 + padding;
+  // --- MODIFICADO: Altura total sumando la URL y un pequeño espacio (4) si existe ---
+  const extraSpace = dataset.url_dataset ? 4 : 0;
+  const cardHeight = padding + 18 + 14 + descHeight + (dataset.url_dataset ? urlHeight + extraSpace : 0) + 14 + padding;
   
   // Verificar salto de página
   if (startY + cardHeight > doc.page.height - 60) {
@@ -628,8 +637,21 @@ const drawDatasetCard = (doc, dataset, startY) => {
        lineGap: 2
      });
   currentY += descHeight + 4;
+
+  // Línea 4: URL
+  if (dataset.url_dataset) {
+    doc.fillColor(COLORS.grayDark) // Mismo color que la línea de fechas
+       .fontSize(8)                // Mismo tamaño que la línea de fechas
+       .font('Helvetica')          // Misma fuente que la línea de fechas
+       .text(dataset.url_dataset, cardX + padding, currentY, { 
+         width: cardWidth - (padding * 2),
+         link: dataset.url_dataset, // Mantiene el link funcional
+         lineBreak: true            // Permite que baje de línea si es larga
+       });
+    currentY += urlHeight + 4; // Añadimos la altura de la URL y el espacio extra
+  }
   
-  // Línea 4: Fecha y frecuencia
+  // Línea 5: Fecha y frecuencia
   const fechaTexto = dataset.proxima_actualizacion ? 
     `Proxima actualizacion: ${formatDate(dataset.proxima_actualizacion)}` : 
     'Sin fecha programada';
