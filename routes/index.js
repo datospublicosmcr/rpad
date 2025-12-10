@@ -33,6 +33,7 @@ import {
   reportePorArea,
   reporteCumplimiento
 } from '../controllers/reportesController.js';
+import { generarNota } from '../controllers/notasController.js';
 
 const router = Router();
 
@@ -94,6 +95,11 @@ router.get('/reportes/estado-general', authMiddleware, reporteEstadoGeneral);
 router.get('/reportes/historial-notificaciones', authMiddleware, reporteHistorialNotificaciones);
 router.get('/reportes/por-area/:areaId', authMiddleware, reportePorArea);
 router.get('/reportes/cumplimiento', authMiddleware, reporteCumplimiento);
+
+// =====================================================
+// Notas DOCX (protegidas)
+// =====================================================
+router.post('/notas/generar', authMiddleware, generarNota);
 
 // =====================================================
 // Cron (protegido por clave secreta)
