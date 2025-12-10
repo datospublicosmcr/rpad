@@ -1,6 +1,25 @@
 // Controller para integración con API de Andino (Portal de Datos Abiertos)
 
 /**
+ * Mapa de normalización de formatos de Andino a RPAD
+ * Andino devuelve formatos en MAYÚSCULAS
+ */
+const FORMATO_NORMALIZACION = {
+  'MD': 'Markdown',
+  'TXT': 'Texto plano'
+};
+
+/**
+ * Normaliza un formato de Andino al catálogo RPAD
+ * @param {string} formato - Formato tal como viene de Andino (en mayúsculas)
+ * @returns {string} - Formato normalizado para RPAD
+ */
+function normalizarFormato(formato) {
+  const upper = formato.toUpperCase().trim();
+  return FORMATO_NORMALIZACION[upper] || upper;
+}
+
+/**
  * Extrae el slug del dataset desde una URL del portal
  * @param {string} url - URL completa del dataset
  * @returns {string|null} - Slug del dataset o null si no es válida
@@ -58,7 +77,7 @@ export const fetchFromAndino = async (req, res) => {
       method: 'GET',
       headers: {
         'Accept': 'application/json',
-        'User-Agent': 'RPAD-MCR/1.3.0'
+        'User-Agent': 'RPAD-MCR/1.4.0'
       },
       timeout: 10000 // 10 segundos de timeout
     });
@@ -84,13 +103,36 @@ export const fetchFromAndino = async (req, res) => {
 
     const dataset = data.result;
 
+    // Extraer formatos únicos de los recursos
+    const formatosSet = new Set();
+
+    if (dataset.resources && Array.isArray(dataset.resources)) {
+      dataset.resources.forEach(resource => {
+        if (resource.format) {
+          const formatoRaw = resource.format.toUpperCase().trim();
+          
+          // Caso especial: ZIP que contiene shapefile
+          if (formatoRaw === 'ZIP' && resource.name && 
+              resource.name.toLowerCase().includes('shapefile')) {
+            formatosSet.add('SHP');
+          } else {
+            // Normalizar formato
+            formatosSet.add(normalizarFormato(formatoRaw));
+          }
+        }
+      });
+    }
+
+    const formatosArray = Array.from(formatosSet);
+
     // Mapear campos de Andino a RPAD
     // area_responsable_texto es solo referencia, no se usa directamente
     const mappedData = {
       titulo: dataset.title || '',
       descripcion: dataset.notes || '',
       area_responsable_texto: dataset.author || '', // Solo como referencia para el usuario
-      url_dataset: url.trim()
+      url_dataset: url.trim(),
+      formatos: formatosArray  // Array de nombres de formatos normalizados
     };
 
     res.json({
