@@ -40,27 +40,25 @@ export const getFrecuencias = async (req, res) => {
   }
 };
 
-// Obtener formatos disponibles
+// Obtener formatos disponibles desde BD
 export const getFormatos = async (req, res) => {
-  const formatos = [
-    'CSV',
-    'XLSX',
-    'XLS',
-    'JSON',
-    'XML',
-    'PDF',
-    'DOC',
-    'DOCX',
-    'SHP',
-    'GeoJSON',
-    'KML',
-    'KMZ',
-    'Markdown',
-    'Texto plano'
-  ];
+  try {
+    const [rows] = await pool.execute(
+      `SELECT id, nombre, habitual, extension, tipo_mime 
+       FROM formatos 
+       WHERE activo = 1 
+       ORDER BY habitual DESC, nombre ASC`
+    );
 
-  res.json({
-    success: true,
-    data: formatos
-  });
+    res.json({
+      success: true,
+      data: rows
+    });
+  } catch (error) {
+    console.error('Error obteniendo formatos:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Error al obtener los formatos'
+    });
+  }
 };
