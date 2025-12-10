@@ -28,10 +28,12 @@
     <nav class="header-nav">
       <div class="header-nav-inner">
         <a href="index.html" class="nav-link"><span>📊</span> Tablero</a>
+        <a href="calendario.html" class="nav-link"><span>📅</span> Calendario</a>
         <a href="datasets.html" class="nav-link"><span>📁</span> Datasets</a>
+        <a href="admin.html" class="nav-link active"><span>⚙️</span> Administrador</a>
         <a href="areas.html" class="nav-link"><span>🏢</span> Áreas</a>
-        <a href="admin.html" class="nav-link"><span>⚙️</span> Admin</a>
-        <a href="reportes.html" class="nav-link active"><span>📄</span> Reportes</a>
+        <a href="reportes.html" class="nav-link"><span>📄</span> Reportes</a>
+        <a href="notas.html" class="nav-link"><span>📝</span> Notas</a>
       </div>
     </nav>
   </header>
@@ -39,7 +41,7 @@
   <main>
     <div class="flex justify-between items-center mb-4">
       <h1 class="page-title" style="margin-bottom: 0;">Gestión de Datasets</h1>
-      <button onclick="openStep1Modal()" class="btn btn-primary">
+      <button onclick="openStep1Modal()" class="btn btn-primary" id="btn-nuevo-dataset">
         <span>➕</span> Nuevo Dataset
       </button>
     </div>
@@ -47,7 +49,7 @@
     <div id="message-container"></div>
 
     <!-- Panel de Notificaciones -->
-    <div class="card" style="margin-bottom: 1.5rem; border: 1px solid #e9ecef; border-radius: 8px;">
+    <div class="card" id="panel-notificaciones" style="margin-bottom: 1.5rem; border: 1px solid #e9ecef; border-radius: 8px;">
       <div style="padding: 1rem 1.5rem; border-bottom: 1px solid #e9ecef; background: #f8f9fa; border-radius: 8px 8px 0 0;">
         <h3 style="margin: 0; font-size: 1rem; font-weight: 600;">📧 Sistema de Notificaciones</h3>
       </div>
@@ -228,17 +230,13 @@
             </div>
           </div>
 
-          <div class="form-row">
-            <div class="form-group">
-              <label class="form-label required">Formato Primario</label>
-              <select id="formato_primario" class="form-select" required></select>
-            </div>
-            <div class="form-group">
-              <label class="form-label">Formato Secundario</label>
-              <select id="formato_secundario" class="form-select">
-                <option value="">Ninguno</option>
-              </select>
-            </div>
+          <div class="form-group">
+            <label class="form-label required">Formatos del Dataset</label>
+            <div id="chips-container" class="chips-container"></div>
+            <select id="formato-dropdown" class="add-format-select">
+              <option value="">+ Agregar otro formato...</option>
+            </select>
+            <span class="form-hint">Seleccione al menos un formato. Click en los chips para seleccionar/deseleccionar.</span>
           </div>
 
           <div class="form-row">
@@ -346,7 +344,7 @@
       </div>
       <div class="footer-section">
         <h4>Contacto</h4>
-        <p>📧 <a href="mailto:datospublicos@comodoro.gov.ar">datospublicos@comodoro.gov.ar</a></p>
+        <p>📧 <a href="/cdn-cgi/l/email-protection#d9bdb8adb6aaa9acbbb5b0bab6aa99bab6b4b6bdb6abb6f7beb6aff7b8ab"><span class="__cf_email__" data-cfemail="6d090c19021e1d180f01040e021e2d0e02000209021f02430a021b430c1f">[email&#160;protected]</span></a></p>
         <p>🌐 <a href="https://datos.comodoro.gov.ar" target="_blank">datos.comodoro.gov.ar</a></p>
       </div>
       <div class="footer-section">
@@ -356,7 +354,7 @@
       </div>
     </div>
     <div class="footer-bottom">
-      © 2025 Municipalidad de Comodoro Rivadavia. RPAD v1.3.0
+      © 2025 Municipalidad de Comodoro Rivadavia. RPAD v1.4.0
     </div>
   </footer>
 
