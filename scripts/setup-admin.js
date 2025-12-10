@@ -41,6 +41,8 @@ const setupAdmin = async () => {
     const nombre_completo = await question('Nombre completo: ');
     const email = await question('Email: ');
     const password = await question('Contraseña (mínimo 8 caracteres): ');
+    const rolInput = await question('Rol (admin/lector) [admin]: ');
+    const rol = (rolInput.toLowerCase() === 'lector') ? 'lector' : 'admin';
 
     if (password.length < 8) {
       console.error('❌ La contraseña debe tener al menos 8 caracteres.');
@@ -52,16 +54,17 @@ const setupAdmin = async () => {
 
     // Insertar usuario
     await pool.execute(
-      `INSERT INTO usuarios (username, password_hash, nombre_completo, email) 
-       VALUES (?, ?, ?, ?)`,
-      [username, password_hash, nombre_completo, email]
+      `INSERT INTO usuarios (username, password_hash, nombre_completo, email, rol) 
+       VALUES (?, ?, ?, ?, ?)`,
+      [username, password_hash, nombre_completo, email, rol]
     );
 
     console.log('');
-    console.log('✅ Usuario administrador creado exitosamente!');
+    console.log('✅ Usuario creado exitosamente!');
     console.log('');
     console.log('   Usuario:', username);
     console.log('   Email:', email);
+    console.log('   Rol:', rol);
     console.log('');
 
   } catch (error) {
