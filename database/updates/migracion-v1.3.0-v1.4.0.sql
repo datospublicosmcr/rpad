@@ -1,9 +1,15 @@
--- ============================================
--- MIGRACIÓN: Sistema de Formatos Many-to-Many
--- RPAD v1.3.0 → v1.4.0
--- ============================================
--- IMPORTANTE: Hacer backup antes de ejecutar
--- ============================================
+-- =================================================================
+-- MIGRACIÓN ACUMULADA: RPAD v1.3.0 → v1.4.0
+-- Incluye:
+-- 1. Sistema de Formatos Many-to-Many
+-- 2. Sistema de roles de usuario (admin/lector)
+-- =================================================================
+
+START TRANSACTION;
+
+-- =================================================================
+-- PARTE 1: GESTIÓN DE FORMATOS
+-- =================================================================
 
 -- 1. Crear tabla de formatos
 CREATE TABLE IF NOT EXISTS `formatos` (
@@ -16,8 +22,8 @@ CREATE TABLE IF NOT EXISTS `formatos` (
   `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 2. Insertar catálogo de formatos
-INSERT INTO `formatos` (`nombre`, `habitual`, `extension`, `tipo_mime`) VALUES
+-- 2. Insertar catálogo de formatos (Usamos IGNORE para evitar errores si ya existen)
+INSERT IGNORE INTO `formatos` (`nombre`, `habitual`, `extension`, `tipo_mime`) VALUES
 -- Habituales (10)
 ('CSV', 1, '.csv', 'text/csv'),
 ('XLSX', 1, '.xlsx', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'),
@@ -57,8 +63,9 @@ CREATE TABLE IF NOT EXISTS `dataset_formatos` (
   FOREIGN KEY (`formato_id`) REFERENCES `formatos`(`id`) ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 4. Migrar formato_primario existente
-INSERT INTO `dataset_formatos` (`dataset_id`, `formato_id`)
+-- 4. Migrar datos existentes
+-- 4.1 Migrar formato_primario
+INSERT IGNORE INTO `dataset_formatos` (`dataset_id`, `formato_id`)
 SELECT d.id, f.id
 FROM `datasets` d
 JOIN `formatos` f ON UPPER(TRIM(d.formato_primario)) = UPPER(f.nombre)
@@ -66,7 +73,7 @@ WHERE d.formato_primario IS NOT NULL
   AND d.formato_primario != ''
   AND d.activo = TRUE;
 
--- 5. Migrar formato_secundario existente (INSERT IGNORE evita duplicados)
+-- 4.2 Migrar formato_secundario
 INSERT IGNORE INTO `dataset_formatos` (`dataset_id`, `formato_id`)
 SELECT d.id, f.id
 FROM `datasets` d
@@ -75,15 +82,23 @@ WHERE d.formato_secundario IS NOT NULL
   AND d.formato_secundario != ''
   AND d.activo = TRUE;
 
--- ============================================
--- VERIFICACIÓN (ejecutar manualmente)
--- ============================================
--- SELECT 
---   (SELECT COUNT(*) FROM datasets WHERE activo = TRUE AND formato_primario IS NOT NULL AND formato_primario != '') as formatos_primarios_origen,
---   (SELECT COUNT(*) FROM dataset_formatos) as relaciones_migradas;
+-- =================================================================
+-- PARTE 2: ROLES DE USUARIO
+-- =================================================================
 
--- ============================================
--- LIMPIEZA FINAL (ejecutar DESPUÉS de verificar que todo funciona)
--- ============================================
--- ALTER TABLE `datasets` DROP COLUMN `formato_primario`;
--- ALTER TABLE `datasets` DROP COLUMN `formato_secundario`;
+-- Agregar columna rol a la tabla usuarios
+-- Nota: Si esto falla porque la columna ya existe, toda la transacción se revertirá.
+ALTER TABLE `usuarios` 
+ADD COLUMN `rol` ENUM('admin', 'lector') NOT NULL DEFAULT 'admin' 
+AFTER `email`;
+
+-- =================================================================
+-- FINALIZACIÓN
+-- =================================================================
+
+-- Si llegamos aquí sin errores, guardamos los cambios.
+COMMIT;
+
+-- Opcional: Limpieza (Descomentar solo si se está seguro de borrar datos antiguos)
+ALTER TABLE `datasets` DROP COLUMN `formato_primario`;
+ALTER TABLE `datasets` DROP COLUMN `formato_secundario`;
