@@ -38,3 +38,14 @@ export const authMiddleware = (req, res, next) => {
   req.user = payload;
   next();
 };
+
+// Middleware para rutas solo de administradores
+export const adminOnly = (req, res, next) => {
+  if (req.user?.rol !== 'admin') {
+    return res.status(403).json({
+      success: false,
+      error: 'Acceso denegado. Se requiere rol de administrador.'
+    });
+  }
+  next();
+};
