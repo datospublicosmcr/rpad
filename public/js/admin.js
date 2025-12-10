@@ -2,11 +2,14 @@
 let datasets = [];
 let temas = [];
 let frecuencias = [];
-let formatos = [];
 let areas = [];
 let deleteId = null;
 let currentEditDataset = null;
 let andinoAreaReferencia = null; // Área de referencia importada de Andino
+
+// Sistema de formatos (chips)
+let formatosSeleccionados = new Set();
+let formatosCatalogo = [];
 
 document.addEventListener('DOMContentLoaded', async () => {
   // Verificar autenticación
@@ -21,6 +24,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('user-name').textContent = `👤 ${user.nombre_completo || user.username}`;
   }
 
+  // Ocultar elementos de administración si es lector
+  if (!Auth.isAdmin()) {
+    document.getElementById('btn-nuevo-dataset').style.display = 'none';
+    document.getElementById('panel-notificaciones').style.display = 'none';
+  }
+
   await loadCatalogos();
   await loadDatasets();
   setupSearch();
@@ -28,7 +37,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 async function loadCatalogos() {
   try {
-    [temas, frecuencias, formatos, areas] = await Promise.all([
+    [temas, frecuencias, formatosCatalogo, areas] = await Promise.all([
       API.getTemas(),
       API.getFrecuencias(),
       API.getFormatos(),
@@ -44,11 +53,6 @@ async function loadCatalogos() {
     document.getElementById('frecuencia_id').innerHTML = '<option value="">Seleccionar...</option>' + 
       frecuencias.map(f => `<option value="${f.id}">${Utils.escapeHtml(f.nombre)}</option>`).join('');
 
-    // Llenar selects de formatos
-    const formatoOptions = formatos.map(f => `<option value="${f}">${f}</option>`).join('');
-    document.getElementById('formato_primario').innerHTML = '<option value="">Seleccionar...</option>' + formatoOptions;
-    document.getElementById('formato_secundario').innerHTML = '<option value="">Ninguno</option>' + formatoOptions;
-
     // Llenar select de áreas
     actualizarSelectAreas();
   } catch (error) {
@@ -61,9 +65,127 @@ function actualizarSelectAreas() {
   document.getElementById('area_id').innerHTML = '<option value="">Seleccionar...</option>' + areaOptions;
 }
 
+// =====================================================
+// SISTEMA DE CHIPS PARA FORMATOS
+// =====================================================
+
+/**
+ * Renderiza los chips de formatos habituales y el dropdown de no habituales
+ */
+function renderizarChipsFormatos() {
+  const container = document.getElementById('chips-container');
+  const dropdown = document.getElementById('formato-dropdown');
+  
+  if (!container || !dropdown) return;
+  
+  // Separar habituales y no habituales
+  const habituales = formatosCatalogo.filter(f => f.habitual === 1);
+  const noHabituales = formatosCatalogo.filter(f => f.habitual === 0);
+  
+  // Renderizar chips habituales
+  container.innerHTML = habituales.map(f => {
+    const selected = formatosSeleccionados.has(f.id);
+    return `
+      <span class="chip ${selected ? 'selected' : ''}" 
+            data-id="${f.id}" 
+            data-habitual="1"
+            onclick="toggleChip(${f.id})">
+        <span class="check-icon">✓</span>
+        ${Utils.escapeHtml(f.nombre)}
+      </span>
+    `;
+  }).join('');
+  
+  // Agregar chips de formatos no habituales seleccionados
+  noHabituales.forEach(f => {
+    if (formatosSeleccionados.has(f.id)) {
+      container.innerHTML += `
+        <span class="chip selected" 
+              data-id="${f.id}" 
+              data-habitual="0">
+          <span class="check-icon">✓</span>
+          ${Utils.escapeHtml(f.nombre)}
+          <span class="chip-remove" onclick="removeNoHabitual(${f.id}, event)">×</span>
+        </span>
+      `;
+    }
+  });
+  
+  // Llenar dropdown con formatos no habituales no seleccionados
+  dropdown.innerHTML = '<option value="">+ Agregar otro formato...</option>';
+  noHabituales.forEach(f => {
+    if (!formatosSeleccionados.has(f.id)) {
+      dropdown.innerHTML += `<option value="${f.id}">${Utils.escapeHtml(f.nombre)}</option>`;
+    }
+  });
+  
+  // Event listener para dropdown (solo agregar una vez)
+  dropdown.onchange = function() {
+    if (this.value) {
+      formatosSeleccionados.add(parseInt(this.value));
+      renderizarChipsFormatos();
+      this.value = '';
+    }
+  };
+  
+  // Actualizar estado visual del contenedor
+  actualizarEstadoContenedorFormatos();
+}
+
+/**
+ * Toggle para chips habituales
+ */
+function toggleChip(id) {
+  if (formatosSeleccionados.has(id)) {
+    formatosSeleccionados.delete(id);
+  } else {
+    formatosSeleccionados.add(id);
+  }
+  renderizarChipsFormatos();
+}
+
+/**
+ * Remover chip no habitual
+ */
+function removeNoHabitual(id, event) {
+  event.stopPropagation();
+  formatosSeleccionados.delete(id);
+  renderizarChipsFormatos();
+}
+
+/**
+ * Actualiza el borde del contenedor según si hay formatos seleccionados
+ */
+function actualizarEstadoContenedorFormatos() {
+  const container = document.getElementById('chips-container');
+  if (formatosSeleccionados.size === 0) {
+    container.classList.add('error');
+  } else {
+    container.classList.remove('error');
+  }
+}
+
+/**
+ * Pre-selecciona formatos por nombre (para importación desde Andino)
+ */
+function preseleccionarFormatosPorNombre(nombresFormatos) {
+  if (!nombresFormatos || !Array.isArray(nombresFormatos)) return;
+  
+  nombresFormatos.forEach(nombre => {
+    const formato = formatosCatalogo.find(f => 
+      f.nombre.toUpperCase() === nombre.toUpperCase()
+    );
+    if (formato) {
+      formatosSeleccionados.add(formato.id);
+    }
+  });
+}
+
 async function loadDatasets() {
   try {
     datasets = await API.getDatasets();
+    // Ordenana alfabéticamente por título
+    datasets.sort((a, b) => a.titulo.localeCompare(b.titulo));
     renderTable(datasets);
   } catch (error) {
     console.error('Error cargando datasets:', error);
@@ -122,9 +244,11 @@ function renderTable(data) {
         <td>${proximaTexto}</td>
         <td>
           <div class="table-actions">
+            ${Auth.isAdmin() ? `
             <button onclick="marcarActualizado(${d.id})" class="btn btn-success btn-sm" title="Marcar actualizado">✔</button>
             <button onclick="editDataset(${d.id})" class="btn btn-secondary btn-sm" title="Editar">✏️</button>
             <button onclick="openDeleteModal(${d.id}, '${Utils.escapeHtml(d.titulo).replace(/'/g, "\\'")}')" class="btn btn-danger btn-sm" title="Eliminar">🗑️</button>
+            ` : '<span class="text-muted text-small">Solo lectura</span>'}
           </div>
         </td>
       </tr>
@@ -235,6 +359,9 @@ function openModal(dataset = null, andinoData = null) {
   form.reset();
   document.getElementById('dataset-id').value = '';
   currentEditDataset = null;
+  
+  // Resetear formatos seleccionados
+  formatosSeleccionados.clear();
 
   // Ocultar sección de referencia de Andino por defecto
   andinoRefSection.classList.add('hidden');
@@ -250,13 +377,16 @@ function openModal(dataset = null, andinoData = null) {
     document.getElementById('tema_principal_id').value = dataset.tema_principal_id || '';
     document.getElementById('tema_secundario_id').value = dataset.tema_secundario_id || '';
     document.getElementById('frecuencia_id').value = dataset.frecuencia_id || '';
-    document.getElementById('formato_primario').value = dataset.formato_primario || '';
-    document.getElementById('formato_secundario').value = dataset.formato_secundario || '';
     document.getElementById('ultima_actualizacion').value = dataset.ultima_actualizacion ? dataset.ultima_actualizacion.split('T')[0] : '';
     document.getElementById('proxima_actualizacion').value = dataset.proxima_actualizacion ? dataset.proxima_actualizacion.split('T')[0] : '';
     document.getElementById('url_dataset').value = dataset.url_dataset || '';
     document.getElementById('observaciones').value = dataset.observaciones || '';
     document.getElementById('tipo_gestion').value = dataset.tipo_gestion || '';
+    
+    // Cargar formatos existentes
+    if (dataset.formatos_array && Array.isArray(dataset.formatos_array)) {
+      dataset.formatos_array.forEach(f => formatosSeleccionados.add(f.id));
+    }
     
     // Mostrar botón de actualizar desde portal si tiene URL
     if (dataset.url_dataset && dataset.url_dataset.includes('datos.comodoro.gov.ar')) {
@@ -275,6 +405,11 @@ function openModal(dataset = null, andinoData = null) {
       document.getElementById('descripcion').value = andinoData.descripcion || '';
       document.getElementById('url_dataset').value = andinoData.url_dataset || '';
       
+      // Pre-seleccionar formatos importados de Andino
+      if (andinoData.formatos && Array.isArray(andinoData.formatos)) {
+        preseleccionarFormatosPorNombre(andinoData.formatos);
+      }
+      
       // Mostrar área de referencia de Andino
       if (andinoAreaReferencia) {
         document.getElementById('andino-area-texto').textContent = andinoAreaReferencia;
@@ -283,6 +418,9 @@ function openModal(dataset = null, andinoData = null) {
     }
   }
 
+  // Renderizar chips de formatos
+  renderizarChipsFormatos();
+  
   modal.classList.add('active');
 }
 
@@ -293,9 +431,14 @@ function closeModal() {
 }
 
 async function editDataset(id) {
-  const dataset = datasets.find(d => d.id === id);
-  if (dataset) {
-    openModal(dataset);
+  try {
+    const dataset = await API.getDataset(id);
+    if (dataset) {
+      openModal(dataset);
+    }
+  } catch (error) {
+    console.error('Error cargando dataset:', error);
+    Utils.showError('Error al cargar el dataset');
   }
 }
 
@@ -345,9 +488,16 @@ async function confirmUpdateFromAndino() {
       return;
     }
 
-    // Actualizar solo título y descripción (área no se actualiza automáticamente)
+    // Actualizar título y descripción
     document.getElementById('titulo').value = result.data.titulo || '';
     document.getElementById('descripcion').value = result.data.descripcion || '';
+
+    // Actualizar formatos si vienen del portal
+    if (result.data.formatos && Array.isArray(result.data.formatos) && result.data.formatos.length > 0) {
+      // Agregar los formatos importados (sin eliminar los existentes)
+      preseleccionarFormatosPorNombre(result.data.formatos);
+      renderizarChipsFormatos();
+    }
 
     // Cerrar modal de confirmación
     closeConfirmUpdateModal();
@@ -422,6 +572,13 @@ async function saveQuickArea() {
 document.getElementById('dataset-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   
+  // Validar que hay al menos un formato seleccionado
+  if (formatosSeleccionados.size === 0) {
+    Utils.showError('Debe seleccionar al menos un formato');
+    actualizarEstadoContenedorFormatos();
+    return;
+  }
+  
   const submitBtn = document.getElementById('submit-btn');
   submitBtn.disabled = true;
   submitBtn.textContent = 'Guardando...';
@@ -434,8 +591,7 @@ document.getElementById('dataset-form').addEventListener('submit', async (e) => 
     tema_principal_id: parseInt(document.getElementById('tema_principal_id').value),
     tema_secundario_id: document.getElementById('tema_secundario_id').value ? parseInt(document.getElementById('tema_secundario_id').value) : null,
     frecuencia_id: parseInt(document.getElementById('frecuencia_id').value),
-    formato_primario: document.getElementById('formato_primario').value,
-    formato_secundario: document.getElementById('formato_secundario').value || null,
+    formatos: Array.from(formatosSeleccionados),
     ultima_actualizacion: document.getElementById('ultima_actualizacion').value || null,
     proxima_actualizacion: document.getElementById('proxima_actualizacion').value || null,
     url_dataset: document.getElementById('url_dataset').value || null,
