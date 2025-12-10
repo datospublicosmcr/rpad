@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Servidor: localhost:3306
--- Tiempo de generación: 10-12-2025 a las 10:05:41
+-- Tiempo de generación: 10-12-2025 a las 19:36:19
 -- Versión del servidor: 10.11.14-MariaDB-cll-lve-log
 -- Versión de PHP: 8.4.14
 
@@ -358,6 +358,7 @@ INSERT INTO `dataset_formatos` (`dataset_id`, `formato_id`) VALUES
 (57, 1),
 (57, 2),
 (58, 1),
+(58, 2),
 (58, 5),
 (59, 1),
 (59, 2),
@@ -568,18 +569,11 @@ CREATE TABLE `usuarios` (
   `password_hash` varchar(255) NOT NULL,
   `nombre_completo` varchar(100) NOT NULL,
   `email` varchar(100) NOT NULL,
+  `rol` enum('admin','lector') NOT NULL DEFAULT 'admin',
   `activo` tinyint(1) DEFAULT 1,
   `created_at` timestamp NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
---
--- Volcado de datos para la tabla `usuarios`
---
-
-INSERT INTO `usuarios` (`id`, `username`, `password_hash`, `nombre_completo`, `email`, `activo`, `created_at`, `updated_at`) VALUES
-(1, 'datos', '$2a$10$Pg3hdXv0E2FOtJJoRZnRxehwfmAUVlsGXzK9P0FRUiVOxmZt0R5.C', 'Mariano Ariel Perez', 'marianoaperez@yahoo.com.ar', 1, '2025-11-30 21:20:04', '2025-11-30 21:20:04'),
-(2, 'admin', '$2a$10$u87t7GIMKt9pIEoztInWxO6wiTJj8efzP40AA1zdpFew/MpuC6udq', 'Aldana Noelia Barroso', 'aldanabarroso16@gmail.com', 1, '2025-11-30 21:32:14', '2025-11-30 21:32:14');
 
 --
 -- Índices para tablas volcadas
@@ -708,7 +702,7 @@ ALTER TABLE `temas`
 -- AUTO_INCREMENT de la tabla `usuarios`
 --
 ALTER TABLE `usuarios`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
 -- Restricciones para tablas volcadas
