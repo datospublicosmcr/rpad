@@ -95,10 +95,8 @@ function renderDataset(d) {
   // Info técnica
   document.getElementById('info-frecuencia').textContent = d.frecuencia_nombre || '-';
   
-  const formatos = [];
-  if (d.formato_primario) formatos.push(d.formato_primario);
-  if (d.formato_secundario) formatos.push(d.formato_secundario);
-  document.getElementById('info-formatos').textContent = formatos.join(', ') || '-';
+  // Formatos vienen como string concatenado desde el backend
+  document.getElementById('info-formatos').textContent = d.formatos || '-';
   
   // Tipo de gestión
   document.getElementById('info-tipo-gestion').textContent = Utils.getTipoGestionTexto(d.tipo_gestion);
