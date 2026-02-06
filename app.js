@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { testConnection } from './config/database.js';
+import { inicializar as inicializarBlockchain } from './services/blockchainService.js';
 import routes from './routes/index.js';
 
 // Cargar variables de entorno
@@ -72,6 +73,11 @@ const startServer = async () => {
     console.error('❌ No se pudo conectar a la base de datos.');
     process.exit(1);
   }
+
+  // Inicializar blockchain (no bloqueante — si falla, RPAD sigue funcionando)
+  inicializarBlockchain().catch(err => {
+    console.error('⚠️ Blockchain: no se pudo inicializar:', err.message);
+  });
 
   app.listen(PORT, () => {
     console.log('');

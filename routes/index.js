@@ -47,6 +47,12 @@ import {
   getDatasetsConPendientes
 } from '../controllers/cambiosPendientesController.js';
 import { enviarContacto } from '../controllers/contactoController.js';
+import {
+  verificar,
+  estado as estadoBlockchain,
+  registro,
+  registrosPorDataset
+} from '../controllers/blockchainController.js';
 
 const router = Router();
 
@@ -76,6 +82,11 @@ router.get('/andino/fetch', fetchFromAndino);
 
 // Contacto (público con rate limiting)
 router.post('/contacto', enviarContacto);
+
+// Blockchain (públicas)
+router.get('/blockchain/verificar/:hash', verificar);
+router.get('/blockchain/registro', registro);
+router.get('/blockchain/dataset/:id', registrosPorDataset);
 
 // =====================================================
 // Rutas protegidas (requieren autenticación)
@@ -111,6 +122,11 @@ router.get('/cambios-pendientes/:id', authMiddleware, getCambioPendienteById);
 router.get('/cambios-pendientes/verificar/:datasetId', authMiddleware, verificarDatasetBloqueado);
 router.post('/cambios-pendientes/:id/aprobar', authMiddleware, aprobarCambio);
 router.post('/cambios-pendientes/:id/rechazar', authMiddleware, rechazarCambio);
+
+// =====================================================
+// Blockchain (protegidas)
+// =====================================================
+router.get('/blockchain/estado', authMiddleware, estadoBlockchain);
 
 // =====================================================
 // Notificaciones (protegidas)
