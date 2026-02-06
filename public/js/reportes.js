@@ -10,10 +10,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     return;
   }
 
-  // Mostrar nombre de usuario
-  const user = Auth.getUser();
-  document.getElementById('user-name').textContent = user?.nombre || '';
-
   // Cargar áreas para el select
   await cargarAreas();
 
