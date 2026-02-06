@@ -58,11 +58,12 @@ const API = {
     return data;
   },
 
-  async registrarActualizacion(id) {
-    const response = await fetch(`${CONFIG.API_URL}/datasets/${id}/actualizar`, {
-      method: 'POST',
-      headers: Auth.getAuthHeaders()
-    });
+async registrarActualizacion(id, datos = {}) {
+  const response = await fetch(`${CONFIG.API_URL}/datasets/${id}/actualizar`, {
+    method: 'POST',
+    headers: Auth.getAuthHeaders(),
+    body: JSON.stringify(datos)
+  });
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || 'Error al registrar actualización');
     return data.data;
@@ -168,6 +169,126 @@ const API = {
       headers: Auth.getAuthHeaders()
     });
     const data = await response.json();
+    return data;
+  },
+
+  // === PERFIL ===
+  async getProfile() {
+    const response = await fetch(`${CONFIG.API_URL}/auth/profile`, {
+      method: 'GET',
+      headers: Auth.getAuthHeaders()
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || 'Error al obtener perfil');
+    return data.data.user;
+  },
+
+  async updateProfile(datos) {
+    const response = await fetch(`${CONFIG.API_URL}/auth/profile`, {
+      method: 'PUT',
+      headers: Auth.getAuthHeaders(),
+      body: JSON.stringify(datos)
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || 'Error al actualizar perfil');
+    return data.data.user;
+  },
+
+  // === CAMBIOS PENDIENTES ===
+  async getContadorPendientes() {
+  const response = await fetch(`${CONFIG.API_URL}/cambios-pendientes/contador?_t=${Date.now()}`, {
+    method: 'GET',
+    headers: Auth.getAuthHeaders(),
+    cache: 'no-store'
+  });
+    const data = await response.json();
+    if (!response.ok) return { cantidad: 0 };
+    return data.data;
+  },
+
+  async getCambiosPendientesParaRevisar(filtros = {}) {
+  const params = new URLSearchParams();
+  if (filtros.tipo) params.append('tipo', filtros.tipo);
+  if (filtros.usuario) params.append('usuario', filtros.usuario);
+  if (filtros.estado) params.append('estado', filtros.estado);
+  params.append('_t', Date.now()); // Cache buster
+
+  const url = `${CONFIG.API_URL}/cambios-pendientes/para-revisar?${params.toString()}`;
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: Auth.getAuthHeaders(),
+    cache: 'no-store'
+  });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || 'Error al obtener cambios pendientes');
+    return data.data;
+  },
+
+  async getMisCambios(filtros = {}) {
+  const params = new URLSearchParams();
+  if (filtros.estado) params.append('estado', filtros.estado);
+  params.append('_t', Date.now()); // Cache buster
+
+  const url = `${CONFIG.API_URL}/cambios-pendientes/mis-cambios?${params.toString()}`;
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: Auth.getAuthHeaders(),
+    cache: 'no-store'
+  });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || 'Error al obtener mis cambios');
+    return data.data;
+  },
+
+  async getCambioPendiente(id) {
+    const response = await fetch(`${CONFIG.API_URL}/cambios-pendientes/${id}`, {
+      method: 'GET',
+      headers: Auth.getAuthHeaders()
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || 'Error al obtener cambio pendiente');
+    return data.data;
+  },
+
+  async getDatasetsConPendientes() {
+    const response = await fetch(`${CONFIG.API_URL}/cambios-pendientes/datasets-bloqueados?_t=${Date.now()}`, {
+        method: 'GET',
+        headers: Auth.getAuthHeaders(),
+        cache: 'no-store'
+    });
+    const data = await response.json();
+    if (!response.ok) return [];
+    return data.data;
+  },
+
+  async verificarDatasetBloqueado(datasetId) {
+    const response = await fetch(`${CONFIG.API_URL}/cambios-pendientes/verificar/${datasetId}`, {
+      method: 'GET',
+      headers: Auth.getAuthHeaders()
+    });
+    const data = await response.json();
+    if (!response.ok) return { bloqueado: false };
+    return data.data;
+  },
+
+  async aprobarCambio(id) {
+    const response = await fetch(`${CONFIG.API_URL}/cambios-pendientes/${id}/aprobar`, {
+      method: 'POST',
+      headers: Auth.getAuthHeaders()
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || 'Error al aprobar cambio');
+    return data;
+  },
+
+  async rechazarCambio(id, comentario) {
+    const response = await fetch(`${CONFIG.API_URL}/cambios-pendientes/${id}/rechazar`, {
+      method: 'POST',
+      headers: Auth.getAuthHeaders(),
+      body: JSON.stringify({ comentario })
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || 'Error al rechazar cambio');
     return data;
   },
 
