@@ -276,9 +276,9 @@ export async function obtenerSello(hashHex) {
        FROM blockchain_registros br
        LEFT JOIN datasets d ON br.dataset_id = d.id
        LEFT JOIN areas a ON d.area_id = a.id
-       WHERE br.hash_sellado = ? OR br.file_hash = ?
+       WHERE br.hash_sellado = ? OR br.file_hash = ? OR br.tx_hash = ?
        ORDER BY br.created_at DESC LIMIT 1`,
-      [hashHex, hashHex]
+      [hashHex, hashHex, hashHex]
     );
 
     if (rows.length === 0) {
