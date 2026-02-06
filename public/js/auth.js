@@ -81,5 +81,23 @@ const Auth = {
       'Content-Type': 'application/json',
       'Authorization': token ? `Bearer ${token}` : ''
     };
+  },
+  // Verificar si el token JWT expiró
+  isTokenExpired() {
+    const token = this.getToken();
+    if (!token) return true;
+    try {
+      const payload = token.split('.')[1];
+      const decoded = JSON.parse(atob(payload));
+      const now = Date.now() / 1000;
+      return decoded.exp < now;
+    } catch {
+      return true;
+    }
+  },
+  // Logout silencioso (sin redirección)
+  clearSession() {
+    localStorage.removeItem(CONFIG.TOKEN_KEY);
+    localStorage.removeItem(CONFIG.USER_KEY);
   }
 };
