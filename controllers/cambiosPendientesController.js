@@ -4,6 +4,7 @@
  */
 
 import pool from '../config/database.js';
+import { calcularHash, sellarHash } from '../services/blockchainService.js';
 
 /**
  * Funcion auxiliar: Cargar catalogos para enriquecer datos
@@ -437,7 +438,7 @@ export const aprobarCambio = async (req, res) => {
         }
       }
 
-    } else if (cambio.tipo_cambio === 'editar') {
+    } else if (cambio.tipo_cambio === 'editar' || cambio.tipo_cambio === 'actualizar') {
       // Actualizar dataset existente
       const updates = [];
       const values = [];
@@ -497,6 +498,47 @@ export const aprobarCambio = async (req, res) => {
 
     await connection.commit();
     connection.release();
+
+    // Sellado blockchain — después del commit, no bloqueante
+    // Si blockchain falla, el cambio en BD ya es definitivo
+    try {
+      const datosAnteriores = cambio.datos_anteriores
+        ? (typeof cambio.datos_anteriores === 'string' ? JSON.parse(cambio.datos_anteriores) : cambio.datos_anteriores)
+        : null;
+
+      // Hash de operación (siempre)
+      const datosParaSellar = {
+        version: "1.0",
+        tipo: "cambio_dataset",
+        tipo_cambio: cambio.tipo_cambio,
+        dataset_id: datasetId,
+        datos_nuevos: datosNuevos,
+        datos_anteriores: datosAnteriores,
+        doble_verificacion: true,
+        usuario_id: cambio.usuario_id,
+        revisor_id: revisorId,
+        timestamp: new Date().toISOString()
+      };
+      const hashHex = calcularHash(datosParaSellar);
+      await sellarHash(hashHex, {
+        tipo: 'cambio_dataset',
+        referencia_id: Number(id),
+        dataset_id: datasetId,
+        metadata: datosParaSellar
+      });
+
+      // Hash de archivo (si hay file_hash en datos_nuevos)
+      if (datosNuevos.file_hash) {
+        await sellarHash(datosNuevos.file_hash, {
+          tipo: 'certificacion_archivo',
+          referencia_id: Number(id),
+          dataset_id: datasetId,
+          metadata: { file_hash: datosNuevos.file_hash, dataset_id: datasetId, timestamp: datosParaSellar.timestamp }
+        });
+      }
+    } catch (blockchainError) {
+      console.error('⚠️ Blockchain: error al sellar (no crítico):', blockchainError.message);
+    }
 
     res.json({
       success: true,
