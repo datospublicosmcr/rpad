@@ -80,12 +80,14 @@ export const createArea = async (req, res) => {
 
     const [result] = await pool.execute(
       `INSERT INTO areas (
-        nombre, area_superior, email_principal, email_secundario,
+        nombre, articulo, area_superior, articulo_superior, email_principal, email_secundario,
         telefono_area, celular_area, nombre_contacto, telefono_contacto, email_contacto
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         data.nombre,
+        data.articulo || 'la',
         data.area_superior || null,
+        data.articulo_superior || null,
         data.email_principal || null,
         data.email_secundario || null,
         data.telefono_area || null,
@@ -155,7 +157,7 @@ export const updateArea = async (req, res) => {
     const values = [];
 
     const fields = [
-      'nombre', 'area_superior', 'email_principal', 'email_secundario',
+      'nombre', 'articulo', 'area_superior', 'articulo_superior', 'email_principal', 'email_secundario',
       'telefono_area', 'celular_area', 'nombre_contacto', 'telefono_contacto', 'email_contacto'
     ];
 
