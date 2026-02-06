@@ -6,10 +6,15 @@ let areas = [];
 let deleteId = null;
 let currentEditDataset = null;
 let andinoAreaReferencia = null; // Área de referencia importada de Andino
+let datasetsConPendientes = []; // IDs de datasets con cambios pendientes
 
 // Sistema de formatos (chips)
 let formatosSeleccionados = new Set();
 let formatosCatalogo = [];
+
+// Variables para modal de registrar actualización
+let registrarActualizacionId = null;
+let registrarActualizacionDataset = null;
 
 document.addEventListener('DOMContentLoaded', async () => {
   // Verificar autenticación
@@ -18,21 +23,20 @@ document.addEventListener('DOMContentLoaded', async () => {
     return;
   }
 
-  // Mostrar nombre de usuario
-  const user = Auth.getUser();
-  if (user) {
-    document.getElementById('user-name').textContent = `👤 ${user.nombre_completo || user.username}`;
-  }
-
   // Ocultar elementos de administración si es lector
   if (!Auth.isAdmin()) {
-    document.getElementById('btn-nuevo-dataset').style.display = 'none';
-    document.getElementById('panel-notificaciones').style.display = 'none';
+    const btnNuevo = document.getElementById('btn-nuevo-dataset');
+    if (btnNuevo) btnNuevo.style.display = 'none';
   }
 
   await loadCatalogos();
   await loadDatasets();
   setupSearch();
+  
+  // Cargar indicadores de cambios pendientes (solo admin)
+  if (Auth.isAdmin()) {
+    await cargarIndicadoresPendientes();
+  }
 });
 
 async function loadCatalogos() {
@@ -229,27 +233,34 @@ function renderTable(data) {
       proximaTexto = Utils.formatDate(d.proxima_actualizacion);
     }
 
-    // Mostrar tipo de gestión con icono
-    const tipoGestionIcon = d.tipo_gestion === 'interna' ? '🏠' : '📤';
+    // Mostrar tipo de gestión con icono Lucide
+    const tipoGestionIcon = d.tipo_gestion === 'interna' 
+    ? '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: #6366f1;"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="m16 8-8 8"/><path d="M16 14v-6h-6"/></svg>'
+    : '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: #f59e0b;"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M8 16 16 8"/><path d="M8 10V8h6"/></svg>';
     const tipoGestionTexto = d.tipo_gestion === 'interna' ? 'Interna' : 'Externa';
 
+    // Verificar si tiene cambios pendientes
+    const tienePendientes = datasetEstaBloqueado(d.id);
+    const indicadorPendiente = tienePendientes ? '<span class="indicador-pendiente">🟡 Pendiente</span>' : '';
+    const claseFila = tienePendientes ? 'fila-bloqueada' : '';
+
     return `
-      <tr>
+      <tr class="${claseFila}">
         <td>
-          <div style="font-weight: 500;">${Utils.escapeHtml(d.titulo)}</div>
+          <div style="font-weight: 500;">${Utils.escapeHtml(d.titulo)}${indicadorPendiente}</div>
           <div class="text-small text-muted">${Utils.escapeHtml(d.area_nombre || '-')}</div>
         </td>
         <td><span class="badge ${estadoClase}">${estadoTexto}</span></td>
         <td><span title="${tipoGestionTexto}">${tipoGestionIcon} ${tipoGestionTexto}</span></td>
         <td>${proximaTexto}</td>
         <td>
-          <div class="table-actions">
+            <div class="table-actions" style="display: flex; gap: 6px;">
             ${Auth.isAdmin() ? `
-            <button onclick="marcarActualizado(${d.id})" class="btn btn-success btn-sm" title="Marcar actualizado">✔</button>
-            <button onclick="editDataset(${d.id})" class="btn btn-secondary btn-sm" title="Editar">✏️</button>
-            <button onclick="openDeleteModal(${d.id}, '${Utils.escapeHtml(d.titulo).replace(/'/g, "\\'")}')" class="btn btn-danger btn-sm" title="Eliminar">🗑️</button>
+            <button onclick="marcarActualizado(${d.id})" class="btn btn-success btn-sm" style="${tienePendientes ? 'filter: grayscale(100%); opacity: 0.5; pointer-events: none;' : ''}" title="Marcar actualizado${tienePendientes ? ' (Bloqueado)' : ''}"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></button>
+            <button onclick="editDataset(${d.id})" class="btn btn-secondary btn-sm" style="${tienePendientes ? 'filter: grayscale(100%); opacity: 0.5; pointer-events: none;' : ''}" title="Editar${tienePendientes ? ' (Bloqueado)' : ''}"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg></button>
+            <button onclick="openDeleteModal(${d.id}, '${Utils.escapeHtml(d.titulo).replace(/'/g, "\\'")}')" class="btn btn-danger btn-sm" style="${tienePendientes ? 'filter: grayscale(100%); opacity: 0.5; pointer-events: none;' : ''}" title="Eliminar${tienePendientes ? ' (Bloqueado)' : ''}"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg></button>
             ` : '<span class="text-muted text-small">Solo lectura</span>'}
-          </div>
+            </div>
         </td>
       </tr>
     `;
@@ -431,6 +442,12 @@ function closeModal() {
 }
 
 async function editDataset(id) {
+  // Verificar bloqueo por cambios pendientes
+  if (datasetEstaBloqueado(id)) {
+    mostrarMensajeBloqueo();
+    return;
+  }
+
   try {
     const dataset = await API.getDataset(id);
     if (dataset) {
@@ -602,15 +619,34 @@ document.getElementById('dataset-form').addEventListener('submit', async (e) => 
   try {
     if (id) {
       await API.updateDataset(id, data);
-      Utils.showSuccess('Dataset actualizado correctamente');
+      Utils.showSuccess('Cambios enviados para aprobación');
     } else {
       await API.createDataset(data);
-      Utils.showSuccess('Dataset creado correctamente');
+      Utils.showSuccess('Dataset enviado para aprobación');
     }
     closeModal();
     await loadDatasets();
+    await cargarIndicadoresPendientes();
   } catch (error) {
-    Utils.showError(error.message);
+    // Mensaje especial si no hubo cambios reales - mostrar dentro del modal
+    if (error.message && error.message.includes('No se detectaron cambios')) {
+      // Mostrar error dentro del modal
+      let errorDiv = document.getElementById('modal-form-error');
+      if (!errorDiv) {
+        // Crear div de error si no existe
+        errorDiv = document.createElement('div');
+        errorDiv.id = 'modal-form-error';
+        errorDiv.style.cssText = 'background: #fee2e2; color: #dc2626; padding: 0.75rem 1rem; border-radius: 6px; margin-bottom: 1rem; font-size: 0.875rem; display: flex; align-items: center; gap: 0.5rem;';
+        const form = document.getElementById('dataset-form');
+        form.insertBefore(errorDiv, form.firstChild);
+      }
+      errorDiv.innerHTML = '⚠️ No realizaste ningún cambio. Modificá al menos un campo para guardar.';
+      errorDiv.style.display = 'flex';
+      // Scroll al inicio del modal para ver el error
+      document.querySelector('.modal-body').scrollTop = 0;
+    } else {
+      Utils.showError(error.message);
+    }
   } finally {
     submitBtn.disabled = false;
     submitBtn.textContent = 'Guardar';
@@ -622,13 +658,8 @@ document.getElementById('dataset-form').addEventListener('submit', async (e) => 
 // =====================================================
 
 async function marcarActualizado(id) {
-  try {
-    await API.registrarActualizacion(id);
-    Utils.showSuccess('Dataset marcado como actualizado');
-    await loadDatasets();
-  } catch (error) {
-    Utils.showError(error.message);
-  }
+  // Abrir modal en lugar de registrar directamente
+  await abrirRegistrarActualizacion(id);
 }
 
 // =====================================================
@@ -636,6 +667,12 @@ async function marcarActualizado(id) {
 // =====================================================
 
 function openDeleteModal(id, nombre) {
+  // Verificar bloqueo por cambios pendientes
+  if (datasetEstaBloqueado(id)) {
+    mostrarMensajeBloqueo();
+    return;
+  }
+
   deleteId = id;
   document.getElementById('delete-dataset-name').textContent = nombre;
   document.getElementById('modal-delete').classList.add('active');
@@ -651,72 +688,167 @@ async function confirmDelete() {
 
   try {
     await API.deleteDataset(deleteId);
-    Utils.showSuccess('Dataset eliminado correctamente');
+    Utils.showSuccess('Solicitud de eliminación enviada para aprobación');
     closeDeleteModal();
     await loadDatasets();
+    await cargarIndicadoresPendientes();
   } catch (error) {
     Utils.showError(error.message);
   }
 }
 
 // =====================================================
-// SISTEMA DE NOTIFICACIONES
+// SISTEMA DE CAMBIOS PENDIENTES (v1.5.0)
 // =====================================================
 
-async function verificarConexionSMTP() {
-  const statusEl = document.getElementById('smtp-status');
-  statusEl.textContent = 'Verificando...';
-  statusEl.style.color = '#6c757d';
-
+/**
+ * Carga indicadores de cambios pendientes
+ */
+async function cargarIndicadoresPendientes() {
   try {
-    const res = await API.verificarSmtp();
-    if (res.success) {
-      statusEl.textContent = '✅ Conexión SMTP exitosa';
-      statusEl.style.color = '#28a745';
-      Utils.showSuccess('Conexión SMTP verificada correctamente');
-    } else {
-      const errorMsg = res.error || res.message || 'Error desconocido';
-      const errorCode = res.code ? ` (${res.code})` : '';
-      statusEl.textContent = '❌ Error: ' + errorMsg + errorCode;
-      statusEl.style.color = '#dc3545';
-      Utils.showError('Error SMTP: ' + errorMsg + errorCode);
+    // Obtener contador para badge
+    const { cantidad } = await API.getContadorPendientes();
+    const badge = document.getElementById('nav-badge-pendientes');
+    if (badge) {
+      if (cantidad > 0) {
+        badge.textContent = cantidad;
+        badge.style.display = 'inline';
+      } else {
+        badge.style.display = 'none';
+      }
+    }
+
+    // Obtener datasets bloqueados
+    datasetsConPendientes = await API.getDatasetsConPendientes();
+    
+    // Re-renderizar tabla si ya hay datos
+    if (datasets.length > 0) {
+      const searchTerm = document.getElementById('search').value.toLowerCase();
+      const filtered = searchTerm 
+        ? datasets.filter(d => d.titulo.toLowerCase().includes(searchTerm) || (d.area_nombre && d.area_nombre.toLowerCase().includes(searchTerm)))
+        : datasets;
+      renderTable(filtered);
     }
   } catch (error) {
-    statusEl.textContent = '❌ Error de conexión';
-    statusEl.style.color = '#dc3545';
-    Utils.showError('Error: ' + error.message);
+    console.error('Error cargando indicadores de pendientes:', error);
   }
 }
 
-async function verPreviewEmail() {
-  const tipo = document.getElementById('tipo-notificacion').value;
+/**
+ * Verifica si un dataset está bloqueado por cambios pendientes
+ */
+function datasetEstaBloqueado(id) {
+  return datasetsConPendientes.includes(id);
+}
+
+/**
+ * Muestra mensaje de bloqueo
+ */
+function mostrarMensajeBloqueo() {
+  Utils.showError('Este dataset tiene cambios pendientes de aprobación. No se puede modificar hasta que se resuelvan.');
+}
+
+// =====================================================
+// REGISTRAR ACTUALIZACIÓN (Modal)
+// =====================================================
+
+/**
+ * Abre el modal de registrar actualización
+ */
+async function abrirRegistrarActualizacion(id) {
   try {
-    const htmlContent = await API.previewNotificacion(tipo);
-    const win = window.open('', '_blank');
-    win.document.write(htmlContent);
-    win.document.close();
+    // Obtener datos completos del dataset
+    const dataset = await API.getDataset(id);
+    if (!dataset) {
+      Utils.showError('No se pudo cargar el dataset');
+      return;
+    }
+
+    registrarActualizacionId = id;
+    registrarActualizacionDataset = dataset;
+
+    // Obtener frecuencia del catálogo
+    const frecuencia = frecuencias.find(f => f.id === dataset.frecuencia_id);
+    const esEventual = frecuencia && frecuencia.dias === null;
+
+    // Llenar datos informativos
+    document.getElementById('registrar-dataset-titulo').textContent = dataset.titulo;
+    document.getElementById('registrar-frecuencia').textContent = frecuencia ? frecuencia.nombre : '-';
+    document.getElementById('registrar-proxima-actual').textContent = 
+      dataset.proxima_actualizacion ? Utils.formatDate(dataset.proxima_actualizacion) : '-';
+
+    // Proponer fecha de actualización = hoy
+    const hoy = new Date().toISOString().split('T')[0];
+    document.getElementById('registrar-ultima').value = hoy;
+
+    // Calcular próxima propuesta
+    const proximaGroup = document.getElementById('registrar-proxima-group');
+    if (esEventual) {
+      // Frecuencia eventual: ocultar campo de próxima
+      proximaGroup.style.display = 'none';
+      document.getElementById('registrar-proxima').value = '';
+    } else {
+      proximaGroup.style.display = 'block';
+      const proximaPropuesta = calcularProximaPropuesta(dataset.proxima_actualizacion, frecuencia.dias);
+      document.getElementById('registrar-proxima').value = proximaPropuesta;
+    }
+
+    // Mostrar modal
+    document.getElementById('modal-registrar-actualizacion').classList.add('active');
+
   } catch (error) {
-    Utils.showError('Error al generar preview: ' + error.message);
+    console.error('Error abriendo modal:', error);
+    Utils.showError('Error al cargar datos del dataset');
   }
 }
 
-async function enviarEmailPrueba() {
-  const tipo = document.getElementById('tipo-notificacion').value;
-  const tipoTexto = document.getElementById('tipo-notificacion').selectedOptions[0].text;
+/**
+ * Calcula la próxima fecha propuesta sumando días de frecuencia a la próxima actual
+ */
+function calcularProximaPropuesta(proximaActual, diasFrecuencia) {
+  if (!proximaActual || !diasFrecuencia) return '';
   
-  if (!confirm(`⚠️ Esto enviará un email REAL a los destinatarios configurados.\n\nTipo: ${tipoTexto}\n\n¿Continuar?`)) {
-    return;
-  }
+  // Parsear fecha evitando problemas de timezone
+  const partes = proximaActual.split('T')[0].split('-');
+  const proxima = new Date(partes[0], partes[1] - 1, partes[2]);
+  proxima.setDate(proxima.getDate() + diasFrecuencia);
+  
+  // Formatear como YYYY-MM-DD
+  const anio = proxima.getFullYear();
+  const mes = String(proxima.getMonth() + 1).padStart(2, '0');
+  const dia = String(proxima.getDate()).padStart(2, '0');
+  return `${anio}-${mes}-${dia}`;
+}
+
+function closeRegistrarActualizacionModal() {
+  document.getElementById('modal-registrar-actualizacion').classList.remove('active');
+  registrarActualizacionId = null;
+  registrarActualizacionDataset = null;
+}
+
+async function confirmarRegistrarActualizacion() {
+  if (!registrarActualizacionId) return;
+
+  const btnConfirmar = document.getElementById('btn-confirmar-actualizacion');
+  btnConfirmar.disabled = true;
+  btnConfirmar.innerHTML = '<span>⏳</span> Guardando...';
+
+  const fechaActualizacion = document.getElementById('registrar-ultima').value;
+  const proximaActualizacion = document.getElementById('registrar-proxima').value || null;
 
   try {
-    Utils.showSuccess('Enviando email...');
-    const res = await API.enviarNotificacionPrueba(tipo);
-    if (res.success) {
-      Utils.showSuccess(`✅ Email enviado. Datasets encontrados: ${res.datasetsEncontrados || res.areasNotificadas?.length || 0}`);
-    } else {
-      Utils.showError(res.message || 'Error al enviar email');
-    }
+    await API.registrarActualizacion(registrarActualizacionId, {
+      fecha_actualizacion: fechaActualizacion,
+      proxima_actualizacion: proximaActualizacion
+    });
+    
+    Utils.showSuccess('Actualización registrada correctamente');
+    closeRegistrarActualizacionModal();
+    await loadDatasets();
   } catch (error) {
-    Utils.showError('Error: ' + error.message);
+    Utils.showError(error.message);
+  } finally {
+    btnConfirmar.disabled = false;
+    btnConfirmar.innerHTML = '<span>✔</span> Registrar';
   }
 }
