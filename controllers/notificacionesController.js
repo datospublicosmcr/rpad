@@ -129,6 +129,56 @@ const logNotificacion = async (tipo, areaId, destinatarios, datasetsIds, success
 };
 
 /**
+ * Obtiene cambios pendientes para un admin específico (excluyendo los propios)
+ * @param {number} adminId - ID del admin que va a revisar
+ */
+const getCambiosPendientesParaAdmin = async (adminId) => {
+  const query = `
+    SELECT 
+      cp.id,
+      cp.tipo_cambio,
+      cp.dataset_id,
+      cp.datos_nuevos,
+      cp.usuario_id,
+      cp.created_at,
+      d.titulo AS dataset_titulo,
+      u.username AS usuario_username,
+      u.nombre_completo AS usuario_nombre,
+      CASE 
+        WHEN TIMESTAMPDIFF(MINUTE, cp.created_at, NOW()) < 60 THEN CONCAT('Hace ', TIMESTAMPDIFF(MINUTE, cp.created_at, NOW()), ' minutos')
+        WHEN TIMESTAMPDIFF(HOUR, cp.created_at, NOW()) < 24 THEN CONCAT('Hace ', TIMESTAMPDIFF(HOUR, cp.created_at, NOW()), ' horas')
+        ELSE CONCAT('Hace ', TIMESTAMPDIFF(DAY, cp.created_at, NOW()), ' dias')
+      END AS tiempo_pendiente
+    FROM cambios_pendientes cp
+    JOIN usuarios u ON cp.usuario_id = u.id
+    LEFT JOIN datasets d ON cp.dataset_id = d.id
+    WHERE cp.estado = 'pendiente'
+      AND cp.usuario_id != ?
+    ORDER BY cp.created_at ASC
+  `;
+  
+  const [rows] = await pool.execute(query, [adminId]);
+  
+  // Parsear datos_nuevos JSON
+  return rows.map(row => ({
+    ...row,
+    datos_nuevos: row.datos_nuevos ? JSON.parse(row.datos_nuevos) : null
+  }));
+};
+
+/**
+ * Obtiene todos los admins con sus emails (para notificaciones)
+ */
+const getAdminsConEmail = async () => {
+  const [rows] = await pool.execute(
+    `SELECT id, username, nombre_completo, email 
+     FROM usuarios 
+     WHERE rol = 'admin' AND activo = TRUE AND email IS NOT NULL`
+  );
+  return rows;
+};
+
+/**
  * Ejecuta el proceso de notificaciones diarias
  * Llamado por cron a las 8:00 AM
  */
@@ -531,6 +581,126 @@ export const previewEmail = async (req, res) => {
     const { subject, html } = config.template(datasets);
 
     // Devolver HTML para previsualizar en el navegador
+    res.setHeader('Content-Type', 'text/html');
+    res.send(html);
+
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+};
+
+/**
+ * Ejecuta notificación de cambios pendientes
+ * Llamado por cron a las 13:00
+ * Envía email a cada admin con los cambios que puede revisar (excluye los propios)
+ */
+export const ejecutarNotificacionCambiosPendientes = async (req, res) => {
+  const resultados = {
+    fecha: new Date().toISOString(),
+    enviados: [],
+    sinPendientes: [],
+    errores: []
+  };
+
+  try {
+    // Obtener todos los admins
+    const admins = await getAdminsConEmail();
+
+    for (const admin of admins) {
+      // Obtener cambios pendientes que este admin puede revisar
+      const cambiosPendientes = await getCambiosPendientesParaAdmin(admin.id);
+
+      if (cambiosPendientes.length === 0) {
+        resultados.sinPendientes.push(admin.username);
+        continue;
+      }
+
+      // Generar y enviar email
+      const { subject, html } = templates.cambiosPendientesTemplate(cambiosPendientes);
+      const result = await sendEmail({ subject, html, to: [admin.email] });
+
+      if (result.success) {
+        resultados.enviados.push({
+          admin: admin.username,
+          email: admin.email,
+          cantidadPendientes: cambiosPendientes.length
+        });
+      } else {
+        resultados.errores.push({
+          admin: admin.username,
+          error: result.error
+        });
+      }
+    }
+
+    const success = resultados.errores.length === 0;
+    res.status(success ? 200 : 207).json({
+      success,
+      message: success
+        ? `Notificaciones enviadas a ${resultados.enviados.length} admins.`
+        : `Proceso completado con ${resultados.errores.length} errores.`,
+      data: resultados
+    });
+
+  } catch (error) {
+    console.error('Error en notificación de cambios pendientes:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Error ejecutando notificación de cambios pendientes',
+      details: error.message
+    });
+  }
+};
+
+/**
+ * Preview de email de cambios pendientes (sin enviar)
+ */
+export const previewCambiosPendientes = async (req, res) => {
+  try {
+    // Usar el usuario actual o buscar cualquier admin para preview
+    const userId = req.user?.id || 0;
+    
+    let cambiosPendientes = await getCambiosPendientesParaAdmin(userId);
+
+    // Si no hay datos reales, usar ejemplo
+    if (cambiosPendientes.length === 0) {
+      cambiosPendientes = [
+        {
+          id: 1,
+          tipo_cambio: 'crear',
+          dataset_id: null,
+          datos_nuevos: { titulo: 'Dataset de Ejemplo Nuevo' },
+          usuario_username: 'usuario_ejemplo',
+          usuario_nombre: 'Usuario de Ejemplo',
+          tiempo_pendiente: 'Hace 2 horas'
+        },
+        {
+          id: 2,
+          tipo_cambio: 'editar',
+          dataset_id: 5,
+          dataset_titulo: 'Presupuesto Municipal 2025',
+          datos_nuevos: { titulo: 'Presupuesto Municipal 2025 (Actualizado)' },
+          usuario_username: 'otro_usuario',
+          usuario_nombre: 'Otro Usuario',
+          tiempo_pendiente: 'Hace 1 dia'
+        },
+        {
+          id: 3,
+          tipo_cambio: 'eliminar',
+          dataset_id: 10,
+          dataset_titulo: 'Dataset Obsoleto',
+          datos_nuevos: null,
+          usuario_username: 'tercer_usuario',
+          usuario_nombre: 'Tercer Usuario',
+          tiempo_pendiente: 'Hace 3 dias'
+        }
+      ];
+    }
+
+    const { html } = templates.cambiosPendientesTemplate(cambiosPendientes);
     res.setHeader('Content-Type', 'text/html');
     res.send(html);
 
