@@ -252,7 +252,7 @@ export const reporteEstadoGeneral = async (req, res) => {
       else if (estado === 'sin-respuesta') stats.sinRespuesta++;
     });
     
-    const tasaActualizacion = stats.total > 0 ? Math.round((stats.actualizados / stats.total) * 100) : 0;
+    const tasaActualizacion = stats.total > 0 ? Math.round(((stats.actualizados + stats.proximos) / stats.total) * 100) : 0;
     
     // Crear PDF
     const doc = new PDFDocument({ size: 'A4', margin: 40, bufferPages: true });
@@ -821,19 +821,19 @@ export const reporteCumplimiento = async (req, res) => {
     const porArea = {};
     datasets.forEach(d => {
       if (!porArea[d.area_nombre]) {
-        porArea[d.area_nombre] = { total: 0, actualizados: 0 };
+        porArea[d.area_nombre] = { total: 0, alDia: 0 };
       }
       porArea[d.area_nombre].total++;
       const estado = calcularEstado(d.proxima_actualizacion, d.frecuencia_dias, d.tipo_gestion);
-      if (estado === 'actualizado') porArea[d.area_nombre].actualizados++;
+      if (estado === 'actualizado' || estado === 'proximo') porArea[d.area_nombre].alDia++;
     });
     
     // Calcular porcentaje por área
     const areasConPorcentaje = Object.entries(porArea).map(([nombre, stats]) => ({
       nombre,
       total: stats.total,
-      actualizados: stats.actualizados,
-      porcentaje: stats.total > 0 ? Math.round((stats.actualizados / stats.total) * 100) : 0
+      alDia: stats.alDia,
+      porcentaje: stats.total > 0 ? Math.round((stats.alDia / stats.total) * 100) : 0
     })).sort((a, b) => b.porcentaje - a.porcentaje);
     
     // Crear PDF
@@ -849,16 +849,17 @@ export const reporteCumplimiento = async (req, res) => {
     
     // Resumen general
     const totalDatasets = datasets.length;
-    const totalActualizados = datasets.filter(d => 
-      calcularEstado(d.proxima_actualizacion, d.frecuencia_dias, d.tipo_gestion) === 'actualizado'
-    ).length;
-    const porcentajeGeneral = totalDatasets > 0 ? Math.round((totalActualizados / totalDatasets) * 100) : 0;
+    const totalAlDia = datasets.filter(d => {
+      const estado = calcularEstado(d.proxima_actualizacion, d.frecuencia_dias, d.tipo_gestion);
+      return estado === 'actualizado' || estado === 'proximo';
+    }).length;
+    const porcentajeGeneral = totalDatasets > 0 ? Math.round((totalAlDia / totalDatasets) * 100) : 0;
     
     doc.fontSize(12).font('Helvetica-Bold').fillColor(COLORS.grayDark).text('Cumplimiento General', 40, doc.y + 10);
     doc.y += 25;
     
     drawStatCard(doc, 40, doc.y, 'Total Datasets', totalDatasets, COLORS.primary);
-    drawStatCard(doc, 170, doc.y, 'Actualizados', totalActualizados, COLORS.success);
+    drawStatCard(doc, 170, doc.y, 'Al día', totalAlDia, COLORS.success);
     drawStatCard(doc, 300, doc.y, '% Cumplimiento', porcentajeGeneral + '%', porcentajeGeneral >= 70 ? COLORS.success : (porcentajeGeneral >= 40 ? COLORS.warning : COLORS.danger));
     
     doc.y += 90;
@@ -867,13 +868,13 @@ export const reporteCumplimiento = async (req, res) => {
     doc.fontSize(12).font('Helvetica-Bold').text('Cumplimiento por Área', 40, doc.y);
     doc.y += 15;
     
-    const headers = ['Área', 'Total', 'Actualizados', 'Cumplimiento'];
+    const headers = ['Área', 'Total', 'Al día', 'Cumplimiento'];
     const colWidths = [280, 70, 80, 85];
     
     const rows = areasConPorcentaje.map(a => [
       a.nombre,
       a.total.toString(),
-      a.actualizados.toString(),
+      a.alDia.toString(),
       a.porcentaje + '%'
     ]);
     
