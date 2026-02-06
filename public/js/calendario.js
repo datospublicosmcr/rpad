@@ -5,8 +5,7 @@ let areas = [];
 let temas = [];
 
 document.addEventListener('DOMContentLoaded', async () => {
-  // Actualizar header si está logueado
-  actualizarHeader();
+  // El header ahora se maneja desde main.js
   
   // Cargar datos
   await cargarDatos();
@@ -17,16 +16,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Setup filtros
   setupFiltros();
 });
-
-function actualizarHeader() {
-  const actions = document.getElementById('header-actions');
-  if (Auth.isAuthenticated()) {
-    actions.innerHTML = `
-      <a href="admin.html" class="btn btn-primary btn-sm"><span>⚙️</span> <span>Admin</span></a>
-      <button onclick="Auth.logout()" class="btn btn-outline btn-sm"><span>🚪</span> <span>Salir</span></button>
-    `;
-  }
-}
 
 async function cargarDatos() {
   try {
@@ -40,7 +29,9 @@ async function cargarDatos() {
     llenarFiltros();
   } catch (error) {
     console.error('Error cargando datos:', error);
-    Utils.showError('Error al cargar los datos');
+    if (typeof showToast === 'function') {
+      showToast('Error al cargar los datos', 'error');
+    }
   }
 }
 
@@ -185,12 +176,9 @@ function determinarColorEvento(datasetsDelDia) {
   let tieneVencido = false;
   let tieneProximo = false;
   
-  const hoy = new Date();
-  hoy.setHours(0, 0, 0, 0);
-  
   datasetsDelDia.forEach(d => {
     const estado = calcularEstadoDataset(d);
-    if (estado === 'vencido' || estado === 'sin-respuesta') {
+    if (estado === 'vencido' || estado === 'sin-respuesta' || estado === 'atrasado') {
       tieneVencido = true;
     } else if (estado === 'proximo') {
       tieneProximo = true;
@@ -253,12 +241,12 @@ function mostrarModalDia(fecha, datasetsDelDia) {
     day: 'numeric'
   });
   
-  document.getElementById('modal-dia-titulo').textContent = fechaFormateada;
+  document.getElementById('modal-dia-titulo').textContent = fechaFormateada.charAt(0).toUpperCase() + fechaFormateada.slice(1);
   
   const contenido = document.getElementById('modal-dia-contenido');
   
   if (!datasetsDelDia || datasetsDelDia.length === 0) {
-    contenido.innerHTML = '<p class="text-muted">No hay datasets para este día.</p>';
+    contenido.innerHTML = '<p class="text-muted text-center">No hay datasets para este día.</p>';
   } else {
     contenido.innerHTML = datasetsDelDia.map(d => {
       const estado = calcularEstadoDataset(d);
@@ -268,12 +256,18 @@ function mostrarModalDia(fecha, datasetsDelDia) {
       return `
         <div class="modal-dia-item">
           <div class="modal-dia-item-header">
-            <a href="dataset.html?id=${d.id}" class="modal-dia-item-titulo">${Utils.escapeHtml(d.titulo)}</a>
+            <a href="dataset.html?id=${d.id}" class="modal-dia-item-titulo">${escapeHtml(d.titulo)}</a>
             <span class="badge ${badgeClass}">${estadoTexto}</span>
           </div>
           <div class="modal-dia-item-meta">
-            <span>📁 ${Utils.escapeHtml(d.area_nombre || '-')}</span>
-            <span>🔄 ${d.frecuencia_nombre || '-'}</span>
+            <span>
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: inline; vertical-align: middle;"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/></svg>
+              ${escapeHtml(d.area_nombre || '-')}
+            </span>
+            <span>
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: inline; vertical-align: middle;"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></svg>
+              ${d.frecuencia_nombre || '-'}
+            </span>
           </div>
         </div>
       `;
@@ -309,6 +303,14 @@ function getEstadoTexto(estado) {
   return textos[estado] || estado;
 }
 
+// Función auxiliar para escapar HTML
+function escapeHtml(text) {
+  if (!text) return '';
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
 // =====================================================
 // EXPORTAR iCAL
 // =====================================================
@@ -318,7 +320,9 @@ function exportarIcal() {
   const datasetsConFecha = datasetsFiltrados.filter(d => d.proxima_actualizacion);
   
   if (datasetsConFecha.length === 0) {
-    Utils.showError('No hay datasets con fecha de vencimiento para exportar');
+    if (typeof showToast === 'function') {
+      showToast('No hay datasets con fecha de vencimiento para exportar', 'warning');
+    }
     return;
   }
   
@@ -362,7 +366,9 @@ function exportarIcal() {
   document.body.removeChild(link);
   URL.revokeObjectURL(url);
   
-  Utils.showSuccess(`Exportados ${datasetsConFecha.length} eventos al calendario`);
+  if (typeof showToast === 'function') {
+    showToast(`Exportados ${datasetsConFecha.length} eventos al calendario`, 'success');
+  }
 }
 
 function limpiarTextoIcal(texto) {
@@ -383,7 +389,7 @@ document.addEventListener('keydown', (e) => {
 });
 
 // Cerrar modal al hacer clic fuera
-document.getElementById('modal-dia').addEventListener('click', (e) => {
+document.getElementById('modal-dia')?.addEventListener('click', (e) => {
   if (e.target.classList.contains('modal-overlay')) {
     cerrarModalDia();
   }
