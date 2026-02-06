@@ -4,11 +4,11 @@
 
 Sistema de seguimiento y gestión de actualización de datasets para la Municipalidad de Comodoro Rivadavia.
 
-**Versión actual:** 1.4.0
+**Versión actual:** 1.5.0
 
 ## Descripción
 
-RPAD permite registrar datasets, asignarles frecuencias de actualización y monitorear su estado. El tablero de seguimiento muestra estadísticas en tiempo real sobre datasets actualizados, próximos a vencer y vencidos, diferenciando entre gestión interna y externa.
+RPAD permite registrar datasets, asignarles frecuencias de actualización y monitorear su estado. El tablero de seguimiento muestra estadísticas en tiempo real sobre datasets actualizados, próximos a vencer y vencidos, diferenciando entre gestión interna y externa. Incluye un sistema de doble verificación donde un operador propone cambios y un segundo operador los aprueba o rechaza antes de que se apliquen.
 
 ## Tecnologías
 
@@ -28,10 +28,10 @@ El sistema cuenta con dos roles de usuario:
 
 | Rol | Descripción | Permisos |
 |-----|-------------|----------|
-| `admin` | Administrador completo | Crear, editar, eliminar datasets y áreas. Configurar notificaciones SMTP. Generar reportes y notas. |
+| `admin` | Administrador completo | Proponer creación, edición y eliminación de datasets. Aprobar o rechazar cambios propuestos por otro admin. Gestionar áreas. Configurar notificaciones SMTP. Generar reportes y notas. |
 | `lector` | Solo lectura | Ver todas las secciones (tablero, calendario, datasets, áreas, reportes, notas) sin poder modificar datos. |
 
-Los usuarios con rol `lector` ven el mensaje "Solo lectura" en lugar de los botones de acción.
+Los cambios sobre datasets requieren doble verificación: un admin propone y otro admin distinto aprueba o rechaza. Los usuarios con rol `lector` ven el mensaje "Solo lectura" en lugar de los botones de acción.
 
 ## Estructura del proyecto
 
@@ -39,6 +39,7 @@ Los usuarios con rol `lector` ven el mensaje "Solo lectura" en lugar de los boto
 rpad/
 ├── app.js                         # Entry point - Express server
 ├── package.json
+├── htaccess-frontend.txt          # Referencia de configuración Apache
 ├── .env                           # Variables de entorno (no incluido en repo)
 ├── .env.example                   # Template de variables
 ├── config/
@@ -49,6 +50,8 @@ rpad/
 │   ├── datasetController.js       # CRUD datasets, estadísticas
 │   ├── areasController.js         # CRUD áreas responsables
 │   ├── andinoController.js        # Integración con portal de datos
+│   ├── cambiosPendientesController.js  # Sistema de doble verificación
+│   ├── contactoController.js      # Formulario de contacto público
 │   ├── notificacionesController.js  # Sistema de alertas por email
 │   ├── notasController.js         # Generador de notas DOCX
 │   └── reportesController.js      # Generación de reportes PDF
@@ -59,7 +62,8 @@ rpad/
 │   ├── schema.sql                 # Estructura y datos iniciales de la BD
 │   └── updates/                   # Scripts de migración
 │       ├── migracion-v1.2.0-v1.3.0.sql
-│       └── migracion-v1.3.0-v1.4.0.sql
+│       ├── migracion-v1.3.0-v1.4.0.sql
+│       └── migracion-v1.4.0-v1.5.0.sql
 ├── middleware/
 │   └── auth.js                    # JWT middleware
 ├── routes/
@@ -71,15 +75,19 @@ rpad/
     ├── datasets.html              # Listado de datasets
     ├── dataset.html               # Detalle de dataset
     ├── login.html                 # Formulario de login
-    ├── admin.html                 # Panel de administración de datasets y correos
+    ├── admin.html                 # Panel de administración de datasets
     ├── areas.html                 # Panel de administración de áreas
+    ├── correos.html               # Configuración de correos y notificaciones
     ├── reportes.html              # Generador de reportes
     ├── calendario.html            # Calendario interactivo de vencimientos
     ├── notas.html                 # Generador de notas administrativas DOCX
+    ├── perfil.html                # Perfil de usuario y cambio de contraseña
+    ├── contacto.html              # Formulario de contacto público
     ├── css/
     │   └── styles.css
     ├── js/
     │   ├── config.js              # Configuración (API_URL)
+    │   ├── main.js                # JavaScript compartido entre páginas
     │   ├── auth.js                # Manejo de autenticación
     │   ├── api.js                 # Llamadas a la API y utilidades
     │   ├── dashboard.js           # Lógica del tablero
@@ -87,9 +95,12 @@ rpad/
     │   ├── dataset-detail.js      # Detalle de dataset
     │   ├── admin.js               # Panel de administración
     │   ├── areas.js               # Gestión de áreas responsables
+    │   ├── correos.js             # Configuración de correos
     │   ├── reportes.js            # Generación de reportes PDF
     │   ├── calendario.js          # Calendario interactivo de vencimientos
-    │   └── notas.js               # Generador de notas administrativas
+    │   ├── notas.js               # Generador de notas administrativas
+    │   ├── perfil.js              # Perfil de usuario
+    │   └── contacto.js            # Formulario de contacto
     └── img/
         ├── icon.png
         ├── logo-2025.png
@@ -121,11 +132,18 @@ Desde **phpMyAdmin** en cPanel:
 | `temas` | Catálogo de temas para clasificación |
 | `frecuencias` | Catálogo de frecuencias de actualización |
 | `formatos` | Catálogo de formatos de archivo (CSV, XLSX, etc.) con distinción de habituales |
-| `areas` | Áreas responsables con contactos y emails |
+| `areas` | Áreas responsables con contactos, emails y artículos gramaticales (el/la) |
 | `datasets` | Registro principal de datasets (sin columnas de formato fijas) |
 | `dataset_formatos` | Tabla intermedia para la relación muchos-a-muchos entre datasets y formatos |
+| `cambios_pendientes` | Cola de cambios propuestos pendientes de aprobación (doble verificación) |
 | `historial_actualizaciones` | Log de actualizaciones realizadas |
 | `notificaciones_log` | Registro de notificaciones enviadas |
+
+### Migración desde v1.4.0 a v1.5.0
+
+⚠️ Requisito: Ejecutar esto si su sistema está en la versión 1.4.0.
+
+Si ya tenés la versión 1.4.0 instalada, importar el script ubicado en /database/updates/migracion-v1.4.0-v1.5.0.sql 
 
 ### Migración desde v1.3.0 a v1.4.0
 
@@ -282,6 +300,7 @@ Esto ejecuta las notificaciones todos los días a las 8:00 AM.
 | GET | `/api/areas` | Listar áreas activas |
 | GET | `/api/areas/:id` | Detalle de un área |
 | GET | `/api/andino/fetch?url=...` | Obtener metadatos desde el portal |
+| POST | `/api/contacto` | Enviar formulario de contacto |
 
 ### Protegidos (requieren JWT)
 
@@ -289,10 +308,14 @@ Esto ejecuta las notificaciones todos los días a las 8:00 AM.
 |--------|------|-------------|
 | GET | `/api/auth/verify` | Verificar sesión activa |
 | POST | `/api/auth/change-password` | Cambiar contraseña |
-| POST | `/api/datasets` | Crear dataset |
-| PUT | `/api/datasets/:id` | Actualizar dataset |
-| DELETE | `/api/datasets/:id` | Eliminar dataset (soft delete) |
+| POST | `/api/datasets` | Crear dataset (vía cambio pendiente) |
+| PUT | `/api/datasets/:id` | Actualizar dataset (vía cambio pendiente) |
+| DELETE | `/api/datasets/:id` | Eliminar dataset (vía cambio pendiente) |
 | POST | `/api/datasets/:id/actualizar` | Registrar actualización |
+| GET | `/api/cambios-pendientes` | Listar cambios pendientes de aprobación |
+| GET | `/api/cambios-pendientes/:id` | Detalle de un cambio pendiente |
+| POST | `/api/cambios-pendientes/:id/aprobar` | Aprobar un cambio pendiente |
+| POST | `/api/cambios-pendientes/:id/rechazar` | Rechazar un cambio pendiente |
 | POST | `/api/areas` | Crear área |
 | PUT | `/api/areas/:id` | Actualizar área |
 | DELETE | `/api/areas/:id` | Eliminar área |
@@ -348,6 +371,20 @@ Esto ejecuta las notificaciones todos los días a las 8:00 AM.
 ---
 
 ## Changelog
+
+### v1.5.0 (2026-02-06)
+- Sistema de doble verificación para cambios en datasets: un operador propone y otro aprueba o rechaza.
+- Nueva tabla `cambios_pendientes` con estados pendiente/aprobado/rechazado y validación JSON.
+- Nuevo controlador `cambiosPendientesController.js` con endpoints para listar, aprobar y rechazar cambios.
+- Las operaciones de crear, editar y eliminar datasets ahora pasan por la cola de aprobación.
+- Registro de revisor y comentario de rechazo en cada cambio.
+- Artículos gramaticales en tabla `areas`: columnas `articulo` y `articulo_superior` (ENUM el/la) para correcta visualización de nombres.
+- Formulario de contacto público (`contacto.html`) con `contactoController.js`.
+- Página de configuración de correos separada (`correos.html`).
+- Página de perfil de usuario (`perfil.html`) para cambio de contraseña y datos personales.
+- JavaScript compartido entre páginas (`main.js`).
+- Mejoras en el generador de notas DOCX.
+- Archivo de referencia `htaccess-frontend.txt` para configuración Apache.
 
 ### v1.4.0 (2025-12-10)
 - Migración del sistema de formatos a relación Many-to-Many (N:M).
