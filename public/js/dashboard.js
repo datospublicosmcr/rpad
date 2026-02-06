@@ -3,40 +3,26 @@ let donutChart = null;
 let calendarChart = null;
 
 document.addEventListener('DOMContentLoaded', async () => {
-  updateAuthUI();
+  // updateAuthUI() ya no es necesario - está en main.js como initHeader()
+  updateHeroGreeting();
   updateHeroDateTime();
   setInterval(updateHeroDateTime, 1000);
   await loadDashboard();
 });
 
-function updateAuthUI() {
-  const actions = document.getElementById('header-actions');
+// Actualizar saludo en el hero (usa Auth de auth.js y getSaludo de main.js)
+function updateHeroGreeting() {
   const heroGreeting = document.getElementById('hero-greeting');
+  if (!heroGreeting) return;
   
   if (Auth.isAuthenticated()) {
     const user = Auth.getUser();
-    actions.innerHTML = `
-      <a href="admin.html" class="btn btn-primary btn-sm">
-        <span>⚙️</span> <span>Admin</span>
-      </a>
-      <button onclick="Auth.logout()" class="btn btn-outline btn-sm">
-        <span>🚪</span> <span>Salir</span>
-      </button>
-    `;
-    
     const nombre = user?.nombre_completo?.split(' ')[0] || user?.username || 'Usuario';
     const saludo = getSaludo();
     heroGreeting.textContent = `${saludo}, ${nombre}`;
   } else {
     heroGreeting.textContent = 'Tablero de Seguimiento';
   }
-}
-
-function getSaludo() {
-  const hora = new Date().getHours();
-  if (hora >= 6 && hora < 12) return 'Buenos días';
-  if (hora >= 12 && hora < 19) return 'Buenas tardes';
-  return 'Buenas noches';
 }
 
 function updateHeroDateTime() {
@@ -68,7 +54,9 @@ async function loadDashboard() {
     
   } catch (error) {
     console.error('Error cargando dashboard:', error);
-    Utils.showError('Error al cargar el dashboard');
+    if (typeof showToast === 'function') {
+      showToast('Error al cargar el dashboard', 'error');
+    }
   }
 }
 
@@ -98,32 +86,38 @@ function renderStats(stats) {
   const container = document.getElementById('stats-grid');
   const totalVencidos = (stats.atrasados || 0) + (stats.sinRespuesta || 0);
   
+  // Iconos Lucide para las stat cards
+  const iconTotal = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5V19A9 3 0 0 0 21 19V5"/><path d="M3 12A9 3 0 0 0 21 12"/></svg>';
+  const iconActualizado = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>';
+  const iconProximo = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>';
+  const iconVencido = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>';
+  
   container.innerHTML = `
     <div class="stat-card primary clickable animate-slide-up" style="animation-delay: 0.05s;" onclick="goToDatasets('')" title="Ver todos los datasets">
       <div class="stat-card-header">
         <span class="stat-card-label">Total Datasets</span>
-        <div class="stat-card-icon">📊</div>
+        <div class="stat-card-icon primary">${iconTotal}</div>
       </div>
       <div class="stat-card-value" data-target="${stats.total || 0}">0</div>
     </div>
     <div class="stat-card success clickable animate-slide-up" style="animation-delay: 0.1s;" onclick="goToDatasets('actualizado')" title="Ver datasets actualizados">
       <div class="stat-card-header">
         <span class="stat-card-label">Actualizados</span>
-        <div class="stat-card-icon">✅</div>
+        <div class="stat-card-icon success">${iconActualizado}</div>
       </div>
       <div class="stat-card-value" data-target="${stats.actualizados || 0}">0</div>
     </div>
     <div class="stat-card warning clickable animate-slide-up" style="animation-delay: 0.15s;" onclick="goToDatasets('proximo')" title="Ver próximos a vencer">
       <div class="stat-card-header">
         <span class="stat-card-label">Vencen en 60 días o menos</span>
-        <div class="stat-card-icon">⏰</div>
+        <div class="stat-card-icon warning">${iconProximo}</div>
       </div>
       <div class="stat-card-value" data-target="${stats.proximos || 0}">0</div>
     </div>
     <div class="stat-card danger clickable animate-slide-up" style="animation-delay: 0.2s;" onclick="goToDatasets('vencidos')" title="Ver vencidos">
       <div class="stat-card-header">
         <span class="stat-card-label">Vencidos</span>
-        <div class="stat-card-icon">⚠️</div>
+        <div class="stat-card-icon danger">${iconVencido}</div>
       </div>
       <div class="stat-card-value" data-target="${totalVencidos}">0</div>
     </div>
@@ -153,7 +147,7 @@ function renderDonutChart(stats) {
     labels: ['Actualizados', 'Próximos a vencer', 'Vencidos'],
     datasets: [{
       data: [stats.actualizados || 0, stats.proximos || 0, totalVencidos],
-      backgroundColor: ['#22c55e', '#f59e0b', '#ef4444'],
+      backgroundColor: ['#81b3a3', '#f8cf61', '#fc7c7e'],
       borderColor: '#ffffff',
       borderWidth: 3,
       hoverBorderWidth: 4,
@@ -207,9 +201,9 @@ function renderChartLegend(stats, totalVencidos) {
   const container = document.getElementById('chart-legend');
   
   const items = [
-    { label: 'Actualizados', value: stats.actualizados || 0, color: '#22c55e' },
-    { label: 'Próximos a vencer', value: stats.proximos || 0, color: '#f59e0b' },
-    { label: 'Vencidos', value: totalVencidos, color: '#ef4444' }
+    { label: 'Actualizados', value: stats.actualizados || 0, color: '#81b3a3' },
+    { label: 'Próximos a vencer', value: stats.proximos || 0, color: '#f8cf61' },
+    { label: 'Vencidos', value: totalVencidos, color: '#fc7c7e' }
   ];
   
   container.innerHTML = items.map(item => {
@@ -275,7 +269,7 @@ function renderAlertas(datasets) {
   } else {
     alertasContainer.innerHTML = `
       <div class="empty-state" style="padding: 1.5rem;">
-        <div style="font-size: 2rem; margin-bottom: 0.5rem;">✅</div>
+        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color: #22c55e; margin-bottom: 0.5rem;"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
         <p class="text-muted">No hay datasets vencidos</p>
       </div>
     `;
@@ -314,7 +308,7 @@ function renderAlertas(datasets) {
   } else {
     proximosContainer.innerHTML = `
       <div class="empty-state" style="padding: 1.5rem;">
-        <div style="font-size: 2rem; margin-bottom: 0.5rem;">📅</div>
+        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color: #3b82f6; margin-bottom: 0.5rem;"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>
         <p class="text-muted">No hay datasets próximos a vencer</p>
       </div>
     `;
@@ -356,7 +350,7 @@ function toggleProximos() {
 // === CALENDARIO DE VENCIMIENTOS ===
 function renderCalendarChart(datasets) {
   const canvas = document.getElementById('calendar-chart');
-  if (!canvas) return; // Si no existe el elemento, salir sin error
+  if (!canvas) return;
   
   const ctx = canvas.getContext('2d');
   
@@ -386,14 +380,13 @@ function renderCalendarChart(datasets) {
     }).length;
   });
   
-  // Colores según cantidad (gradiente de verde a rojo)
-  const maxVencimientos = Math.max(...vencimientosPorMes, 1);
+  // Colores según cantidad de vencimientos (valores fijos)
   const colores = vencimientosPorMes.map(v => {
-    if (v === 0) return '#22c55e'; // Verde si no hay vencimientos
-    const ratio = v / maxVencimientos;
-    if (ratio <= 0.33) return '#22c55e'; // Verde
-    if (ratio <= 0.66) return '#f59e0b'; // Amarillo
-    return '#ef4444'; // Rojo
+    if (v === 0) return '#faffff';       // (sin vencimientos)
+    if (v === 1) return '#b9e4df';       // (1)
+    if (v <= 3) return '#72c8c1';        // (2-3)
+    if (v <= 7) return '#4bb0a9';        // (4-7)
+    return '#329b93';                    // (8+ vencimientos)
   });
   
   const data = {
@@ -463,7 +456,6 @@ function renderCalendarChart(datasets) {
       if (elements.length > 0) {
         const idx = elements[0].index;
         const m = meses[idx];
-        // Filtrar por mes específico (formato YYYY-MM)
         const mesParam = `${m.anio}-${String(m.mes + 1).padStart(2, '0')}`;
         window.location.href = `datasets.html?mes=${mesParam}`;
       }
