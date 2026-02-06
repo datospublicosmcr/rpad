@@ -1,4 +1,64 @@
 import pool from '../config/database.js';
+import { crearCambioPendiente, datasetTieneCambiosPendientes } from './cambiosPendientesController.js';
+
+/**
+ * Funcion auxiliar: Normalizar valor para comparacion
+ * Maneja fechas, nulls y strings de forma consistente
+ */
+const normalizarValor = (valor) => {
+  if (valor === null || valor === undefined || valor === '') {
+    return '';
+  }
+  
+  // Si es un objeto Date, convertir a YYYY-MM-DD
+  if (valor instanceof Date) {
+    return valor.toISOString().split('T')[0];
+  }
+  
+  // Si es string que parece fecha ISO (viene de la BD), extraer solo la parte de fecha
+  if (typeof valor === 'string' && valor.match(/^\d{4}-\d{2}-\d{2}(T|$)/)) {
+    return valor.split('T')[0];
+  }
+  
+  return String(valor);
+};
+
+/**
+ * Funcion auxiliar: Comparar dos objetos para detectar si hay cambios reales
+ * Retorna true si hay al menos un cambio
+ */
+const hayCambiosReales = (antes, despues) => {
+  const camposComparar = [
+    'titulo', 'descripcion', 'area_id', 'frecuencia_id',
+    'tema_principal_id', 'tema_secundario_id', 'tipo_gestion',
+    'ultima_actualizacion', 'proxima_actualizacion', 'url_dataset', 'observaciones'
+  ];
+
+  // Comparar campos simples
+  for (const campo of camposComparar) {
+    const valorAntes = normalizarValor(antes[campo]);
+    const valorDespues = normalizarValor(despues[campo]);
+    if (valorAntes !== valorDespues) {
+      return true;
+    }
+  }
+
+  // Comparar formatos (arrays)
+  const formatosAntes = new Set(antes.formatos || []);
+  const formatosDespues = new Set(despues.formatos || []);
+  
+  if (formatosAntes.size !== formatosDespues.size) {
+    return true;
+  }
+  
+  for (const f of formatosAntes) {
+    if (!formatosDespues.has(f)) {
+      return true;
+    }
+  }
+
+  return false;
+};
 
 // Query base para obtener datasets con datos relacionados
 const DATASET_SELECT_QUERY = `
@@ -153,18 +213,16 @@ export const getDatasetById = async (req, res) => {
   }
 };
 
-// Crear nuevo dataset
+// Crear nuevo dataset (crea cambio pendiente para aprobación)
 export const createDataset = async (req, res) => {
-  const connection = await pool.getConnection();
-  
   try {
     const data = req.body;
+    const usuarioId = req.user?.userId;
 
     // Validaciones básicas
     if (!data.titulo || !data.area_id || !data.frecuencia_id || 
         !data.formatos || !Array.isArray(data.formatos) || data.formatos.length === 0 ||
         !data.tema_principal_id || !data.tipo_gestion) {
-      connection.release();
       return res.status(400).json({
         success: false,
         error: 'Faltan campos obligatorios: titulo, area_id, frecuencia_id, formatos (array con al menos 1), tema_principal_id, tipo_gestion'
@@ -173,7 +231,6 @@ export const createDataset = async (req, res) => {
 
     // Validar que tipo_gestion sea válido
     if (!['interna', 'externa'].includes(data.tipo_gestion)) {
-      connection.release();
       return res.status(400).json({
         success: false,
         error: 'tipo_gestion debe ser "interna" o "externa"'
@@ -184,172 +241,92 @@ export const createDataset = async (req, res) => {
     const formatoIds = data.formatos.map(f => typeof f === 'object' ? f.id : f);
     
     // Validar que los formatos existan
-    const [formatosExistentes] = await connection.execute(
+    const [formatosExistentes] = await pool.execute(
       `SELECT id FROM formatos WHERE id IN (${formatoIds.map(() => '?').join(',')}) AND activo = 1`,
       formatoIds
     );
     
     if (formatosExistentes.length !== formatoIds.length) {
-      connection.release();
       return res.status(400).json({
         success: false,
         error: 'Uno o más formatos no son válidos'
       });
     }
 
-    // Iniciar transacción
-    await connection.beginTransaction();
+    // Preparar datos para el cambio pendiente
+    const datosNuevos = {
+      titulo: data.titulo,
+      descripcion: data.descripcion || null,
+      area_id: data.area_id,
+      frecuencia_id: data.frecuencia_id,
+      ultima_actualizacion: data.ultima_actualizacion || null,
+      proxima_actualizacion: data.proxima_actualizacion || null,
+      tema_principal_id: data.tema_principal_id,
+      tema_secundario_id: data.tema_secundario_id || null,
+      url_dataset: data.url_dataset || null,
+      observaciones: data.observaciones || null,
+      tipo_gestion: data.tipo_gestion,
+      formatos: formatoIds
+    };
 
-    // Insertar dataset
-    const [result] = await connection.execute(
-      `INSERT INTO datasets (
-        titulo, descripcion, area_id, frecuencia_id, 
-        ultima_actualizacion, proxima_actualizacion, 
-        tema_principal_id, tema_secundario_id, 
-        url_dataset, observaciones, tipo_gestion
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        data.titulo,
-        data.descripcion || null,
-        data.area_id,
-        data.frecuencia_id,
-        data.ultima_actualizacion || null,
-        data.proxima_actualizacion || null,
-        data.tema_principal_id,
-        data.tema_secundario_id || null,
-        data.url_dataset || null,
-        data.observaciones || null,
-        data.tipo_gestion
-      ]
-    );
-
-    const datasetId = result.insertId;
-
-    // Insertar relaciones con formatos
-    for (const formatoId of formatoIds) {
-      await connection.execute(
-        'INSERT INTO dataset_formatos (dataset_id, formato_id) VALUES (?, ?)',
-        [datasetId, formatoId]
-      );
-    }
-
-    // Confirmar transacción
-    await connection.commit();
-    connection.release();
-
-    // Obtener el dataset creado con todos los datos
-    const [rows] = await pool.execute(
-      DATASET_SELECT_QUERY + ' AND d.id = ? GROUP BY d.id',
-      [datasetId]
-    );
+    // Crear cambio pendiente (dataset_id es null porque aún no existe)
+    const cambioId = await crearCambioPendiente('crear', null, datosNuevos, null, usuarioId);
 
     res.status(201).json({
       success: true,
-      data: rows[0],
-      message: 'Dataset creado correctamente'
+      data: { cambio_pendiente_id: cambioId },
+      message: 'Solicitud de creación enviada. Pendiente de aprobación por otro administrador.'
     });
   } catch (error) {
-    // Rollback en caso de error
-    await connection.rollback();
-    connection.release();
-    
-    console.error('Error creando dataset:', error);
+    console.error('Error creando solicitud de dataset:', error);
     res.status(500).json({
       success: false,
-      error: 'Error al crear el dataset'
+      error: 'Error al crear la solicitud'
     });
   }
 };
 
-// Actualizar dataset
+// Actualizar dataset (crea cambio pendiente para aprobación)
 export const updateDataset = async (req, res) => {
-  const connection = await pool.getConnection();
-  
   try {
     const { id } = req.params;
     const data = req.body;
+    const usuarioId = req.user?.userId;
 
     // Verificar que el dataset existe
-    const [existing] = await connection.execute(
-      'SELECT id FROM datasets WHERE id = ? AND activo = TRUE',
+    const [existing] = await pool.execute(
+      'SELECT * FROM datasets WHERE id = ? AND activo = TRUE',
       [id]
     );
 
     if (existing.length === 0) {
-      connection.release();
       return res.status(404).json({
         success: false,
         error: 'Dataset no encontrado'
       });
     }
 
+    // Verificar si el dataset tiene cambios pendientes (bloqueado)
+    const bloqueado = await datasetTieneCambiosPendientes(id);
+    if (bloqueado) {
+      return res.status(409).json({
+        success: false,
+        error: 'Este dataset tiene cambios pendientes de aprobación. No se puede editar hasta que sean revisados.'
+      });
+    }
+
     // Validar tipo_gestion si se proporciona
     if (data.tipo_gestion !== undefined && !['interna', 'externa'].includes(data.tipo_gestion)) {
-      connection.release();
       return res.status(400).json({
         success: false,
         error: 'tipo_gestion debe ser "interna" o "externa"'
       });
     }
 
-    // Construir query dinámico para campos del dataset
-    const updates = [];
-    const values = [];
-
-    if (data.titulo !== undefined) {
-      updates.push('titulo = ?');
-      values.push(data.titulo);
-    }
-    if (data.descripcion !== undefined) {
-      updates.push('descripcion = ?');
-      values.push(data.descripcion || null);
-    }
-    if (data.area_id !== undefined) {
-      updates.push('area_id = ?');
-      values.push(data.area_id);
-    }
-    if (data.frecuencia_id !== undefined) {
-      updates.push('frecuencia_id = ?');
-      values.push(data.frecuencia_id);
-    }
-    if (data.ultima_actualizacion !== undefined) {
-      updates.push('ultima_actualizacion = ?');
-      values.push(data.ultima_actualizacion || null);
-    }
-    if (data.proxima_actualizacion !== undefined) {
-      updates.push('proxima_actualizacion = ?');
-      values.push(data.proxima_actualizacion || null);
-    }
-    if (data.tema_principal_id !== undefined) {
-      updates.push('tema_principal_id = ?');
-      values.push(data.tema_principal_id);
-    }
-    if (data.tema_secundario_id !== undefined) {
-      updates.push('tema_secundario_id = ?');
-      values.push(data.tema_secundario_id || null);
-    }
-    if (data.url_dataset !== undefined) {
-      updates.push('url_dataset = ?');
-      values.push(data.url_dataset || null);
-    }
-    if (data.observaciones !== undefined) {
-      updates.push('observaciones = ?');
-      values.push(data.observaciones || null);
-    }
-    if (data.tipo_gestion !== undefined) {
-      updates.push('tipo_gestion = ?');
-      values.push(data.tipo_gestion);
-    }
-    if (data.activo !== undefined) {
-      updates.push('activo = ?');
-      values.push(data.activo);
-    }
-
     // Validar formatos si se proporcionan
     let formatoIds = null;
     if (data.formatos !== undefined) {
       if (!Array.isArray(data.formatos) || data.formatos.length === 0) {
-        connection.release();
         return res.status(400).json({
           success: false,
           error: 'formatos debe ser un array con al menos 1 elemento'
@@ -359,13 +336,12 @@ export const updateDataset = async (req, res) => {
       formatoIds = data.formatos.map(f => typeof f === 'object' ? f.id : f);
       
       // Validar que los formatos existan
-      const [formatosExistentes] = await connection.execute(
+      const [formatosExistentes] = await pool.execute(
         `SELECT id FROM formatos WHERE id IN (${formatoIds.map(() => '?').join(',')}) AND activo = 1`,
         formatoIds
       );
       
       if (formatosExistentes.length !== formatoIds.length) {
-        connection.release();
         return res.status(400).json({
           success: false,
           error: 'Uno o más formatos no son válidos'
@@ -373,86 +349,123 @@ export const updateDataset = async (req, res) => {
       }
     }
 
-    // Iniciar transacción
-    await connection.beginTransaction();
-
-    // Actualizar dataset si hay cambios
-    if (updates.length > 0) {
-      values.push(Number(id));
-      await connection.execute(
-        `UPDATE datasets SET ${updates.join(', ')} WHERE id = ?`,
-        values
-      );
-    }
-
-    // Actualizar formatos si se proporcionaron
-    if (formatoIds !== null) {
-      // Eliminar relaciones existentes
-      await connection.execute('DELETE FROM dataset_formatos WHERE dataset_id = ?', [id]);
-      
-      // Insertar nuevas relaciones
-      for (const formatoId of formatoIds) {
-        await connection.execute(
-          'INSERT INTO dataset_formatos (dataset_id, formato_id) VALUES (?, ?)',
-          [id, formatoId]
-        );
-      }
-    }
-
-    // Confirmar transacción
-    await connection.commit();
-    connection.release();
-
-    // Obtener el dataset actualizado
-    const [rows] = await pool.execute(
-      DATASET_SELECT_QUERY.replace('WHERE d.activo = TRUE', 'WHERE 1=1') + ' AND d.id = ? GROUP BY d.id',
+    // Obtener datos actuales del dataset para guardar como "datos_anteriores"
+    const datasetActual = existing[0];
+    
+    // Obtener formatos actuales
+    const [formatosActuales] = await pool.execute(
+      'SELECT formato_id FROM dataset_formatos WHERE dataset_id = ?',
       [id]
     );
 
+    const datosAnteriores = {
+      titulo: datasetActual.titulo,
+      descripcion: datasetActual.descripcion,
+      area_id: datasetActual.area_id,
+      frecuencia_id: datasetActual.frecuencia_id,
+      ultima_actualizacion: datasetActual.ultima_actualizacion,
+      proxima_actualizacion: datasetActual.proxima_actualizacion,
+      tema_principal_id: datasetActual.tema_principal_id,
+      tema_secundario_id: datasetActual.tema_secundario_id,
+      url_dataset: datasetActual.url_dataset,
+      observaciones: datasetActual.observaciones,
+      tipo_gestion: datasetActual.tipo_gestion,
+      formatos: formatosActuales.map(f => f.formato_id)
+    };
+
+    // Construir datos nuevos (merge de actuales con los cambios)
+    const datosNuevos = {
+      titulo: data.titulo !== undefined ? data.titulo : datasetActual.titulo,
+      descripcion: data.descripcion !== undefined ? (data.descripcion || null) : datasetActual.descripcion,
+      area_id: data.area_id !== undefined ? data.area_id : datasetActual.area_id,
+      frecuencia_id: data.frecuencia_id !== undefined ? data.frecuencia_id : datasetActual.frecuencia_id,
+      ultima_actualizacion: data.ultima_actualizacion !== undefined ? (data.ultima_actualizacion || null) : datasetActual.ultima_actualizacion,
+      proxima_actualizacion: data.proxima_actualizacion !== undefined ? (data.proxima_actualizacion || null) : datasetActual.proxima_actualizacion,
+      tema_principal_id: data.tema_principal_id !== undefined ? data.tema_principal_id : datasetActual.tema_principal_id,
+      tema_secundario_id: data.tema_secundario_id !== undefined ? (data.tema_secundario_id || null) : datasetActual.tema_secundario_id,
+      url_dataset: data.url_dataset !== undefined ? (data.url_dataset || null) : datasetActual.url_dataset,
+      observaciones: data.observaciones !== undefined ? (data.observaciones || null) : datasetActual.observaciones,
+      tipo_gestion: data.tipo_gestion !== undefined ? data.tipo_gestion : datasetActual.tipo_gestion,
+      formatos: formatoIds !== null ? formatoIds : formatosActuales.map(f => f.formato_id)
+    };
+
+    // Verificar si hay cambios reales
+    if (!hayCambiosReales(datosAnteriores, datosNuevos)) {
+      return res.status(400).json({
+        success: false,
+        error: 'No se detectaron cambios. El dataset no fue modificado.'
+      });
+    }
+
+    // Crear cambio pendiente
+    const cambioId = await crearCambioPendiente('editar', Number(id), datosNuevos, datosAnteriores, usuarioId);
+
     res.json({
       success: true,
-      data: rows[0],
-      message: 'Dataset actualizado correctamente'
+      data: { cambio_pendiente_id: cambioId },
+      message: 'Solicitud de edición enviada. Pendiente de aprobación por otro administrador.'
     });
   } catch (error) {
-    // Rollback en caso de error
-    await connection.rollback();
-    connection.release();
-    
-    console.error('Error actualizando dataset:', error);
+    console.error('Error creando solicitud de edición:', error);
     res.status(500).json({
       success: false,
-      error: 'Error al actualizar el dataset'
+      error: 'Error al crear la solicitud de edición'
     });
   }
 };
 
-// Eliminar dataset (soft delete)
+// Eliminar dataset (crea cambio pendiente para aprobación)
 export const deleteDataset = async (req, res) => {
   try {
     const { id } = req.params;
+    const usuarioId = req.user?.userId;
 
-    const [result] = await pool.execute(
-      'UPDATE datasets SET activo = FALSE WHERE id = ?',
+    // Verificar que el dataset existe
+    const [existing] = await pool.execute(
+      'SELECT * FROM datasets WHERE id = ? AND activo = TRUE',
       [id]
     );
 
-    if (result.affectedRows === 0) {
+    if (existing.length === 0) {
       return res.status(404).json({
         success: false,
         error: 'Dataset no encontrado'
       });
     }
 
+    // Verificar si el dataset tiene cambios pendientes (bloqueado)
+    const bloqueado = await datasetTieneCambiosPendientes(id);
+    if (bloqueado) {
+      return res.status(409).json({
+        success: false,
+        error: 'Este dataset tiene cambios pendientes de aprobación. No se puede eliminar hasta que sean revisados.'
+      });
+    }
+
+    const datasetActual = existing[0];
+
+    // Guardar datos actuales para el registro
+    const datosAnteriores = {
+      titulo: datasetActual.titulo,
+      descripcion: datasetActual.descripcion,
+      area_id: datasetActual.area_id,
+      frecuencia_id: datasetActual.frecuencia_id,
+      tipo_gestion: datasetActual.tipo_gestion
+    };
+
+    // Crear cambio pendiente de eliminación
+    const cambioId = await crearCambioPendiente('eliminar', Number(id), { eliminado: true }, datosAnteriores, usuarioId);
+
     res.json({
       success: true,
-      message: 'Dataset eliminado correctamente'
+      data: { cambio_pendiente_id: cambioId },
+      message: 'Solicitud de eliminación enviada. Pendiente de aprobación por otro administrador.'
     });
   } catch (error) {
-    console.error('Error eliminando dataset:', error);
+    console.error('Error creando solicitud de eliminación:', error);
     res.status(500).json({
       success: false,
-      error: 'Error al eliminar el dataset'
+      error: 'Error al crear la solicitud de eliminación'
     });
   }
 };
@@ -540,11 +553,12 @@ export const getEstadisticas = async (req, res) => {
   }
 };
 
-// Registrar actualización de dataset
+// Registrar actualización de dataset (crea cambio pendiente para aprobación)
 export const registrarActualizacion = async (req, res) => {
   try {
     const { id } = req.params;
     const { fecha_actualizacion, notas } = req.body;
+    const usuarioId = req.user?.userId;
 
     // Obtener el dataset y su frecuencia
     const [datasetRows] = await pool.execute(
@@ -562,6 +576,15 @@ export const registrarActualizacion = async (req, res) => {
       });
     }
 
+    // Verificar si el dataset tiene cambios pendientes (bloqueado)
+    const bloqueado = await datasetTieneCambiosPendientes(id);
+    if (bloqueado) {
+      return res.status(409).json({
+        success: false,
+        error: 'Este dataset tiene cambios pendientes de aprobación. No se puede marcar como actualizado hasta que sean revisados.'
+      });
+    }
+
     const dataset = datasetRows[0];
     const fechaActualizacion = fecha_actualizacion || new Date().toISOString().split('T')[0];
 
@@ -573,38 +596,32 @@ export const registrarActualizacion = async (req, res) => {
       proximaActualizacion = fecha.toISOString().split('T')[0];
     }
 
-    // Actualizar el dataset
-    await pool.execute(
-      `UPDATE datasets SET 
-        ultima_actualizacion = ?, 
-        proxima_actualizacion = ? 
-       WHERE id = ?`,
-      [fechaActualizacion, proximaActualizacion, id]
-    );
+    // Datos anteriores
+    const datosAnteriores = {
+      ultima_actualizacion: dataset.ultima_actualizacion,
+      proxima_actualizacion: dataset.proxima_actualizacion
+    };
 
-    // Registrar en historial
-    await pool.execute(
-      `INSERT INTO historial_actualizaciones (dataset_id, fecha_actualizacion, usuario_id, notas)
-       VALUES (?, ?, ?, ?)`,
-      [id, fechaActualizacion, req.user?.userId || null, notas || null]
-    );
+    // Datos nuevos
+    const datosNuevos = {
+      ultima_actualizacion: fechaActualizacion,
+      proxima_actualizacion: proximaActualizacion,
+      notas: notas || null
+    };
 
-    // Obtener el dataset actualizado
-    const [rows] = await pool.execute(
-      DATASET_SELECT_QUERY + ' AND d.id = ? GROUP BY d.id',
-      [id]
-    );
+    // Crear cambio pendiente
+    const cambioId = await crearCambioPendiente('editar', Number(id), datosNuevos, datosAnteriores, usuarioId);
 
     res.json({
       success: true,
-      data: rows[0],
-      message: 'Actualización registrada correctamente'
+      data: { cambio_pendiente_id: cambioId },
+      message: 'Solicitud de actualización enviada. Pendiente de aprobación por otro administrador.'
     });
   } catch (error) {
-    console.error('Error registrando actualización:', error);
+    console.error('Error creando solicitud de actualización:', error);
     res.status(500).json({
       success: false,
-      error: 'Error al registrar la actualización'
+      error: 'Error al crear la solicitud de actualización'
     });
   }
 };
