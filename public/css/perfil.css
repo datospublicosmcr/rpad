@@ -1,0 +1,323 @@
+/* === PERFIL PAGE STYLES === */
+
+/* Grid de información del perfil */
+.perfil-info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.perfil-info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.perfil-info-label {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--gray-500);
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+}
+
+.perfil-info-value {
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--gray-800);
+}
+
+.perfil-actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+/* Badge en navegación */
+.nav-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.25rem;
+  height: 1.25rem;
+  padding: 0 0.375rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  background: var(--danger);
+  color: white;
+  border-radius: 9999px;
+  margin-left: 0.375rem;
+}
+
+/* Lista de cambios */
+.cambio-item {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem;
+  background: var(--gray-50);
+  border-radius: var(--radius);
+  margin-bottom: 0.75rem;
+  border-left: 4px solid var(--gray-300);
+  transition: all 0.2s ease;
+}
+
+.cambio-item:hover {
+  background: var(--gray-100);
+}
+
+.cambio-item:last-child {
+  margin-bottom: 0;
+}
+
+.cambio-item.tipo-crear {
+  border-left-color: var(--success);
+}
+
+.cambio-item.tipo-editar {
+  border-left-color: var(--warning);
+}
+
+.cambio-item.tipo-eliminar {
+  border-left-color: var(--danger);
+}
+
+.cambio-item-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.cambio-item-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.25rem;
+  flex-wrap: wrap;
+}
+
+.cambio-tipo-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.125rem 0.5rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  border-radius: var(--radius-sm);
+}
+
+.cambio-tipo-badge.crear {
+  background: var(--success-light);
+  color: #15803d;
+}
+
+.cambio-tipo-badge.editar {
+  background: var(--warning-light);
+  color: #b45309;
+}
+
+.cambio-tipo-badge.eliminar {
+  background: var(--danger-light);
+  color: #dc2626;
+}
+
+.cambio-item-titulo {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--gray-800);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cambio-item-meta {
+  font-size: 0.8125rem;
+  color: var(--gray-500);
+}
+
+.cambio-item-actions {
+  display: flex;
+  gap: 0.375rem;
+  flex-shrink: 0;
+}
+
+/* Estados de mis cambios */
+.cambio-estado {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  margin-top: 0.25rem;
+}
+
+.cambio-estado.pendiente {
+  color: var(--gray-500);
+}
+
+.cambio-estado.aprobado {
+  color: var(--success);
+}
+
+.cambio-estado.rechazado {
+  color: var(--danger);
+}
+
+.cambio-comentario-rechazo {
+  margin-top: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: var(--danger-light);
+  border-radius: var(--radius-sm);
+  font-size: 0.8125rem;
+  color: #991b1b;
+}
+
+.cambio-comentario-rechazo strong {
+  display: block;
+  margin-bottom: 0.125rem;
+}
+
+/* Modal de comparación de cambios */
+.cambios-meta {
+  margin-bottom: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--gray-200);
+}
+
+.cambios-meta-item {
+  display: flex;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  margin-bottom: 0.25rem;
+}
+
+.cambios-meta-label {
+  color: var(--gray-500);
+  min-width: 80px;
+}
+
+.cambios-meta-value {
+  color: var(--gray-800);
+  font-weight: 500;
+}
+
+.cambios-comparacion {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.cambio-campo {
+  padding: 0.75rem;
+  background: var(--gray-50);
+  border-radius: var(--radius);
+}
+
+.cambio-campo-nombre {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--gray-500);
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+  margin-bottom: 0.5rem;
+}
+
+.cambio-campo-valores {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.cambio-valor-antes,
+.cambio-valor-despues {
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.875rem;
+}
+
+.cambio-valor-antes {
+  background: var(--danger-light);
+  color: #991b1b;
+  border-left: 3px solid var(--danger);
+}
+
+.cambio-valor-despues {
+  background: var(--success-light);
+  color: #15803d;
+  border-left: 3px solid var(--success);
+}
+
+.cambio-valor-antes::before {
+  content: 'Antes: ';
+  font-weight: 600;
+}
+
+.cambio-valor-despues::before {
+  content: 'Después: ';
+  font-weight: 600;
+}
+
+/* Para creaciones (solo valor nuevo) */
+.cambio-campo.solo-nuevo .cambio-campo-valores {
+  grid-template-columns: 1fr;
+}
+
+.cambio-campo.solo-nuevo .cambio-valor-despues::before {
+  content: 'Valor: ';
+}
+
+/* Para eliminaciones */
+.cambio-eliminar-aviso {
+  padding: 1rem;
+  background: var(--danger-light);
+  border-radius: var(--radius);
+  border-left: 4px solid var(--danger);
+  color: #991b1b;
+  text-align: center;
+}
+
+.cambio-eliminar-aviso strong {
+  display: block;
+  font-size: 1rem;
+  margin-bottom: 0.25rem;
+}
+
+/* Empty state */
+.cambios-empty {
+  text-align: center;
+  padding: 2rem;
+  color: var(--gray-500);
+}
+
+.cambios-empty-icon {
+  font-size: 2.5rem;
+  margin-bottom: 0.75rem;
+  opacity: 0.5;
+}
+
+.cambios-empty-text {
+  font-size: 0.9375rem;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .cambio-item {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  
+  .cambio-item-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+  
+  .cambio-campo-valores {
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+  }
+  
+  .perfil-info-grid {
+    grid-template-columns: 1fr;
+  }
+}
