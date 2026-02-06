@@ -161,3 +161,115 @@ export const changePassword = async (req, res) => {
     });
   }
 };
+
+// Actualizar perfil (nombre y email)
+export const updateProfile = async (req, res) => {
+  try {
+    const { nombre_completo, email } = req.body;
+    const userId = req.user?.userId;
+
+    if (!nombre_completo && !email) {
+      return res.status(400).json({
+        success: false,
+        error: 'Debe proporcionar al menos un campo para actualizar'
+      });
+    }
+
+    // Verificar que el usuario existe
+    const [userRows] = await pool.execute(
+      'SELECT * FROM usuarios WHERE id = ?',
+      [userId]
+    );
+
+    if (userRows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'Usuario no encontrado'
+      });
+    }
+
+    // Si se cambia el email, verificar que no esté en uso por otro usuario
+    if (email) {
+      const [existingEmail] = await pool.execute(
+        'SELECT id FROM usuarios WHERE email = ? AND id != ?',
+        [email, userId]
+      );
+
+      if (existingEmail.length > 0) {
+        return res.status(400).json({
+          success: false,
+          error: 'El email ya está en uso por otro usuario'
+        });
+      }
+    }
+
+    // Construir query de actualización
+    const updates = [];
+    const values = [];
+
+    if (nombre_completo) {
+      updates.push('nombre_completo = ?');
+      values.push(nombre_completo.trim());
+    }
+
+    if (email) {
+      updates.push('email = ?');
+      values.push(email.trim().toLowerCase());
+    }
+
+    values.push(userId);
+
+    await pool.execute(
+      `UPDATE usuarios SET ${updates.join(', ')} WHERE id = ?`,
+      values
+    );
+
+    // Obtener datos actualizados
+    const [updatedUser] = await pool.execute(
+      'SELECT id, username, nombre_completo, email, rol FROM usuarios WHERE id = ?',
+      [userId]
+    );
+
+    res.json({
+      success: true,
+      message: 'Perfil actualizado correctamente',
+      data: { user: updatedUser[0] }
+    });
+  } catch (error) {
+    console.error('Error actualizando perfil:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Error interno del servidor'
+    });
+  }
+};
+
+// Obtener datos del perfil actual
+export const getProfile = async (req, res) => {
+  try {
+    const userId = req.user?.userId;
+
+    const [rows] = await pool.execute(
+      'SELECT id, username, nombre_completo, email, rol, created_at FROM usuarios WHERE id = ? AND activo = TRUE',
+      [userId]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'Usuario no encontrado'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: { user: rows[0] }
+    });
+  } catch (error) {
+    console.error('Error obteniendo perfil:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Error interno del servidor'
+    });
+  }
+};
