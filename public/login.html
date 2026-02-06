@@ -1,176 +1,518 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Ingresar - RPAD</title>
-  <link rel="icon" type="image/png" href="img/icon.png">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Source+Sans+3:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/styles.css">
-  <style>
-    .login-container {
-      min-height: calc(100vh - 200px);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 2rem 1rem;
-    }
-    .login-card {
-      background: white;
-      border-radius: var(--radius-xl);
-      box-shadow: var(--shadow-lg);
-      width: 100%;
-      max-width: 400px;
-      overflow: hidden;
-    }
-    .login-header {
-      background: linear-gradient(135deg, var(--mcr-blue-900) 0%, var(--mcr-blue-700) 100%);
-      color: white;
-      padding: 2rem;
-      text-align: center;
-    }
-    .login-header img {
-      height: 60px;
-      margin-bottom: 1rem;
-    }
-    .login-header h1 {
-      color: white;
-      font-size: 1.5rem;
-      margin-bottom: 0.25rem;
-    }
-    .login-header p {
-      opacity: 0.8;
-      font-size: 0.875rem;
-    }
-    .login-form {
-      padding: 2rem;
-    }
-    .password-toggle {
-      position: relative;
-    }
-    .password-toggle button {
-      position: absolute;
-      right: 0.75rem;
-      top: 50%;
-      transform: translateY(-50%);
-      background: none;
-      border: none;
-      color: var(--gray-400);
-      cursor: pointer;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RPAD - Iniciar Sesión</title>
+    <link rel="icon" type="image/png" href="img/icon.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* === RESET & BASE === */
+        *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html, body {
+            height: 100%;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-size: 16px;
+            line-height: 1.6;
+            color: #1f2937;
+            background-color: #f9fafb;
+        }
+
+        /* === LOGIN PAGE LAYOUT === */
+        .login-page {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* === LADO IZQUIERDO - BRANDING === */
+        .login-left {
+            flex: 1;
+            background: linear-gradient(135deg, #1a365d 0%, #2a5a8a 50%, #3182ce 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 3rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Efecto decorativo */
+        .login-left::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -20%;
+            width: 80%;
+            height: 200%;
+            background: linear-gradient(45deg, transparent 30%, rgba(255,255,255,0.03) 50%, transparent 70%);
+            transform: rotate(-15deg);
+            pointer-events: none;
+        }
+
+        .login-left::after {
+            content: '';
+            position: absolute;
+            bottom: -30%;
+            left: -10%;
+            width: 60%;
+            height: 150%;
+            background: linear-gradient(45deg, transparent 30%, rgba(255,255,255,0.02) 50%, transparent 70%);
+            transform: rotate(20deg);
+            pointer-events: none;
+        }
+
+        .login-left-content {
+            position: relative;
+            z-index: 1;
+            text-align: center;
+            max-width: 480px;
+            color: white;
+        }
+
+        .login-left-logo {
+            height: 80px;
+            margin-bottom: 2rem;
+            filter: brightness(0) invert(1);
+        }
+
+        .login-left-content h1 {
+            font-size: 3.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            letter-spacing: -0.02em;
+        }
+
+        .login-left-content h2 {
+            font-size: 1.25rem;
+            font-weight: 400;
+            opacity: 0.9;
+            margin-bottom: 1.5rem;
+        }
+
+        .login-left-content p {
+            font-size: 1rem;
+            opacity: 0.8;
+            line-height: 1.7;
+        }
+
+        /* === LADO DERECHO - FORMULARIO === */
+        .login-right {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 3rem;
+            background: #f9fafb;
+        }
+
+        .login-box {
+            width: 100%;
+            max-width: 420px;
+        }
+
+        .login-box-title {
+            font-size: 1.875rem;
+            font-weight: 700;
+            color: #111827;
+            margin-bottom: 0.5rem;
+        }
+
+        .login-box-subtitle {
+            font-size: 1rem;
+            color: #6b7280;
+            margin-bottom: 2rem;
+        }
+
+        /* === FORMULARIO === */
+        .form-group {
+            margin-bottom: 1.25rem;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: #374151;
+            margin-bottom: 0.5rem;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            font-size: 1rem;
+            font-family: inherit;
+            border: 1px solid #d1d5db;
+            border-radius: 0.5rem;
+            background: white;
+            color: #1f2937;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: #3182ce;
+            box-shadow: 0 0 0 3px rgba(49, 130, 206, 0.15);
+        }
+
+        .form-control::placeholder {
+            color: #9ca3af;
+        }
+
+        /* Input con icono */
+        .input-group {
+            position: relative;
+        }
+
+        .input-group .form-control {
+            padding-left: 2.75rem;
+        }
+
+        .input-group-icon {
+            position: absolute;
+            left: 0.875rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #9ca3af;
+            pointer-events: none;
+        }
+
+        .input-group-icon svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        /* Toggle password */
+        .password-toggle {
+            position: relative;
+        }
+
+        .password-toggle .form-control {
+            padding-right: 2.75rem;
+        }
+
+        .password-toggle-btn {
+            position: absolute;
+            right: 0.75rem;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: #9ca3af;
+            cursor: pointer;
+            padding: 0.25rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: color 0.2s;
+        }
+
+        .password-toggle-btn:hover {
+            color: #6b7280;
+        }
+
+        .password-toggle-btn svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        /* === BOTÓN === */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.5rem;
+            font-size: 1rem;
+            font-weight: 500;
+            font-family: inherit;
+            border-radius: 0.5rem;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-decoration: none;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #1a365d 0%, #2a5a8a 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #1e4976 0%, #3182ce 100%);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(26, 54, 93, 0.3);
+        }
+
+        .btn-primary:active {
+            transform: translateY(0);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-lg {
+            padding: 0.875rem 1.75rem;
+            font-size: 1rem;
+        }
+
+        /* === ALERTA === */
+        .alert {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.875rem 1rem;
+            border-radius: 0.5rem;
+            margin-bottom: 1.25rem;
+            font-size: 0.875rem;
+        }
+
+        .alert svg {
+            width: 20px;
+            height: 20px;
+            flex-shrink: 0;
+        }
+
+        .alert-danger {
+            background: #fef2f2;
+            color: #dc2626;
+            border: 1px solid #fecaca;
+        }
+
+        /* === FOOTER DEL LOGIN === */
+        .login-footer {
+            margin-top: 2.5rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #e5e7eb;
+            text-align: center;
+        }
+
+        .login-footer p {
+            font-size: 0.8125rem;
+            color: #9ca3af;
+            margin: 0.25rem 0;
+        }
+
+        /* === SPINNER === */
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .spinner {
+            animation: spin 1s linear infinite;
+        }
+
+        /* === RESPONSIVE === */
+        @media (max-width: 1024px) {
+            .login-left {
+                padding: 2rem;
+            }
+
+            .login-left-content h1 {
+                font-size: 2.5rem;
+            }
+
+            .login-left-content h2 {
+                font-size: 1.125rem;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .login-page {
+                flex-direction: column;
+            }
+
+            .login-left {
+                padding: 2rem 1.5rem;
+                min-height: auto;
+            }
+
+            .login-left-logo {
+                height: 60px;
+                margin-bottom: 1.5rem;
+            }
+
+            .login-left-content h1 {
+                font-size: 2rem;
+            }
+
+            .login-left-content h2 {
+                font-size: 1rem;
+                margin-bottom: 1rem;
+            }
+
+            .login-left-content p {
+                font-size: 0.875rem;
+                display: none;
+            }
+
+            .login-right {
+                padding: 2rem 1.5rem;
+            }
+
+            .login-box-title {
+                font-size: 1.5rem;
+            }
+        }
+    </style>
 </head>
 <body>
-  <header class="header">
-    <div class="header-top">
-      <div class="header-brand">
-        <img src="img/logo-2025.png" alt="MCR" class="header-logo">
-        <div>
-          <div class="header-title">RPAD</div>
-          <div class="header-subtitle">Registro Permanente de Actualización de Datasets</div>
+    <div class="login-page">
+        <!-- Lado izquierdo - Branding -->
+        <div class="login-left">
+            <div class="login-left-content">
+                <img src="img/logo-blanco.png" alt="Municipalidad de Comodoro Rivadavia" class="login-left-logo">
+                <h1>RPAD</h1>
+                <h2>Registro Permanente de Actualización de Datasets</h2>
+                <p>Sistema de seguimiento y gestión de actualización de datasets para el Portal de Datos Abiertos de la Municipalidad de Comodoro Rivadavia.</p>
+            </div>
         </div>
-      </div>
-    </div>
-    <nav class="header-nav">
-      <div class="header-nav-inner">
-        <a href="index.html" class="nav-link"><span>📊</span> Tablero</a>
-        <a href="datasets.html" class="nav-link"><span>📁</span> Datasets</a>
-      </div>
-    </nav>
-  </header>
 
-  <div class="login-container">
-    <div class="login-card">
-      <div class="login-header">
-        <img src="img/logo-2025-blanco.png" alt="MCR">
-        <h1>Panel de Administración</h1>
-        <p>Ingrese sus credenciales</p>
-      </div>
-      <form class="login-form" id="login-form">
-        <div id="message-container"></div>
-        
-        <div class="form-group">
-          <label class="form-label" for="username">Usuario</label>
-          <input type="text" id="username" class="form-input" required autocomplete="username">
+        <!-- Lado derecho - Formulario -->
+        <div class="login-right">
+            <div class="login-box">
+                <h1 class="login-box-title">Bienvenido</h1>
+                <p class="login-box-subtitle">Ingrese sus credenciales para acceder al sistema</p>
+
+                <div id="alertError" class="alert alert-danger" style="display: none;">
+                    <!-- Icono Lucide: alert-circle -->
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"/>
+                        <line x1="12" x2="12" y1="8" y2="12"/>
+                        <line x1="12" x2="12.01" y1="16" y2="16"/>
+                    </svg>
+                    <span id="alertErrorText"></span>
+                </div>
+
+                <form id="loginForm">
+                    <div class="form-group">
+                        <label class="form-label" for="username">Usuario</label>
+                        <div class="input-group">
+                            <span class="input-group-icon">
+                                <!-- Icono Lucide: user -->
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/>
+                                    <circle cx="12" cy="7" r="4"/>
+                                </svg>
+                            </span>
+                            <input type="text" id="username" name="username" class="form-control" placeholder="Ingrese su usuario" required autofocus>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="password">Contraseña</label>
+                        <div class="input-group password-toggle">
+                            <span class="input-group-icon">
+                                <!-- Icono Lucide: lock -->
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <rect width="18" height="11" x="3" y="11" rx="2" ry="2"/>
+                                    <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                                </svg>
+                            </span>
+                            <input type="password" id="password" name="password" class="form-control" placeholder="Ingrese su contraseña" required>
+                            <button type="button" class="password-toggle-btn" onclick="togglePassword()" title="Mostrar/ocultar contraseña">
+                                <!-- Icono Lucide: eye -->
+                                <svg id="eyeIcon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/>
+                                    <circle cx="12" cy="12" r="3"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary btn-lg" style="width: 100%; margin-top: 0.5rem;" id="btnLogin">
+                        Iniciar Sesión
+                    </button>
+                </form>
+
+                <div class="login-footer">
+                    <p>Municipalidad de Comodoro Rivadavia</p>
+                    <p>Dirección General de Modernización e Investigación Territorial</p>
+                </div>
+            </div>
         </div>
-        
-        <div class="form-group">
-          <label class="form-label" for="password">Contraseña</label>
-          <div class="password-toggle">
-            <input type="password" id="password" class="form-input" required autocomplete="current-password">
-            <button type="button" onclick="togglePassword()">👁️</button>
-          </div>
-        </div>
-        
-        <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem;" id="submit-btn">
-          Ingresar
-        </button>
-        
-        <p class="text-center text-muted text-small mt-4">
-          <a href="index.html">← Volver al inicio</a>
-        </p>
-      </form>
     </div>
-  </div>
 
-  <footer class="footer">
-    <div class="footer-inner">
-      <div class="footer-section">
-        <h4>Dirección de Datos Públicos y Comunicación</h4>
-        <p>Municipalidad de Comodoro Rivadavia</p>
-        <p>Dirección General de Modernización e Investigación Territorial</p>
-      </div>
-      <div class="footer-section">
-        <h4>Contacto</h4>
-        <p>📧 <a href="mailto:datospublicos@comodoro.gov.ar">datospublicos@comodoro.gov.ar</a></p>
-        <p>🌐 <a href="https://datos.comodoro.gov.ar" target="_blank">datos.comodoro.gov.ar</a></p>
-      </div>
-      <div class="footer-section">
-        <h4>Marco Legal</h4>
-        <p>Ordenanza N° 17.662/23 - Artículo 8°</p>
-        <p>Licencia: CC BY-SA 4.0</p>
-      </div>
-    </div>
-    <div class="footer-bottom">
-      © 2025 Municipalidad de Comodoro Rivadavia. RPAD v1.0.0
-    </div>
-  </footer>
+    <script src="js/config.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/api.js"></script>
+    <script>
+        // Verificar si ya hay sesión activa
+        document.addEventListener('DOMContentLoaded', () => {
+            if (Auth.isAuthenticated()) {
+                window.location.href = 'index.html';
+            }
+        });
 
-  <script src="js/config.js"></script>
-  <script src="js/auth.js"></script>
-  <script src="js/api.js"></script>
-  <script>
-    // Redirect si ya está autenticado
-    if (Auth.isAuthenticated()) {
-      window.location.href = 'admin.html';
-    }
+        // Toggle mostrar/ocultar contraseña
+        function togglePassword() {
+            const input = document.getElementById('password');
+            const eyeIcon = document.getElementById('eyeIcon');
+            
+            if (input.type === 'password') {
+                input.type = 'text';
+                // Cambiar a icono eye-off
+                eyeIcon.innerHTML = `
+                    <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/>
+                    <path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/>
+                    <path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/>
+                    <line x1="2" x2="22" y1="2" y2="22"/>
+                `;
+            } else {
+                input.type = 'password';
+                // Volver a icono eye
+                eyeIcon.innerHTML = `
+                    <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/>
+                    <circle cx="12" cy="12" r="3"/>
+                `;
+            }
+        }
 
-    function togglePassword() {
-      const input = document.getElementById('password');
-      input.type = input.type === 'password' ? 'text' : 'password';
-    }
+        // Manejar login
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
 
-    document.getElementById('login-form').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      
-      const username = document.getElementById('username').value;
-      const password = document.getElementById('password').value;
-      const submitBtn = document.getElementById('submit-btn');
-      
-      submitBtn.disabled = true;
-      submitBtn.textContent = 'Ingresando...';
-      
-      try {
-        await Auth.login(username, password);
-        window.location.href = 'admin.html';
-      } catch (error) {
-        Utils.showError(error.message);
-        submitBtn.disabled = false;
-        submitBtn.textContent = 'Ingresar';
-      }
-    });
-  </script>
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const btnLogin = document.getElementById('btnLogin');
+            const alertError = document.getElementById('alertError');
+            const alertErrorText = document.getElementById('alertErrorText');
+
+            // Ocultar error previo
+            alertError.style.display = 'none';
+
+            // Deshabilitar botón y mostrar loading
+            btnLogin.disabled = true;
+            btnLogin.innerHTML = `
+                <svg class="spinner" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+                </svg>
+                Iniciando sesión...
+            `;
+
+            try {
+                await Auth.login(username, password);
+                window.location.href = 'index.html';
+            } catch (error) {
+                alertErrorText.textContent = error.message;
+                alertError.style.display = 'flex';
+                btnLogin.disabled = false;
+                btnLogin.innerHTML = 'Iniciar Sesión';
+            }
+        });
+    </script>
 </body>
 </html>
