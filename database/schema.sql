@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Servidor: localhost:3306
--- Tiempo de generación: 06-02-2026 a las 13:01:27
+-- Tiempo de generación: 06-02-2026 a las 13:34:43
 -- Versión del servidor: 10.11.15-MariaDB-cll-lve-log
 -- Versión de PHP: 8.4.17
 
@@ -667,6 +667,21 @@ CREATE TABLE `usuarios` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
+-- Volcado de datos para la tabla `usuarios`
+--
+
+INSERT INTO `usuarios` (`id`, `username`, `password_hash`, `nombre_completo`, `email`, `rol`, `activo`, `created_at`, `updated_at`) VALUES
+(1, 'MAPEREZ', '$2a$10$k7REGha8GXbRTweZLa.pueM0tsPn8g7cfdL9Qq1IrxayIHizfbqTq', 'Mariano Ariel Perez', 'marianoaperez@yahoo.com.ar', 'admin', 1, '2025-11-30 21:20:04', '2026-01-11 01:18:36'),
+(2, 'ANBARROSO', '$2a$10$H53B9iq27YCqQAVoCr1EteRzsImMqmgzk.80I2xD5hi4cx77eDiOK', 'Aldana Noelia Barroso', 'aldanabarroso16.dit@gmail.com', 'admin', 1, '2025-11-30 21:32:14', '2026-01-26 17:44:28'),
+(3, 'ANNAVARRO', '$2a$10$8UAiODStyggM3LSUuqPllePZmNolSmwmT33YlkEDdygXoo7DYuaqa', 'Ana Noemi Navarro', 'investigacionterritorial@comodoro.gov.ar', 'lector', 1, '2025-12-10 15:19:52', '2026-01-11 00:52:21'),
+(4, 'GALOPEZ', '$2a$12$yCvIBfWVDSr1/clO/LhGHuqZ5u0CBwsGwBpMZsRwyjTn7KcQr77c2', 'Gustavo Angel Lopez', 'mit@comodoro.gov.ar', 'admin', 1, '2025-12-10 15:21:22', '2026-01-23 13:49:59'),
+(5, 'MASAEZ', '$2a$10$Dljya6Xl1kOMUGq.DvPVZu/HTXUStUFTyBSXC8QSedsWmQIxgLdBG', 'Melanie Abigail Sáez', 'smelanie.dit@gmail.com', 'lector', 1, '2026-01-11 01:26:16', '2026-01-11 01:26:16'),
+(6, 'AARODRIGUEZ', '$2a$10$VhgxFfUe/ohlgonXT.V6FOedKXrgFWbgSxxdgwaZtlmDbHrULAdZK', 'Agustín Alejandro Rodríguez', 'geoestadisticas@comodoro.gov.ar', 'lector', 1, '2026-01-11 01:26:16', '2026-01-11 01:26:16'),
+(7, 'VAGOMEZ', '$2a$10$PRQF.fiq9QBjJ6bPgFaO1e.QtHPmXmajfuROWjmsP/sS6753UuubG', 'Valeria Adriana Gómez', 'valeriagomez.dit@gmail.com', 'admin', 1, '2026-01-11 01:26:16', '2026-01-11 01:26:16'),
+(8, 'SBARANEDA', '$2a$10$3PNG7xeyZpnT53xz3.HhZOGJzQYVP2BGQ8cyCQNR16TVttsJJZwNG', 'Susana Beatriz Araneda', 'saraneda247@gmail.com', 'lector', 1, '2026-01-11 01:26:16', '2026-01-11 01:26:16'),
+(9, 'MVNAVARRO', '$2a$10$UC9HX.hrZ6d4dwzYTLCnuukwDi4WQrv2abPMdKbjd.htcq9foOaxO', 'Manuela Vanesa Navarro', '', 'lector', 1, '2026-01-11 01:26:16', '2026-01-11 01:26:16');
+
+--
 -- Índices para tablas volcadas
 --
 
@@ -810,7 +825,7 @@ ALTER TABLE `temas`
 -- AUTO_INCREMENT de la tabla `usuarios`
 --
 ALTER TABLE `usuarios`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
 
 --
 -- Restricciones para tablas volcadas
