@@ -3,7 +3,7 @@ import jwt from 'jsonwebtoken';
 const JWT_SECRET = process.env.JWT_SECRET || 'rpad-secret-key-cambiar-en-produccion';
 
 export const generateToken = (payload) => {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: '24h' });
+  return jwt.sign(payload, JWT_SECRET, { expiresIn: '7h' });
 };
 
 export const verifyToken = (token) => {
