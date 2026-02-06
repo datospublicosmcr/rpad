@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { authMiddleware } from '../middleware/auth.js';
 
 // Controladores
-import { login, verifySession, changePassword } from '../controllers/authController.js';
+import { login, verifySession, changePassword, updateProfile, getProfile } from '../controllers/authController.js';
 import { 
   getDatasets, 
   getDatasetById, 
@@ -22,10 +22,12 @@ import {
   deleteArea 
 } from '../controllers/areasController.js';
 import { 
-  ejecutarNotificacionesDiarias, 
-  pruebaNotificacion, 
+  ejecutarNotificacionesDiarias,
+  pruebaNotificacion,
   verificarSMTP,
-  previewEmail 
+  previewEmail,
+  ejecutarNotificacionCambiosPendientes,
+  previewCambiosPendientes
 } from '../controllers/notificacionesController.js';
 import {
   reporteEstadoGeneral,
@@ -34,6 +36,17 @@ import {
   reporteCumplimiento
 } from '../controllers/reportesController.js';
 import { generarNota } from '../controllers/notasController.js';
+import {
+  getContadorPendientes,
+  getCambiosPendientesParaRevisar,
+  getMisCambios,
+  getCambioPendienteById,
+  verificarDatasetBloqueado,
+  aprobarCambio,
+  rechazarCambio,
+  getDatasetsConPendientes
+} from '../controllers/cambiosPendientesController.js';
+import { enviarContacto } from '../controllers/contactoController.js';
 
 const router = Router();
 
@@ -61,6 +74,9 @@ router.get('/areas/:id', getAreaById);
 // Andino (Portal de Datos Abiertos)
 router.get('/andino/fetch', fetchFromAndino);
 
+// Contacto (público con rate limiting)
+router.post('/contacto', enviarContacto);
+
 // =====================================================
 // Rutas protegidas (requieren autenticación)
 // =====================================================
@@ -68,6 +84,10 @@ router.get('/andino/fetch', fetchFromAndino);
 // Auth
 router.get('/auth/verify', authMiddleware, verifySession);
 router.post('/auth/change-password', authMiddleware, changePassword);
+
+// Perfil
+router.get('/auth/profile', authMiddleware, getProfile);
+router.put('/auth/profile', authMiddleware, updateProfile);
 
 // Datasets (escritura)
 router.post('/datasets', authMiddleware, createDataset);
@@ -81,12 +101,26 @@ router.put('/areas/:id', authMiddleware, updateArea);
 router.delete('/areas/:id', authMiddleware, deleteArea);
 
 // =====================================================
+// Cambios Pendientes (protegidas - solo admin)
+// =====================================================
+router.get('/cambios-pendientes/contador', authMiddleware, getContadorPendientes);
+router.get('/cambios-pendientes/para-revisar', authMiddleware, getCambiosPendientesParaRevisar);
+router.get('/cambios-pendientes/mis-cambios', authMiddleware, getMisCambios);
+router.get('/cambios-pendientes/datasets-bloqueados', authMiddleware, getDatasetsConPendientes);
+router.get('/cambios-pendientes/:id', authMiddleware, getCambioPendienteById);
+router.get('/cambios-pendientes/verificar/:datasetId', authMiddleware, verificarDatasetBloqueado);
+router.post('/cambios-pendientes/:id/aprobar', authMiddleware, aprobarCambio);
+router.post('/cambios-pendientes/:id/rechazar', authMiddleware, rechazarCambio);
+
+// =====================================================
 // Notificaciones (protegidas)
 // =====================================================
 router.get('/notificaciones/ejecutar', authMiddleware, ejecutarNotificacionesDiarias);
 router.get('/notificaciones/prueba/:tipo', authMiddleware, pruebaNotificacion);
 router.get('/notificaciones/verificar-smtp', authMiddleware, verificarSMTP);
 router.get('/notificaciones/preview/:tipo', authMiddleware, previewEmail);
+router.get('/notificaciones/cambios-pendientes', ejecutarNotificacionCambiosPendientes);
+router.get('/notificaciones/preview-cambios-pendientes', authMiddleware, previewCambiosPendientes);
 
 // =====================================================
 // Reportes PDF (protegidas)
@@ -111,5 +145,13 @@ router.get('/cron/notificaciones', (req, res, next) => {
   }
   next();
 }, ejecutarNotificacionesDiarias);
+
+router.get('/cron/cambios-pendientes', (req, res, next) => {
+  const secret = req.query.secret || req.headers['x-cron-secret'];
+  if (secret !== process.env.CRON_SECRET) {
+    return res.status(403).json({ success: false, error: 'Acceso denegado' });
+  }
+  next();
+}, ejecutarNotificacionCambiosPendientes);
 
 export default router;
