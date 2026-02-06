@@ -16,7 +16,7 @@
             border-radius: var(--border-radius-lg);
             box-shadow: var(--shadow);
             padding: 32px;
-            max-width: 800px;
+            max-width: 900px;
         }
 
         .verificar-intro {
@@ -24,6 +24,52 @@
             color: var(--gray-600);
             font-size: 0.9rem;
             line-height: 1.6;
+        }
+
+        /* Pestañas */
+        .verificar-tabs {
+            display: flex;
+            gap: 0;
+            margin-bottom: 24px;
+            border-bottom: 2px solid var(--border-color);
+        }
+
+        .verificar-tab {
+            padding: 10px 20px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--gray-500);
+            background: none;
+            border: none;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -2px;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .verificar-tab:hover {
+            color: var(--gray-700);
+        }
+
+        .verificar-tab.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+        }
+
+        .verificar-tab svg {
+            width: 16px;
+            height: 16px;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
         }
 
         .hash-input-group {
@@ -38,13 +84,121 @@
             font-size: 0.85rem;
         }
 
+        /* Zona de drop de archivo */
+        .file-drop-zone {
+            border: 2px dashed var(--border-color);
+            border-radius: var(--border-radius-lg);
+            padding: 40px 24px;
+            text-align: center;
+            cursor: pointer;
+            transition: var(--transition);
+            background: var(--gray-50);
+        }
+
+        .file-drop-zone:hover,
+        .file-drop-zone.dragover {
+            border-color: var(--primary);
+            background: var(--info-light);
+        }
+
+        .file-drop-zone svg {
+            color: var(--gray-400);
+            margin-bottom: 12px;
+        }
+
+        .file-drop-zone.dragover svg {
+            color: var(--primary);
+        }
+
+        .file-drop-zone p {
+            color: var(--gray-500);
+            font-size: 0.9rem;
+            margin-bottom: 4px;
+        }
+
+        .file-drop-zone .hint {
+            font-size: 0.8rem;
+            color: var(--gray-400);
+        }
+
+        .file-drop-zone input[type="file"] {
+            display: none;
+        }
+
+        /* Archivo seleccionado */
+        .file-selected {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 16px;
+            background: var(--gray-50);
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            margin-top: 16px;
+        }
+
+        .file-selected svg {
+            color: var(--primary);
+            flex-shrink: 0;
+        }
+
+        .file-selected-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .file-selected-name {
+            font-weight: 500;
+            font-size: 0.9rem;
+            color: var(--gray-800);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .file-selected-size {
+            font-size: 0.8rem;
+            color: var(--gray-500);
+        }
+
+        .file-hash-display {
+            margin-top: 16px;
+            padding: 12px 16px;
+            background: var(--gray-50);
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+        }
+
+        .file-hash-display label {
+            display: block;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--gray-500);
+            margin-bottom: 6px;
+        }
+
+        .file-hash-display code {
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.8rem;
+            word-break: break-all;
+            color: var(--gray-800);
+        }
+
+        .file-actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 16px;
+        }
+
         /* Resultado */
         .resultado-card {
             background: var(--bg-card);
             border-radius: var(--border-radius-lg);
             box-shadow: var(--shadow);
             overflow: hidden;
-            max-width: 800px;
+            max-width: 900px;
         }
 
         .resultado-header {
@@ -128,39 +282,6 @@
             border: 1px solid var(--border-color);
         }
 
-        .resultado-links {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 12px;
-            margin-top: 20px;
-            padding-top: 20px;
-            border-top: 1px solid var(--border-color);
-        }
-
-        .resultado-links a {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            padding: 8px 16px;
-            background: var(--gray-50);
-            border: 1px solid var(--border-color);
-            border-radius: var(--border-radius);
-            font-size: 0.8rem;
-            font-weight: 500;
-            color: var(--primary);
-            transition: var(--transition);
-        }
-
-        .resultado-links a:hover {
-            background: var(--gray-100);
-            border-color: var(--primary);
-        }
-
-        .resultado-links a svg {
-            width: 14px;
-            height: 14px;
-        }
-
         /* Info box */
         .info-box {
             display: flex;
@@ -170,7 +291,7 @@
             background: var(--info-light);
             border-radius: var(--border-radius);
             margin-top: 24px;
-            max-width: 800px;
+            max-width: 900px;
         }
 
         .info-box svg {
@@ -185,6 +306,200 @@
             line-height: 1.5;
         }
 
+        /* Seccion registro de operaciones */
+        .registro-section {
+            margin-top: 48px;
+            max-width: none;
+        }
+
+        .registro-section h2 {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--gray-800);
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .registro-section h2 svg {
+            color: var(--primary);
+        }
+
+        .registro-filtros {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+        }
+
+        .registro-filtros select {
+            padding: 8px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            font-size: 0.85rem;
+            color: var(--gray-700);
+            background: var(--bg-card);
+            cursor: pointer;
+        }
+
+        .registro-card {
+            background: var(--bg-card);
+            border-radius: var(--border-radius-lg);
+            box-shadow: var(--shadow);
+            overflow-x: auto;
+        }
+
+        .registro-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .registro-table th {
+            padding: 12px 16px;
+            text-align: left;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--gray-500);
+            background: var(--gray-50);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .registro-table td {
+            padding: 12px 16px;
+            font-size: 0.85rem;
+            color: var(--gray-700);
+            border-bottom: 1px solid var(--border-color);
+            vertical-align: middle;
+        }
+
+        .registro-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .registro-table tr:hover td {
+            background: var(--gray-50);
+        }
+
+        .registro-dataset {
+            font-weight: 500;
+            color: var(--gray-800);
+            max-width: 200px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .registro-hash {
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.75rem;
+            color: var(--gray-500);
+            cursor: pointer;
+            max-width: 120px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .registro-hash:hover {
+            color: var(--primary);
+        }
+
+        .registro-verificacion {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .registro-verificacion .badge {
+            font-size: 0.7rem;
+            width: fit-content;
+        }
+
+        /* Paginacion */
+        .registro-paginacion {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            background: var(--gray-50);
+            font-size: 0.8rem;
+            color: var(--gray-500);
+        }
+
+        .registro-paginacion-btns {
+            display: flex;
+            gap: 8px;
+        }
+
+        .registro-paginacion-btns button {
+            padding: 6px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            background: var(--bg-card);
+            color: var(--gray-600);
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .registro-paginacion-btns button:hover:not(:disabled) {
+            background: var(--gray-100);
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
+        .registro-paginacion-btns button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .registro-empty {
+            padding: 40px 24px;
+            text-align: center;
+            color: var(--gray-400);
+        }
+
+        .registro-empty svg {
+            margin-bottom: 12px;
+            color: var(--gray-300);
+        }
+
+        .registro-empty p {
+            font-size: 0.9rem;
+        }
+
+        /* Leyenda */
+        .registro-leyenda {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            margin-top: 12px;
+            padding: 12px 16px;
+            background: var(--gray-50);
+            border-radius: var(--border-radius);
+            font-size: 0.8rem;
+            color: var(--gray-500);
+        }
+
+        .registro-leyenda-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .leyenda-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        .leyenda-dot.confirmado { background: var(--success); }
+        .leyenda-dot.pendiente { background: var(--warning); }
+        .leyenda-dot.doble { background: var(--primary); }
+
         @media (max-width: 768px) {
             .hash-input-group {
                 flex-direction: column;
@@ -194,8 +509,27 @@
                 grid-template-columns: 1fr;
             }
 
-            .resultado-links {
+            .registro-table th:nth-child(3),
+            .registro-table td:nth-child(3) {
+                display: none;
+            }
+
+            .registro-table th:nth-child(5),
+            .registro-table td:nth-child(5) {
+                display: none;
+            }
+
+            .registro-filtros {
                 flex-direction: column;
+            }
+
+            .verificar-tabs {
+                gap: 0;
+            }
+
+            .verificar-tab {
+                padding: 10px 14px;
+                font-size: 0.8rem;
             }
         }
     </style>
@@ -303,38 +637,88 @@
                 </h1>
             </div>
 
-            <!-- Formulario de verificacion -->
+            <!-- Verificador con pestañas -->
             <div class="verificar-card" id="verificar-form-card">
                 <p class="verificar-intro">
-                    Ingrese un hash de operacion, hash de archivo o hash de transaccion para verificar
-                    si fue registrado en la <strong>Blockchain Federal Argentina (BFA)</strong>.
+                    Verifique si una operacion o un archivo fue registrado en la
+                    <strong>Blockchain Federal Argentina (BFA)</strong>.
                 </p>
-                <form id="verificar-form" onsubmit="verificarHash(event)">
-                    <div class="form-group" style="margin-bottom: 8px;">
-                        <label class="form-label">Hash a verificar</label>
-                        <div class="hash-input-group">
-                            <input type="text" id="hash-input" class="form-input"
-                                   placeholder="0x..." autocomplete="off" required
-                                   pattern="^0x[0-9a-fA-F]{64}$"
-                                   title="Hash hexadecimal: 0x seguido de 64 caracteres (a-f, 0-9)">
-                            <button type="submit" class="btn btn-primary" id="btn-verificar">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-                                Verificar
-                            </button>
+
+                <!-- Pestañas -->
+                <div class="verificar-tabs">
+                    <button class="verificar-tab active" data-tab="tab-hash" onclick="cambiarTab('tab-hash')">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                        Verificar por hash
+                    </button>
+                    <button class="verificar-tab" data-tab="tab-archivo" onclick="cambiarTab('tab-archivo')">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="m9 15 2 2 4-4"/></svg>
+                        Verificar archivo
+                    </button>
+                </div>
+
+                <!-- Tab: Verificar por hash -->
+                <div class="tab-content active" id="tab-hash">
+                    <form id="verificar-form" onsubmit="verificarHash(event)">
+                        <div class="form-group" style="margin-bottom: 8px;">
+                            <label class="form-label">Hash a verificar</label>
+                            <div class="hash-input-group">
+                                <input type="text" id="hash-input" class="form-input"
+                                       placeholder="0x..." autocomplete="off" required
+                                       pattern="^0x[0-9a-fA-F]{64}$"
+                                       title="Hash hexadecimal: 0x seguido de 64 caracteres (a-f, 0-9)">
+                                <button type="submit" class="btn btn-primary" id="btn-verificar">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                                    Verificar
+                                </button>
+                            </div>
+                            <span class="form-hint">Formato: 0x seguido de 64 caracteres hexadecimales (66 caracteres en total)</span>
                         </div>
-                        <span class="form-hint">Formato: 0x seguido de 64 caracteres hexadecimales (66 caracteres en total)</span>
+                    </form>
+                </div>
+
+                <!-- Tab: Verificar archivo -->
+                <div class="tab-content" id="tab-archivo">
+                    <p style="font-size: 0.85rem; color: var(--gray-600); margin-bottom: 16px;">
+                        Suba un archivo para calcular su hash SHA-256 y verificar si fue certificado en la blockchain.
+                        El archivo no se envia al servidor — el hash se calcula localmente en su navegador.
+                    </p>
+                    <div class="file-drop-zone" id="file-drop-zone">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
+                        <p>Arrastre un archivo aqui o haga clic para seleccionar</p>
+                        <span class="hint">CSV, XLSX, JSON, PDF o cualquier archivo de datos</span>
+                        <input type="file" id="file-input">
                     </div>
-                </form>
+                    <div id="file-info" class="hidden">
+                        <div class="file-selected">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/></svg>
+                            <div class="file-selected-info">
+                                <div class="file-selected-name" id="file-name"></div>
+                                <div class="file-selected-size" id="file-size"></div>
+                            </div>
+                        </div>
+                        <div class="file-hash-display">
+                            <label>Hash SHA-256 del archivo</label>
+                            <code id="file-hash-value"></code>
+                        </div>
+                        <div class="file-actions">
+                            <button class="btn btn-primary" id="btn-verificar-archivo" onclick="verificarArchivoHash()">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                                Verificar en blockchain
+                            </button>
+                            <button class="btn btn-secondary" onclick="limpiarArchivo()">Cambiar archivo</button>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <!-- Loading -->
-            <div id="verificar-loading" class="hidden" style="max-width: 800px;">
+            <div id="verificar-loading" class="hidden" style="max-width: 900px;">
                 <div class="loading"><div class="spinner"></div></div>
             </div>
 
             <!-- Resultado -->
             <div id="verificar-resultado" class="hidden" style="margin-top: 24px;">
-                <!-- Se llena dinámicamente -->
+                <!-- Se llena dinamicamente -->
             </div>
 
             <!-- Info box -->
@@ -351,6 +735,43 @@
                         El hash no contiene datos personales ni del contenido — es una huella digital
                         irreversible que certifica que el registro existio en un momento dado.
                     </p>
+                </div>
+            </div>
+
+            <!-- Registro de operaciones -->
+            <div class="registro-section">
+                <h2>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>
+                    Registro de Operaciones Selladas
+                </h2>
+
+                <div class="registro-filtros">
+                    <select id="filtro-tipo" onchange="cargarRegistro(1)">
+                        <option value="">Todos los tipos</option>
+                        <option value="cambio_dataset">Operaciones sobre datasets</option>
+                        <option value="certificacion_archivo">Certificaciones de archivo</option>
+                        <option value="sello_fundacional">Sello fundacional</option>
+                    </select>
+                </div>
+
+                <div class="registro-card">
+                    <div id="registro-loading" class="hidden">
+                        <div class="loading" style="padding: 40px;"><div class="spinner"></div></div>
+                    </div>
+                    <div id="registro-contenido">
+                        <!-- Se llena dinamicamente -->
+                    </div>
+                </div>
+
+                <div class="registro-leyenda">
+                    <div class="registro-leyenda-item">
+                        <span class="leyenda-dot confirmado"></span>
+                        Sellado en blockchain
+                    </div>
+                    <div class="registro-leyenda-item">
+                        <span class="leyenda-dot doble"></span>
+                        Doble verificacion interna
+                    </div>
                 </div>
             </div>
 
@@ -396,6 +817,22 @@
     // Verificar Sello Blockchain
     // =====================================================
 
+    let archivoHashCalculado = null;
+    let registroPaginaActual = 1;
+
+    // --- Pestañas ---
+
+    function cambiarTab(tabId) {
+        document.querySelectorAll('.verificar-tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+        document.querySelector(`[data-tab="${tabId}"]`).classList.add('active');
+        document.getElementById(tabId).classList.add('active');
+        // Ocultar resultado previo al cambiar de tab
+        document.getElementById('verificar-resultado').classList.add('hidden');
+    }
+
+    // --- Tab 1: Verificar por hash ---
+
     async function verificarHash(e) {
         e.preventDefault();
 
@@ -414,10 +851,98 @@
             return;
         }
 
-        // Mostrar loading
+        await buscarHashEnBlockchain(hash);
+    }
+
+    // --- Tab 2: Verificar archivo ---
+
+    function initFileDropZone() {
+        const dropZone = document.getElementById('file-drop-zone');
+        const fileInput = document.getElementById('file-input');
+
+        dropZone.addEventListener('click', () => fileInput.click());
+
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('dragover');
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            if (e.dataTransfer.files.length > 0) {
+                procesarArchivo(e.dataTransfer.files[0]);
+            }
+        });
+
+        fileInput.addEventListener('change', () => {
+            if (fileInput.files.length > 0) {
+                procesarArchivo(fileInput.files[0]);
+            }
+        });
+    }
+
+    async function procesarArchivo(file) {
+        // Mostrar info del archivo
+        document.getElementById('file-name').textContent = file.name;
+        document.getElementById('file-size').textContent = formatFileSize(file.size);
+        document.getElementById('file-hash-value').textContent = 'Calculando...';
+        document.getElementById('file-info').classList.remove('hidden');
+        document.getElementById('file-drop-zone').classList.add('hidden');
+        document.getElementById('btn-verificar-archivo').disabled = true;
+
+        try {
+            // Calcular SHA-256 con Web Crypto API
+            const buffer = await file.arrayBuffer();
+            const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            const hashHex = '0x' + hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+
+            archivoHashCalculado = hashHex;
+            document.getElementById('file-hash-value').textContent = hashHex;
+            document.getElementById('btn-verificar-archivo').disabled = false;
+        } catch (error) {
+            document.getElementById('file-hash-value').textContent = 'Error al calcular hash';
+            archivoHashCalculado = null;
+        }
+    }
+
+    async function verificarArchivoHash() {
+        if (!archivoHashCalculado) return;
+        await buscarHashEnBlockchain(archivoHashCalculado);
+    }
+
+    function limpiarArchivo() {
+        archivoHashCalculado = null;
+        document.getElementById('file-info').classList.add('hidden');
+        document.getElementById('file-drop-zone').classList.remove('hidden');
+        document.getElementById('file-input').value = '';
+        document.getElementById('verificar-resultado').classList.add('hidden');
+    }
+
+    function formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+    }
+
+    // --- Busqueda comun ---
+
+    async function buscarHashEnBlockchain(hash) {
         document.getElementById('verificar-loading').classList.remove('hidden');
         document.getElementById('verificar-resultado').classList.add('hidden');
-        document.getElementById('btn-verificar').disabled = true;
+
+        // Deshabilitar botones de ambas tabs
+        const btnHash = document.getElementById('btn-verificar');
+        const btnArchivo = document.getElementById('btn-verificar-archivo');
+        if (btnHash) btnHash.disabled = true;
+        if (btnArchivo) btnArchivo.disabled = true;
 
         try {
             const response = await fetch(`${CONFIG.API_URL}/blockchain/verificar/${hash}`);
@@ -437,9 +962,12 @@
             mostrarError('No se pudo conectar con el servidor. Intente nuevamente.');
         } finally {
             document.getElementById('verificar-loading').classList.add('hidden');
-            document.getElementById('btn-verificar').disabled = false;
+            if (btnHash) btnHash.disabled = false;
+            if (btnArchivo) btnArchivo.disabled = false;
         }
     }
+
+    // --- Mostrar resultados ---
 
     function mostrarResultadoEncontrado(data, hashBuscado) {
         const container = document.getElementById('verificar-resultado');
@@ -546,41 +1074,6 @@
         }
 
         html += `
-                    </div>`;
-
-        // Links de verificacion externa
-        const hashParaSello = data.hash_sellado || hashBuscado;
-        const txHash = data.tx_hash;
-        const blockNumber = data.block_number;
-
-        html += `
-                    <div class="resultado-links">`;
-
-        if (hashParaSello) {
-            html += `
-                        <a href="https://bfa.ar/sello2#/hash/${hashParaSello}" target="_blank" rel="noopener">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></svg>
-                            Verificar en BFA
-                        </a>`;
-        }
-
-        if (txHash) {
-            html += `
-                        <a href="https://bfaexplorer.com.ar:8443/tx/${txHash}" target="_blank" rel="noopener">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>
-                            Ver transaccion en BFA Explorer
-                        </a>`;
-        }
-
-        if (blockNumber) {
-            html += `
-                        <a href="https://bfaexplorer.com.ar:8443/block/${blockNumber}" target="_blank" rel="noopener">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>
-                            Ver bloque #${blockNumber.toLocaleString('es-AR')}
-                        </a>`;
-        }
-
-        html += `
                     </div>
                 </div>
             </div>`;
@@ -628,7 +1121,10 @@
             </div>`;
         container.classList.remove('hidden');
         document.getElementById('verificar-loading').classList.add('hidden');
-        document.getElementById('btn-verificar').disabled = false;
+        const btnHash = document.getElementById('btn-verificar');
+        const btnArchivo = document.getElementById('btn-verificar-archivo');
+        if (btnHash) btnHash.disabled = false;
+        if (btnArchivo) btnArchivo.disabled = false;
     }
 
     function escapeHtml(text) {
@@ -637,8 +1133,147 @@
         return div.innerHTML;
     }
 
-    // Si hay hash en la URL (?hash=0x...), verificar automaticamente
+    // =====================================================
+    // Registro de operaciones selladas
+    // =====================================================
+
+    async function cargarRegistro(page = 1) {
+        registroPaginaActual = page;
+        const contenido = document.getElementById('registro-contenido');
+        const loading = document.getElementById('registro-loading');
+
+        loading.classList.remove('hidden');
+        contenido.innerHTML = '';
+
+        const tipo = document.getElementById('filtro-tipo').value;
+
+        let url = `${CONFIG.API_URL}/blockchain/registro?page=${page}&limit=10`;
+        if (tipo) url += `&tipo_cambio=${tipo}`;
+
+        try {
+            const response = await fetch(url);
+            const data = await response.json();
+
+            if (!data.success || !data.data.length) {
+                contenido.innerHTML = `
+                    <div class="registro-empty">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>
+                        <p>No hay operaciones selladas registradas</p>
+                    </div>`;
+                loading.classList.add('hidden');
+                return;
+            }
+
+            const tipoLabels = {
+                'cambio_dataset': 'Operacion',
+                'certificacion_archivo': 'Archivo',
+                'sello_fundacional': 'Fundacional'
+            };
+
+            const tipoBadgeClass = {
+                'cambio_dataset': 'badge-primary',
+                'certificacion_archivo': 'badge-purple',
+                'sello_fundacional': 'badge-warning'
+            };
+
+            let html = `<table class="registro-table">
+                <thead>
+                    <tr>
+                        <th>Dataset</th>
+                        <th>Tipo</th>
+                        <th>Area</th>
+                        <th>Fecha</th>
+                        <th>Verificacion</th>
+                        <th>Hash</th>
+                    </tr>
+                </thead>
+                <tbody>`;
+
+            for (const reg of data.data) {
+                const fecha = reg.confirmed_at
+                    ? new Date(reg.confirmed_at).toLocaleDateString('es-AR')
+                    : '-';
+
+                const dataset = reg.dataset_titulo
+                    ? escapeHtml(reg.dataset_titulo)
+                    : '<span style="color:var(--gray-400)">-</span>';
+
+                const area = reg.area_nombre
+                    ? escapeHtml(reg.area_nombre)
+                    : '-';
+
+                const hashCorto = reg.hash_sellado
+                    ? reg.hash_sellado.substring(0, 10) + '...' + reg.hash_sellado.substring(58)
+                    : '-';
+
+                const badgeClass = tipoBadgeClass[reg.tipo] || 'badge-primary';
+                const tipoLabel = tipoLabels[reg.tipo] || reg.tipo;
+
+                let verificacionHtml = '<span class="badge badge-primary" style="font-size:0.7rem">Doble verificacion</span>';
+                if (reg.tiene_archivo_certificado) {
+                    verificacionHtml += '<span class="badge badge-purple" style="font-size:0.7rem; margin-top:2px">+ Archivo certificado</span>';
+                }
+                if (reg.tipo === 'certificacion_archivo') {
+                    verificacionHtml = '<span class="badge badge-purple" style="font-size:0.7rem">Archivo certificado</span>';
+                }
+                if (reg.tipo === 'sello_fundacional') {
+                    verificacionHtml = '<span class="badge badge-warning" style="font-size:0.7rem">Sello fundacional</span>';
+                }
+
+                html += `
+                    <tr>
+                        <td><span class="registro-dataset">${dataset}</span></td>
+                        <td><span class="badge ${badgeClass}" style="font-size:0.7rem">${tipoLabel}</span></td>
+                        <td>${area}</td>
+                        <td>${fecha}</td>
+                        <td><div class="registro-verificacion">${verificacionHtml}</div></td>
+                        <td><span class="registro-hash" title="${reg.hash_sellado || ''}" onclick="copiarYVerificar('${reg.hash_sellado || ''}')">${hashCorto}</span></td>
+                    </tr>`;
+            }
+
+            html += '</tbody></table>';
+
+            // Paginacion
+            const { page: pag, pages, total } = data.pagination;
+            html += `
+                <div class="registro-paginacion">
+                    <span>${total} registro${total !== 1 ? 's' : ''} — Pagina ${pag} de ${pages || 1}</span>
+                    <div class="registro-paginacion-btns">
+                        <button onclick="cargarRegistro(${pag - 1})" ${pag <= 1 ? 'disabled' : ''}>Anterior</button>
+                        <button onclick="cargarRegistro(${pag + 1})" ${pag >= pages ? 'disabled' : ''}>Siguiente</button>
+                    </div>
+                </div>`;
+
+            contenido.innerHTML = html;
+        } catch (error) {
+            contenido.innerHTML = `
+                <div class="registro-empty">
+                    <p style="color: var(--danger);">Error al cargar el registro de operaciones</p>
+                </div>`;
+        } finally {
+            loading.classList.add('hidden');
+        }
+    }
+
+    function copiarYVerificar(hash) {
+        if (!hash) return;
+        // Ir a la tab de hash y verificar
+        cambiarTab('tab-hash');
+        document.getElementById('hash-input').value = hash;
+        buscarHashEnBlockchain(hash);
+        // Scroll al resultado
+        document.getElementById('verificar-form-card').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    // =====================================================
+    // Inicializacion
+    // =====================================================
+
     document.addEventListener('DOMContentLoaded', () => {
+        initFileDropZone();
+        cargarRegistro(1);
+
+        // Si hay hash en la URL (?hash=0x...), verificar automaticamente
         const params = new URLSearchParams(window.location.search);
         const hash = params.get('hash');
         if (hash) {
