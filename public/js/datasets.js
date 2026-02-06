@@ -4,22 +4,12 @@ let temas = [];
 let frecuencias = [];
 
 document.addEventListener('DOMContentLoaded', async () => {
-  updateAuthUI();
+  // El header ahora se maneja desde main.js
   await loadCatalogos();
   await loadDatasets();
   setupFilters();
   applyUrlParams();
 });
-
-function updateAuthUI() {
-  const actions = document.getElementById('header-actions');
-  if (Auth.isAuthenticated()) {
-    actions.innerHTML = `
-      <a href="admin.html" class="btn btn-primary btn-sm"><span>⚙️</span> <span>Admin</span></a>
-      <button onclick="Auth.logout()" class="btn btn-outline btn-sm"><span>🚪</span> <span>Salir</span></button>
-    `;
-  }
-}
 
 async function loadCatalogos() {
   try {
@@ -31,13 +21,13 @@ async function loadCatalogos() {
     // Llenar select de temas
     const selectTema = document.getElementById('filter-tema');
     temas.forEach(t => {
-      selectTema.innerHTML += `<option value="${t.id}">${Utils.escapeHtml(t.nombre)}</option>`;
+      selectTema.innerHTML += `<option value="${t.id}">${escapeHtml(t.nombre)}</option>`;
     });
 
     // Llenar select de frecuencias
     const selectFrec = document.getElementById('filter-frecuencia');
     frecuencias.forEach(f => {
-      selectFrec.innerHTML += `<option value="${f.id}">${Utils.escapeHtml(f.nombre)}</option>`;
+      selectFrec.innerHTML += `<option value="${f.id}">${escapeHtml(f.nombre)}</option>`;
     });
   } catch (error) {
     console.error('Error cargando catálogos:', error);
@@ -52,7 +42,9 @@ async function loadDatasets() {
     renderDatasets(allDatasets);
   } catch (error) {
     console.error('Error cargando datasets:', error);
-    Utils.showError('Error al cargar los datasets');
+    if (typeof showToast === 'function') {
+      showToast('Error al cargar los datasets', 'error');
+    }
   }
 }
 
@@ -74,12 +66,23 @@ function setupFilters() {
 }
 
 function applyUrlParams() {
-  const params = Utils.getUrlParams();
+  const params = getUrlParams();
   if (params.tema) document.getElementById('filter-tema').value = params.tema;
   if (params.frecuencia) document.getElementById('filter-frecuencia').value = params.frecuencia;
   if (params.estado) document.getElementById('filter-estado').value = params.estado;
   if (params.busqueda) document.getElementById('search').value = params.busqueda;
   applyFilters();
+}
+
+function getUrlParams() {
+  const params = new URLSearchParams(window.location.search);
+  return {
+    tema: params.get('tema'),
+    frecuencia: params.get('frecuencia'),
+    estado: params.get('estado'),
+    busqueda: params.get('busqueda'),
+    mes: params.get('mes')
+  };
 }
 
 function applyFilters() {
@@ -110,7 +113,7 @@ function applyFilters() {
 
   if (estado) {
     filtered = filtered.filter(d => {
-      const estadoDataset = Utils.calcularEstado(d.proxima_actualizacion, d.frecuencia_dias, d.tipo_gestion);
+      const estadoDataset = calcularEstado(d.proxima_actualizacion, d.frecuencia_dias, d.tipo_gestion);
       
       // Filtro especial "vencidos" incluye tanto atrasados como sin-respuesta
       if (estado === 'vencidos') {
@@ -156,11 +159,14 @@ function renderDatasets(datasets) {
   container.classList.remove('hidden');
   emptyState.classList.add('hidden');
 
-  // Usar tema_principal_nombre del backend
+  // Iconos Lucide
+  const iconArea = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/></svg>';
+  const iconFrecuencia = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></svg>';
+
   container.innerHTML = datasets.map(d => {
-    const estado = Utils.calcularEstado(d.proxima_actualizacion, d.frecuencia_dias, d.tipo_gestion);
-    const estadoTexto = Utils.getEstadoTexto(estado);
-    const estadoClase = Utils.getEstadoClase(estado);
+    const estado = calcularEstado(d.proxima_actualizacion, d.frecuencia_dias, d.tipo_gestion);
+    const estadoTexto = getEstadoTexto(estado);
+    const estadoClase = getEstadoClase(estado);
     
     // Formatos vienen como string concatenado "CSV, XLSX, KML" desde el backend
     const formatos = d.formatos ? d.formatos.split(', ') : [];
@@ -169,20 +175,20 @@ function renderDatasets(datasets) {
       <div class="dataset-card">
         <div class="dataset-card-header">
           <div class="dataset-card-title">
-            <h3><a href="dataset.html?id=${d.id}">${Utils.escapeHtml(d.titulo)}</a></h3>
+            <h3><a href="dataset.html?id=${d.id}">${escapeHtml(d.titulo)}</a></h3>
             <span class="badge ${estadoClase}">${estadoTexto}</span>
           </div>
           ${d.tema_principal_nombre ? `
             <div class="temas-tags">
-              <span class="tema-tag">${Utils.escapeHtml(d.tema_principal_nombre)}</span>
+              <span class="tema-tag">${escapeHtml(d.tema_principal_nombre)}</span>
             </div>
           ` : ''}
         </div>
         <div class="dataset-card-body">
-          <p class="dataset-card-description">${Utils.escapeHtml(d.descripcion || 'Sin descripción')}</p>
+          <p class="dataset-card-description">${escapeHtml(d.descripcion || 'Sin descripción')}</p>
           <div class="dataset-card-meta">
-            <span>📍 ${Utils.escapeHtml(d.area_responsable || '-')}</span>
-            <span>🔄 ${Utils.escapeHtml(d.frecuencia_nombre || '-')}</span>
+            <span>${iconArea} ${escapeHtml(d.area_responsable || '-')}</span>
+            <span>${iconFrecuencia} ${escapeHtml(d.frecuencia_nombre || '-')}</span>
           </div>
         </div>
         <div class="dataset-card-footer">
@@ -190,7 +196,7 @@ function renderDatasets(datasets) {
             ${formatos.map(f => `<span class="format-tag">${f}</span>`).join('')}
           </div>
           <span class="text-xs text-muted">
-            ${d.proxima_actualizacion ? `Próx: ${Utils.formatDate(d.proxima_actualizacion)}` : 'Sin fecha'}
+            ${d.proxima_actualizacion ? `Próx: ${formatDate(d.proxima_actualizacion)}` : 'Sin fecha'}
           </span>
         </div>
       </div>
@@ -210,7 +216,7 @@ function exportarCSV() {
   if (frecId) filtered = filtered.filter(d => d.frecuencia_id == frecId);
   if (estado) {
     filtered = filtered.filter(d => {
-      const estadoDataset = Utils.calcularEstado(d.proxima_actualizacion, d.frecuencia_dias, d.tipo_gestion);
+      const estadoDataset = calcularEstado(d.proxima_actualizacion, d.frecuencia_dias, d.tipo_gestion);
       if (estado === 'vencidos') {
         return estadoDataset === 'atrasado' || estadoDataset === 'sin-respuesta';
       }
@@ -224,10 +230,10 @@ function exportarCSV() {
     d.area_responsable || '',
     d.tema_principal_nombre || '',
     d.frecuencia_nombre || '',
-    Utils.getTipoGestionTexto(d.tipo_gestion),
-    Utils.getEstadoTexto(Utils.calcularEstado(d.proxima_actualizacion, d.frecuencia_dias, d.tipo_gestion)),
-    Utils.formatDate(d.ultima_actualizacion),
-    Utils.formatDate(d.proxima_actualizacion)
+    getTipoGestionTexto(d.tipo_gestion),
+    getEstadoTexto(calcularEstado(d.proxima_actualizacion, d.frecuencia_dias, d.tipo_gestion)),
+    formatDate(d.ultima_actualizacion),
+    formatDate(d.proxima_actualizacion)
   ]);
 
   const csvContent = '\uFEFF' + [headers, ...rows]
@@ -239,4 +245,84 @@ function exportarCSV() {
   link.href = URL.createObjectURL(blob);
   link.download = `datasets-rpad-${new Date().toISOString().slice(0, 10)}.csv`;
   link.click();
+
+  if (typeof showToast === 'function') {
+    showToast(`Exportados ${filtered.length} datasets a CSV`, 'success');
+  }
+}
+
+// =====================================================
+// FUNCIONES AUXILIARES
+// =====================================================
+
+function escapeHtml(text) {
+  if (!text) return '';
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+function formatDate(dateString) {
+  if (!dateString) return '-';
+  const date = new Date(dateString);
+  return date.toLocaleDateString('es-AR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric'
+  });
+}
+
+function calcularEstado(proximaActualizacion, frecuenciaDias, tipoGestion) {
+  if (!proximaActualizacion) return 'eventual';
+  if (frecuenciaDias === null) return 'eventual';
+
+  const hoy = new Date();
+  const hoyYear = hoy.getFullYear();
+  const hoyMonth = hoy.getMonth();
+  const hoyDay = hoy.getDate();
+
+  const fechaStr = proximaActualizacion.split('T')[0];
+  const [year, month, day] = fechaStr.split('-').map(Number);
+
+  const hoyUTC = Date.UTC(hoyYear, hoyMonth, hoyDay);
+  const proximaUTC = Date.UTC(year, month - 1, day);
+
+  const diffDias = Math.round((proximaUTC - hoyUTC) / (1000 * 60 * 60 * 24));
+
+  if (diffDias < 0) {
+    return tipoGestion === 'interna' ? 'atrasado' : 'sin-respuesta';
+  } else if (diffDias <= 60) {
+    return 'proximo';
+  }
+  return 'actualizado';
+}
+
+function getEstadoTexto(estado) {
+  const textos = {
+    'actualizado': 'Actualizado',
+    'proximo': 'Próximo',
+    'atrasado': 'Atrasado',
+    'sin-respuesta': 'Sin respuesta',
+    'eventual': 'Eventual'
+  };
+  return textos[estado] || estado;
+}
+
+function getEstadoClase(estado) {
+  const clases = {
+    'actualizado': 'badge-success',
+    'proximo': 'badge-warning',
+    'atrasado': 'badge-danger',
+    'sin-respuesta': 'badge-sin-respuesta',
+    'eventual': 'badge-secondary'
+  };
+  return clases[estado] || 'badge-secondary';
+}
+
+function getTipoGestionTexto(tipo) {
+  const tipos = {
+    'interna': 'Gestión Interna',
+    'externa': 'Gestión Externa'
+  };
+  return tipos[tipo] || tipo;
 }
