@@ -1057,7 +1057,7 @@ h4 { font-size: 1.125rem; }
 
 /* Agregar al final de styles.css */
 
-/* BotÃ³n Ver mÃ¡s para listas */
+/* Botón Ver más para listas */
 .btn-ver-mas {
   width: 100%;
   padding: 0.75rem;
@@ -1390,8 +1390,399 @@ h4 { font-size: 1.125rem; }
   }
 }
 
-/* Badge para estado "Sin respuesta" (gesti¨®n externa vencida) */
+/* Badge para estado "Sin respuesta" (gesti��n externa vencida) */
 .badge-sin-respuesta {
   background-color: #6f42c1;
   color: white;
+}
+/* ==========================================
+   SISTEMA DE CHIPS PARA FORMATOS
+   ========================================== */
+
+.chips-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  padding: 1rem;
+  background-color: var(--gray-50);
+  border-radius: var(--radius);
+  border: 1px solid var(--gray-200);
+  margin-bottom: 0.5rem;
+  min-height: 60px;
+}
+
+.chips-container.error {
+  border-color: var(--danger);
+  background-color: #fef2f2;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.4rem 0.9rem;
+  border-radius: 50px;
+  border: 1px solid var(--gray-300);
+  background-color: white;
+  color: var(--gray-700);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.chip:hover {
+  background-color: var(--gray-100);
+  border-color: var(--gray-400);
+  transform: translateY(-1px);
+}
+
+.chip.selected {
+  background-color: var(--mcr-sky);
+  border-color: var(--mcr-sky);
+  color: #0f172a;
+  box-shadow: 0 2px 4px rgba(56, 189, 248, 0.3);
+}
+
+.chip .check-icon {
+  width: 0;
+  overflow: hidden;
+  margin-right: 0;
+  opacity: 0;
+  transition: all 0.2s ease;
+  font-weight: bold;
+}
+
+.chip.selected .check-icon {
+  width: auto;
+  margin-right: 6px;
+  opacity: 1;
+}
+
+.chip .chip-remove {
+  margin-left: 6px;
+  font-size: 1.1rem;
+  line-height: 1;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+}
+
+.chip .chip-remove:hover {
+  opacity: 1;
+}
+
+.add-format-select {
+  width: 100%;
+  padding: 0.6rem;
+  border: 1px dashed var(--gray-300);
+  border-radius: var(--radius);
+  color: var(--gray-600);
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  cursor: pointer;
+  background: transparent;
+  transition: all 0.2s;
+}
+
+.add-format-select:hover {
+  border-color: var(--mcr-sky);
+  color: var(--mcr-blue-900);
+  background-color: var(--gray-50);
+}
+
+.add-format-select:focus {
+  outline: none;
+  border-color: var(--mcr-sky);
+  border-style: solid;
+}
+
+/* ==========================================
+   CALENDARIO DE VENCIMIENTOS (FullCalendar)
+   ========================================== */
+
+.calendario-container {
+  background: white;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.calendario-leyenda {
+  display: flex;
+  gap: 1.5rem;
+  margin-bottom: 1rem;
+  padding: 0.75rem 1rem;
+  background: var(--gray-50);
+  border-radius: var(--radius);
+  flex-wrap: wrap;
+}
+
+.leyenda-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  color: var(--gray-600);
+}
+
+.leyenda-color {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+/* Estilos personalizados para FullCalendar */
+.fc {
+  font-family: 'Source Sans 3', sans-serif;
+}
+
+.fc .fc-toolbar-title {
+  font-family: 'Outfit', sans-serif;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--mcr-blue-900);
+}
+
+.fc .fc-button-primary {
+  background-color: var(--mcr-sky);
+  border-color: var(--mcr-sky);
+  font-weight: 500;
+}
+
+.fc .fc-button-primary:hover {
+  background-color: var(--mcr-blue-600);
+  border-color: var(--mcr-blue-600);
+}
+
+.fc .fc-button-primary:disabled {
+  background-color: var(--gray-300);
+  border-color: var(--gray-300);
+}
+
+.fc .fc-button-primary:not(:disabled).fc-button-active,
+.fc .fc-button-primary:not(:disabled):active {
+  background-color: var(--mcr-blue-700);
+  border-color: var(--mcr-blue-700);
+}
+
+.fc .fc-daygrid-day-number {
+  color: var(--gray-700);
+  font-weight: 500;
+  padding: 0.5rem;
+}
+
+.fc .fc-daygrid-day.fc-day-today {
+  background-color: var(--mcr-blue-50);
+}
+
+.fc .fc-daygrid-day.fc-day-today .fc-daygrid-day-number {
+  color: var(--mcr-sky);
+  font-weight: 700;
+}
+
+.fc .fc-col-header-cell-cushion {
+  color: var(--gray-600);
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+}
+
+.fc .fc-daygrid-event {
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.fc .fc-daygrid-event:hover {
+  transform: scale(1.02);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.fc .fc-daygrid-day-frame {
+  min-height: 100px;
+}
+
+.fc .fc-daygrid-more-link {
+  color: var(--mcr-sky);
+  font-weight: 600;
+}
+
+.fc .fc-popover {
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+}
+
+.fc .fc-popover-header {
+  background: var(--mcr-blue-900);
+  color: white;
+  font-weight: 600;
+}
+
+/* Modal día - items */
+.modal-dia-item {
+  padding: 1rem;
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius);
+  margin-bottom: 0.75rem;
+  transition: all 0.2s;
+}
+
+.modal-dia-item:hover {
+  border-color: var(--mcr-sky);
+  box-shadow: var(--shadow-sm);
+}
+
+.modal-dia-item:last-child {
+  margin-bottom: 0;
+}
+
+.modal-dia-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.modal-dia-item-titulo {
+  font-weight: 600;
+  color: var(--mcr-blue-900);
+  font-size: 0.95rem;
+  line-height: 1.3;
+}
+
+.modal-dia-item-titulo:hover {
+  color: var(--mcr-sky);
+}
+
+.modal-dia-item-meta {
+  display: flex;
+  gap: 1rem;
+  font-size: 0.8rem;
+  color: var(--gray-500);
+}
+
+/* Responsive calendario */
+@media (max-width: 768px) {
+  .calendario-container {
+    padding: 1rem;
+  }
+  
+  .calendario-leyenda {
+    gap: 1rem;
+  }
+  
+  .fc .fc-toolbar {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  
+  .fc .fc-toolbar-title {
+    font-size: 1.1rem;
+  }
+  
+  .fc .fc-daygrid-day-frame {
+    min-height: 80px;
+  }
+  
+  .fc .fc-daygrid-event {
+    font-size: 0.7rem;
+    padding: 1px 4px;
+  }
+  
+  .modal-dia-item-header {
+    flex-direction: column;
+  }
+  
+  .modal-dia-item-meta {
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+}
+
+/* === FORMULARIO DE CONTACTO === */
+.contacto-layout {
+  display: grid;
+  grid-template-columns: 1fr 380px;
+  gap: 2rem;
+  align-items: start;
+}
+
+.contacto-form-card {
+  max-width: 100%;
+}
+
+.contacto-form-card .card-header h2 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--gray-800);
+  margin: 0;
+}
+
+.contacto-info {
+  position: sticky;
+  top: 100px;
+}
+
+.contacto-info .card-header h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--gray-800);
+  margin: 0;
+}
+
+.contacto-info-item {
+  display: flex;
+  gap: 1rem;
+  padding: 1rem 0;
+  border-bottom: 1px solid var(--gray-100);
+}
+
+.contacto-info-item:last-child {
+  border-bottom: none;
+}
+
+.contacto-info-icon {
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.contacto-info-item strong {
+  display: block;
+  color: var(--gray-800);
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+}
+
+.contacto-info-item p {
+  margin: 0;
+  color: var(--gray-600);
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.contacto-info-item a {
+  color: var(--mcr-sky);
+}
+
+.contacto-info-item a:hover {
+  color: var(--mcr-blue-700);
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+  .contacto-layout {
+    grid-template-columns: 1fr;
+  }
+  
+  .contacto-info {
+    position: static;
+  }
 }
