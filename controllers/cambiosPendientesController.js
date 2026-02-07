@@ -637,27 +637,38 @@ export const datasetTieneCambiosPendientes = async (datasetId) => {
  * Función auxiliar: Crear un cambio pendiente (para usar desde datasetController)
  */
 export const crearCambioPendiente = async (tipoCambio, datasetId, datosNuevos, datosAnteriores, usuarioId) => {
-  // Si ya existe un cambio pendiente del mismo usuario para este dataset, lo sobreescribimos
-  if (datasetId) {
-    await pool.execute(
-      'DELETE FROM cambios_pendientes WHERE dataset_id = ? AND usuario_id = ? AND estado = ?',
-      [datasetId, usuarioId, 'pendiente']
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+
+    // Si ya existe un cambio pendiente del mismo usuario para este dataset, lo sobreescribimos
+    if (datasetId) {
+      await connection.execute(
+        'DELETE FROM cambios_pendientes WHERE dataset_id = ? AND usuario_id = ? AND estado = ?',
+        [datasetId, usuarioId, 'pendiente']
+      );
+    }
+
+    const [result] = await connection.execute(
+      `INSERT INTO cambios_pendientes (tipo_cambio, dataset_id, datos_nuevos, datos_anteriores, usuario_id)
+       VALUES (?, ?, ?, ?, ?)`,
+      [
+        tipoCambio,
+        datasetId,
+        JSON.stringify(datosNuevos),
+        datosAnteriores ? JSON.stringify(datosAnteriores) : null,
+        usuarioId
+      ]
     );
+
+    await connection.commit();
+    return result.insertId;
+  } catch (error) {
+    await connection.rollback();
+    throw error;
+  } finally {
+    connection.release();
   }
-
-  const [result] = await pool.execute(
-    `INSERT INTO cambios_pendientes (tipo_cambio, dataset_id, datos_nuevos, datos_anteriores, usuario_id)
-     VALUES (?, ?, ?, ?, ?)`,
-    [
-      tipoCambio,
-      datasetId,
-      JSON.stringify(datosNuevos),
-      datosAnteriores ? JSON.stringify(datosAnteriores) : null,
-      usuarioId
-    ]
-  );
-
-  return result.insertId;
 };
 
 /**
