@@ -557,8 +557,25 @@ export const getEstadisticas = async (req, res) => {
 export const registrarActualizacion = async (req, res) => {
   try {
     const { id } = req.params;
-    const { fecha_actualizacion, notas, proxima_actualizacion } = req.body;
+    const { fecha_actualizacion, notas, proxima_actualizacion, file_hash } = req.body;
     const usuarioId = req.user?.userId;
+
+    // Validar file_hash obligatorio
+    if (!file_hash) {
+      return res.status(400).json({
+        success: false,
+        error: 'Debe subir el archivo para certificar (file_hash obligatorio)'
+      });
+    }
+
+    // Validar formato y normalizar con prefijo 0x
+    const hashNormalizado = file_hash.startsWith('0x') ? file_hash : '0x' + file_hash;
+    if (!/^0x[a-fA-F0-9]{64}$/.test(hashNormalizado)) {
+      return res.status(400).json({
+        success: false,
+        error: 'file_hash inválido. Debe ser un hash SHA-256 hexadecimal de 64 caracteres'
+      });
+    }
 
     // Obtener el dataset y su frecuencia
     const [datasetRows] = await pool.execute(
@@ -604,15 +621,16 @@ export const registrarActualizacion = async (req, res) => {
       proxima_actualizacion: dataset.proxima_actualizacion
     };
 
-    // Datos nuevos
+    // Datos nuevos (file_hash viaja dentro para que aprobarCambio() lo use)
     const datosNuevos = {
       ultima_actualizacion: fechaActualizacion,
       proxima_actualizacion: proximaActualizacion,
-      notas: notas || null
+      notas: notas || null,
+      file_hash: hashNormalizado
     };
 
-    // Crear cambio pendiente
-    const cambioId = await crearCambioPendiente('editar', Number(id), datosNuevos, datosAnteriores, usuarioId);
+    // Crear cambio pendiente con tipo 'actualizar' (distinto de 'editar' metadatos)
+    const cambioId = await crearCambioPendiente('actualizar', Number(id), datosNuevos, datosAnteriores, usuarioId);
 
     res.json({
       success: true,
