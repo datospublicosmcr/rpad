@@ -557,7 +557,7 @@ export const getEstadisticas = async (req, res) => {
 export const registrarActualizacion = async (req, res) => {
   try {
     const { id } = req.params;
-    const { fecha_actualizacion, notas } = req.body;
+    const { fecha_actualizacion, notas, proxima_actualizacion } = req.body;
     const usuarioId = req.user?.userId;
 
     // Obtener el dataset y su frecuencia
@@ -590,7 +590,9 @@ export const registrarActualizacion = async (req, res) => {
 
     // Calcular próxima actualización si la frecuencia tiene días definidos
     let proximaActualizacion = null;
-    if (dataset.frecuencia_dias) {
+    if (proxima_actualizacion) {
+      proximaActualizacion = proxima_actualizacion;
+    } else if (dataset.frecuencia_dias) {
       const fecha = new Date(fechaActualizacion);
       fecha.setDate(fecha.getDate() + dataset.frecuencia_dias);
       proximaActualizacion = fecha.toISOString().split('T')[0];
