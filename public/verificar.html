@@ -1066,12 +1066,13 @@
             'sello_fundacional': 'Sello fundacional'
         };
 
+        const opcionesFechaHora = { day: 'numeric', month: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false };
         const fecha = data.confirmed_at
-            ? new Date(data.confirmed_at).toLocaleString('es-AR')
-            : (data.timestamp ? new Date(data.timestamp).toLocaleString('es-AR') : '-');
+            ? new Date(data.confirmed_at).toLocaleString('es-AR', opcionesFechaHora)
+            : (data.timestamp ? new Date(data.timestamp).toLocaleString('es-AR', opcionesFechaHora) : '-');
 
         const blockTimestamp = data.block_timestamp
-            ? new Date(data.block_timestamp).toLocaleString('es-AR')
+            ? new Date(data.block_timestamp).toLocaleString('es-AR', opcionesFechaHora)
             : null;
 
         let html = `

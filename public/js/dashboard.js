@@ -33,7 +33,7 @@ function updateHeroDateTime() {
   fechaStr = fechaStr.charAt(0).toUpperCase() + fechaStr.slice(1);
   document.getElementById('hero-date').textContent = fechaStr;
   
-  const opcionesHora = { hour: '2-digit', minute: '2-digit', second: '2-digit' };
+  const opcionesHora = { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false };
   document.getElementById('hero-time').textContent = now.toLocaleTimeString('es-AR', opcionesHora);
 }
 
