@@ -1,8 +1,8 @@
 # RPAD v1.5.0 + Blockchain Federal Argentina (BFA)
 ## Documento de Contexto para Implementación
 
-**Fecha:** 5 de febrero de 2026 (actualizado tras auditoría de código, verificación SQL y sincronización de nodo)
-**Estado:** ✅ Nodo BFA propio sincronizado en VPS Contabo (bloque ~45,996,005). Documento validado contra código y esquema SQL. Listo para implementar.
+**Fecha:** 7 de febrero de 2026 (actualizado tras implementar certificación voluntaria, QR, link BFA, fix 24h)
+**Estado:** ✅ Nodo BFA propio sincronizado (~46M bloques). Sellado real funcionando (primer sello bloque 46012604). Certificación voluntaria implementada (Spec 13.6). Card blockchain con QR y link BFA.
 **Autor:** Mariano Perez - Subsecretaría de Modernización, Municipalidad de Comodoro Rivadavia
 
 ---
@@ -622,15 +622,24 @@ Agregar zona de drag & drop OPCIONAL para archivo:
 - Si no sube, se crea sin hash de archivo (solo se sellará el hash de operación)
 - En `aprobarCambio()`, la lógica `if (datosNuevos.file_hash)` funciona igual para `'crear'` que para `'actualizar'`
 
-### 13.6. Nuevo: Botón "Certificar archivo" en admin.html
+### 13.6. Nuevo: Botón "Certificar archivo" en admin.html — ✅ IMPLEMENTADO (07/02/2026)
 
-Nuevo botón en el panel de acciones de cada dataset:
-- Aparece para todos los datasets (permite certificar/recertificar)
-- Al hacer clic, abre modal con zona de drag & drop
+Nuevo botón (ícono escudo) en la tabla de datasets, entre "Marcar actualizado" y "Editar":
+- Aparece para TODOS los datasets (no bloqueado por cambios pendientes)
+- Al hacer clic, abre modal con zona de drag & drop (reutiliza `inicializarDropZone()`)
 - Se calcula hash SHA-256 en el navegador
-- Se muestra el hash y se pregunta "¿Querés registrar este hash?"
-- Al confirmar, se envía al backend que crea un registro `certificacion_archivo` y lo sella en blockchain
-- Útil para: datasets eventuales, datasets existentes pre-migración, recertificación voluntaria
+- Al confirmar → `POST /api/blockchain/certificar` con `{ dataset_id, file_hash }`
+- Backend valida dataset existe y `activo = 1`, valida formato hash, llama `sellarHash()` no-bloqueante
+- Responde `{ registroId, estado }` — el sello se confirma async en blockchain
+
+**Archivos modificados:**
+- `controllers/blockchainController.js` — nueva función `certificar`
+- `routes/index.js` — ruta `POST /blockchain/certificar` (protegida con authMiddleware)
+- `public/js/api.js` — método `API.certificarArchivo(datasetId, datos)`
+- `public/admin.html` — modal `#modal-certificar-archivo` con dropzone, columna acciones a 200px
+- `public/js/admin.js` — funciones `abrirCertificarArchivo()`, `closeCertificarArchivoModal()`, `confirmarCertificarArchivo()`
+
+**Testeado:** Certificación voluntaria exitosa, registro confirmado en blockchain.
 
 ### 13.7. Nuevo: verificar.html (página pública, sin login)
 
@@ -650,19 +659,24 @@ Página de auditoría pública con dos secciones:
 - Leyenda al pie: "Sellado en blockchain" / "Pendiente de sellar" / "Doble verificación interna"
 - Nota de alcance de la certificación
 
-### 13.8. Modificar dataset.html — Card de certificación
+### 13.8. Modificar dataset.html — Card de certificación — ✅ IMPLEMENTADO
 
-Agregar sección de certificación blockchain en el detalle del dataset (basado en mockup aprobado):
+Card de certificación blockchain en `dataset.html` con diseño header azul oscuro + logo BFA:
 - Solo se muestra si el dataset tiene registros en `blockchain_registros`
-- Si no tiene certificación, no se muestra nada (ni pública ni logueado)
-- Muestra: estado, última operación, fecha de registro, bloque BFA, badge "Doble verificación"
-- Hash de operación (copiable) con explicación
-- Hash de archivo (copiable, si existe) con explicación
-- Links: "Ver en BFA Explorer" y "Verificar integridad"
-- QR con URL de verificación
+- Header: logo BFA + "Certificación Blockchain" + badge "Verificado en BFA"
+- Metadata: operación, fecha, bloque BFA
+- Hash de operación (copiable con botón copiar)
+- Hash de archivo (copiable, usa `file_hash` del registro `certificacion_archivo`)
+- **QR de verificación** (120x120px, librería `qrcode-generator` v1.4.4 via cdnjs CDN ~4KB, genera SVG inline)
+  - Codifica URL: `{origin}/verificar.html?hash={hashParaVerificar}`
+  - Texto: "Escaneá para verificar"
+- **Link "Ver en BFA"**: apunta a `https://bfa.escribanodigital.ar//verificar#/hash/{hash_sin_0x}` (nueva pestaña)
+- Link "Verificar integridad": apunta a `verificar.html?hash=...` (interno)
 - Nota de alcance al pie
 
-**Layout:** Mover "Acceso al Dataset" a la columna derecha. Reutilizar espacio liberado para el card de certificación.
+**Archivos:** `dataset.html` (CSS + CDN script), `dataset-detail.js` (renderizado card + QR)
+
+**Fix aplicado:** Formato de hora 24h (`hour12: false`) en `verificar.html` y `dashboard.js`
 
 ### 13.9. Rutas de verificación pública
 
@@ -892,27 +906,44 @@ BFA_GAS_LIMIT=2000000
 - [x] **Diagnóstico conectividad WNPower → VPS** — puerto 8545 bloqueado, puertos 80/443 permitidos
 - [x] **nginx reverse proxy instalado en VPS** — puerto 443 → proxy_pass 127.0.0.1:8545
 - [x] **Conectividad WNPower → nodo BFA confirmada** — curl desde cPanel al puerto 443 devuelve bloque 0x2bdd938
+- [x] **blockchainService.js creado y testeado** — inicializar, calcularHash, verificarHash, obtenerSello, getEstado, sellarHash
+- [x] **Migraciones SQL ejecutadas** — blockchain_registros creada, ENUM 'actualizar' agregado
+- [x] **web3.js v4 instalado** — v4.16.0, no requiere POA middleware (funciona directo con BFA)
+- [x] **Primer sello real exitoso** — bloque 46012604 (06/02/2026)
+- [x] **Integración en aprobarCambio()** — sellado post-commit no-bloqueante + file_hash
+- [x] **registrarActualizacion() modificado** — tipo_cambio='actualizar', file_hash obligatorio, dropzone
+- [x] **admin.js: drag & drop** — modal "Marcar como actualizado" (obligatorio) y "Nuevo Dataset" (opcional)
+- [x] **Rutas /api/blockchain/* creadas** — verificar, estado, registro, dataset/:id, certificar
+- [x] **verificar.html creada** — verificador por hash/archivo + registro público paginado con filtros
+- [x] **dataset.html: card blockchain** — header BFA, hashes copiables, QR verificación, link BFA
+- [x] **Link verificar.html en sidebar** — agregado en todas las páginas HTML
+- [x] **Spec 13.6: Certificar archivo voluntario** — botón escudo en admin, endpoint POST /blockchain/certificar
+- [x] **QR en card blockchain** — qrcode-generator v1.4.4 (CDN), SVG inline 120x120px
+- [x] **Link "Ver en BFA"** — bfa.escribanodigital.ar con hash sin 0x
+- [x] **Hash archivo usa file_hash** — no hash_sellado, semánticamente correcto
+- [x] **Fix formato 24h** — hour12: false en verificar.html y dashboard.js
+- [x] **Test flujo completo "Marcar actualizado"** — cambio pendiente → aprobar → 2 registros blockchain (cambio_dataset bloque 46023324 + certificacion_archivo bloque 46023325), ambos confirmados
 
 ### 🔄 EN PROGRESO
 - (nada actualmente)
 
 ### 📋 PENDIENTE (en orden)
-1. ~~**Copiar keyfile al VPS**~~ → ✅ Subido a WNPower en `/home/datospublicos/rpad/keystore/` (corregido: el keyfile va donde corre RPAD, no en el VPS)
-2. ~~**Probar RPC del nodo propio**~~ → ✅ Responde via nginx proxy en puerto 443 (bloque 0x2bdd938)
-3. **Migraciones SQL** — CREATE TABLE `blockchain_registros` + ALTER TABLE `cambios_pendientes` MODIFY ENUM (agregar 'actualizar')
-4. **Crear `blockchainService.js`** — módulo central con web3.js v4
-5. **Probar stamp real** — enviar un hash de prueba con la wallet contra nodo propio
-6. **Integrar en `aprobarCambio()`** — sellado post-commit + lógica 'actualizar' reutiliza 'editar' + file_hash
-7. **Modificar `datasetController.js`** — tipo_cambio='actualizar', recibir file_hash obligatorio
-8. **Modificar `admin.js`** — drag & drop en modal "Marcar como actualizado" (obligatorio) y "Nuevo Dataset" (opcional)
-9. **Crear botón "Certificar archivo"** en admin.html con modal de drag & drop
-10. **Crear rutas `/api/blockchain/*`** — verificar, registro, estado, dataset
-11. **Crear `verificar.html`** — página pública con verificador + registro de operaciones
-12. **Modificar `dataset.html`** — agregar card de certificación blockchain
-13. **Agregar link verificar.html al sidebar** — en todas las páginas HTML (~10 archivos)
+1. ~~**Copiar keyfile al VPS**~~ → ✅ Subido a WNPower
+2. ~~**Probar RPC del nodo propio**~~ → ✅ Responde via nginx proxy
+3. ~~**Migraciones SQL**~~ → ✅ Ejecutadas
+4. ~~**Crear `blockchainService.js`**~~ → ✅ Creado y testeado
+5. ~~**Probar stamp real**~~ → ✅ Primer sello bloque 46012604
+6. ~~**Integrar en `aprobarCambio()`**~~ → ✅ Sellado post-commit + file_hash
+7. ~~**Modificar `datasetController.js`**~~ → ✅ tipo_cambio='actualizar', file_hash obligatorio
+8. ~~**Modificar `admin.js`**~~ → ✅ Drag & drop en ambos modales
+9. ~~**Crear botón "Certificar archivo"**~~ → ✅ Spec 13.6 implementada
+10. ~~**Crear rutas `/api/blockchain/*`**~~ → ✅ verificar, estado, registro, dataset, certificar
+11. ~~**Crear `verificar.html`**~~ → ✅ Verificador + registro público
+12. ~~**Modificar `dataset.html`**~~ → ✅ Card blockchain con QR y link BFA
+13. ~~**Agregar link verificar.html al sidebar**~~ → ✅ En todas las páginas
 14. **Crear sistema de reintentos** — cola para sellos fallidos con backoff
 15. **Ejecutar sello fundacional** — script one-time al activar v1.6
-16. **Testing end-to-end** — flujo completo en producción
+16. **Testing end-to-end en producción (WNPower)** — deploy + flujo completo
 17. **Presentar PoC funcionando a municipalidad** — solicitar aprobación presupuestaria
 
 ### ⚠️ NOTAS OPERATIVAS
