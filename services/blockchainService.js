@@ -285,7 +285,21 @@ export async function obtenerSello(hashHex) {
       // No está en nuestra BD — verificar directo en blockchain
       if (inicializadoOk) {
         const verificacion = await verificarHash(hashHex);
-        return { success: true, encontrado: verificacion.encontrado, fuente: 'blockchain', ...verificacion };
+        if (verificacion.encontrado) {
+          // Normalizar respuesta para que el frontend reciba los mismos campos que desde BD
+          return {
+            success: true,
+            encontrado: true,
+            fuente: 'blockchain',
+            hash_sellado: hashHex,
+            block_number: verificacion.blockNumber || null,
+            block_timestamp: verificacion.timestamp || null,
+            confirmed_at: verificacion.timestamp || null,
+            network: process.env.BFA_NETWORK || 'produccion',
+            estado: 'confirmado'
+          };
+        }
+        return { success: true, encontrado: false };
       }
       return { success: true, encontrado: false };
     }

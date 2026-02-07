@@ -195,14 +195,12 @@ function renderBlockchainCard(data) {
   const ultimoCambio = data.ultimo_cambio;
   const ultimoArchivo = data.ultimo_archivo;
 
-  // Determinar operacion para mostrar
-  const tipoOperacionLabels = {
-    'cambio_dataset': 'Operacion sobre dataset',
+  const tipoLabels = {
+    'cambio_dataset': 'Cambio de dataset',
     'certificacion_archivo': 'Certificacion de archivo',
     'sello_fundacional': 'Sello fundacional'
   };
 
-  // Registro principal a mostrar (ultimo cambio o ultimo archivo)
   const principal = ultimoCambio || ultimoArchivo;
   if (!principal) return;
 
@@ -210,111 +208,90 @@ function renderBlockchainCard(data) {
     ? new Date(principal.confirmed_at).toLocaleDateString('es-AR')
     : '-';
 
+  const tipoTexto = ultimoCambio ? (tipoLabels[ultimoCambio.tipo] || ultimoCambio.tipo) : '-';
+  const bloque = principal.block_number ? `#${principal.block_number.toLocaleString('es-AR')}` : '-';
+
+  // Header con fondo azul oscuro y logo BFA
   let html = `
-    <div class="blockchain-card-header">
-      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></svg>
-      <div>
-        <h4>Certificacion Blockchain</h4>
-        <p>Registrado en Blockchain Federal Argentina</p>
+    <div class="bc-header">
+      <div class="bc-header-left">
+        <a href="https://bfa.ar/" target="_blank" rel="noopener noreferrer"><img src="img/bfa.svg" alt="BFA" class="bc-header-logo"></a>
+        <div class="bc-header-text">
+          <span class="bc-header-title">Certificación Blockchain</span>
+          <span class="bc-header-subtitle">Blockchain Federal Argentina</span>
+        </div>
       </div>
-    </div>
-    <div class="blockchain-card-body">`;
+      <span class="bc-badge-verificado">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        Verificado en BFA
+      </span>
+    </div>`;
 
-  // Ultima operacion
-  if (ultimoCambio) {
-    html += `
-      <div class="blockchain-row">
-        <span class="blockchain-row-label">Ultima operacion</span>
-        <span class="blockchain-row-value">
-          <span class="badge badge-primary" style="font-size:0.7rem">${escapeHtml(tipoOperacionLabels[ultimoCambio.tipo] || ultimoCambio.tipo)}</span>
-        </span>
-      </div>`;
-  }
-
+  // Cuerpo: metadata en fila horizontal
   html += `
-      <div class="blockchain-row">
-        <span class="blockchain-row-label">Fecha de registro</span>
-        <span class="blockchain-row-value">${fecha}</span>
+    <div class="bc-body">
+      <div class="bc-meta-row">
+        <div class="bc-meta-item">
+          <span class="bc-meta-label">Operacion</span>
+          <span class="bc-meta-value">${escapeHtml(tipoTexto)}</span>
+        </div>
+        <div class="bc-meta-item">
+          <span class="bc-meta-label">Fecha</span>
+          <span class="bc-meta-value">${fecha}</span>
+        </div>
+        <div class="bc-meta-item">
+          <span class="bc-meta-label">Bloque BFA</span>
+          <span class="bc-meta-value">${bloque}</span>
+        </div>
       </div>`;
 
-  if (principal.block_number) {
-    html += `
-      <div class="blockchain-row">
-        <span class="blockchain-row-label">Bloque BFA</span>
-        <span class="blockchain-row-value">#${principal.block_number.toLocaleString('es-AR')}</span>
-      </div>`;
-  }
-
-  html += `
-      <div class="blockchain-row">
-        <span class="blockchain-row-label">Verificacion</span>
-        <span class="blockchain-row-value">
-          <span class="badge badge-success" style="font-size:0.7rem">Doble verificacion</span>
-        </span>
-      </div>`;
-
-  // Hashes
-  html += '<div class="blockchain-hash-group">';
-
+  // Hashes compactos con boton copiar
   if (ultimoCambio && ultimoCambio.hash_sellado) {
     html += `
-      <div class="blockchain-hash-item">
-        <div class="blockchain-hash-label">
-          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>
-          Hash de operacion
-        </div>
-        <div class="blockchain-hash-value" title="Clic para copiar" onclick="copiarHash(this, '${ultimoCambio.hash_sellado}')">${ultimoCambio.hash_sellado}</div>
-        <div class="blockchain-hash-hint">Certifica que el cambio paso por doble verificacion</div>
+      <div class="bc-hash-row">
+        <span class="bc-hash-label">Hash operacion</span>
+        <span class="bc-hash-value" title="${ultimoCambio.hash_sellado}">${ultimoCambio.hash_sellado}</span>
+        <button class="bc-copy-btn" title="Copiar hash" onclick="copiarHash(this, '${ultimoCambio.hash_sellado}')">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+        </button>
       </div>`;
   }
 
   if (ultimoArchivo && ultimoArchivo.hash_sellado) {
     html += `
-      <div class="blockchain-hash-item">
-        <div class="blockchain-hash-label">
-          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/></svg>
-          Hash de archivo
-        </div>
-        <div class="blockchain-hash-value" title="Clic para copiar" onclick="copiarHash(this, '${ultimoArchivo.hash_sellado}')">${ultimoArchivo.hash_sellado}</div>
-        <div class="blockchain-hash-hint">Certifica el contenido del archivo de datos</div>
+      <div class="bc-hash-row">
+        <span class="bc-hash-label">Hash archivo</span>
+        <span class="bc-hash-value" title="${ultimoArchivo.hash_sellado}">${ultimoArchivo.hash_sellado}</span>
+        <button class="bc-copy-btn" title="Copiar hash" onclick="copiarHash(this, '${ultimoArchivo.hash_sellado}')">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+        </button>
       </div>`;
   }
 
-  html += '</div>';
+  html += `</div>`;
 
-  // Nota de alcance
-  html += `
-      <p class="blockchain-nota">
-        La certificacion blockchain garantiza la integridad del registro, no la calidad de los datos.
-      </p>
-    </div>`;
-
-  // Footer con link a verificar
+  // Footer: texto explicativo + link verificar
   const hashParaVerificar = (ultimoCambio && ultimoCambio.hash_sellado) || (ultimoArchivo && ultimoArchivo.hash_sellado);
-  if (hashParaVerificar) {
-    html += `
-    <div class="blockchain-card-footer">
-      <a href="verificar.html?hash=${hashParaVerificar}">
-        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></svg>
+  html += `
+    <div class="bc-footer">
+      <p class="bc-footer-nota">Blockchain Federal Argentina (BFA) es una red blockchain pública argentina administrada por organismos públicos. Cada operación aprobada en RPAD genera un hash SHA-256 que se sella en BFA, creando un registro inmutable y verificable públicamente. El hash no contiene datos personales ni del contenido — es una huella digital irreversible que certifica que el registro existió en un momento dado.</p>
+      ${hashParaVerificar ? `<div class="bc-footer-actions"><a href="verificar.html?hash=${hashParaVerificar}" class="bc-footer-link">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></svg>
         Verificar integridad
-      </a>
+      </a></div>` : ''}
     </div>`;
-  }
 
   container.innerHTML = html;
   container.classList.remove('hidden');
 }
 
-function copiarHash(element, hash) {
+function copiarHash(btn, hash) {
   navigator.clipboard.writeText(hash).then(() => {
-    const original = element.textContent;
-    element.textContent = 'Copiado!';
-    element.style.background = 'var(--success-light)';
-    element.style.borderColor = 'var(--success)';
+    btn.classList.add('copied');
+    btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
     setTimeout(() => {
-      element.textContent = original;
-      element.style.background = '';
-      element.style.borderColor = '';
+      btn.classList.remove('copied');
+      btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>';
     }, 1500);
   });
 }

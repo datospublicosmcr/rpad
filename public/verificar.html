@@ -16,7 +16,6 @@
             border-radius: var(--border-radius-lg);
             box-shadow: var(--shadow);
             padding: 32px;
-            max-width: 900px;
         }
 
         .verificar-intro {
@@ -198,7 +197,6 @@
             border-radius: var(--border-radius-lg);
             box-shadow: var(--shadow);
             overflow: hidden;
-            max-width: 900px;
         }
 
         .resultado-header {
@@ -209,8 +207,9 @@
         }
 
         .resultado-header.encontrado {
-            background: var(--success-light);
-            color: var(--success);
+            background: #1a2744;
+            color: #fff;
+            justify-content: space-between;
         }
 
         .resultado-header.no-encontrado {
@@ -227,6 +226,19 @@
             flex-shrink: 0;
         }
 
+        .resultado-header-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .resultado-header-logo {
+            width: 45px;
+            height: 45px;
+            flex-shrink: 0;
+            filter: brightness(0) invert(1);
+        }
+
         .resultado-header-text h3 {
             font-size: 1rem;
             font-weight: 600;
@@ -236,6 +248,24 @@
         .resultado-header-text p {
             font-size: 0.8rem;
             opacity: 0.8;
+        }
+
+        .resultado-badge-verificado {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: #4ade80;
+            background: rgba(74, 222, 128, 0.15);
+            padding: 4px 12px;
+            border-radius: 12px;
+            white-space: nowrap;
+        }
+
+        .resultado-badge-verificado svg {
+            width: 12px;
+            height: 12px;
         }
 
         .resultado-body {
@@ -291,7 +321,6 @@
             background: var(--info-light);
             border-radius: var(--border-radius);
             margin-top: 24px;
-            max-width: 900px;
         }
 
         .info-box svg {
@@ -712,7 +741,7 @@
             </div>
 
             <!-- Loading -->
-            <div id="verificar-loading" class="hidden" style="max-width: 900px;">
+            <div id="verificar-loading" class="hidden">
                 <div class="loading"><div class="spinner"></div></div>
             </div>
 
@@ -812,6 +841,7 @@
     <script src="js/config.js"></script>
     <script src="js/auth.js"></script>
     <script src="js/main.js"></script>
+    <script src="js/api.js"></script>
     <script>
     // =====================================================
     // Verificar Sello Blockchain
@@ -886,6 +916,66 @@
         });
     }
 
+    // SHA-256 en JavaScript puro (fallback para contextos HTTP sin crypto.subtle)
+    function sha256JS(data) {
+        const K = new Uint32Array([
+            0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,
+            0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,
+            0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,
+            0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,
+            0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,
+            0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,
+            0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,
+            0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2
+        ]);
+        const rr = (v, n) => (v >>> n) | (v << (32 - n));
+        const bytes = new Uint8Array(data);
+        const len = bytes.length;
+        const padLen = (((len + 8) >> 6) << 6) + 64;
+        const padded = new Uint8Array(padLen);
+        padded.set(bytes);
+        padded[len] = 0x80;
+        const view = new DataView(padded.buffer);
+        view.setUint32(padLen - 8, Math.floor(len / 0x20000000), false);
+        view.setUint32(padLen - 4, (len * 8) >>> 0, false);
+        let H0=0x6a09e667, H1=0xbb67ae85, H2=0x3c6ef372, H3=0xa54ff53a;
+        let H4=0x510e527f, H5=0x9b05688c, H6=0x1f83d9ab, H7=0x5be0cd19;
+        const W = new Uint32Array(64);
+        for (let off = 0; off < padLen; off += 64) {
+            for (let i = 0; i < 16; i++) W[i] = view.getUint32(off + i * 4, false);
+            for (let i = 16; i < 64; i++) {
+                const s0 = rr(W[i-15],7) ^ rr(W[i-15],18) ^ (W[i-15]>>>3);
+                const s1 = rr(W[i-2],17) ^ rr(W[i-2],19) ^ (W[i-2]>>>10);
+                W[i] = (W[i-16]+s0+W[i-7]+s1)|0;
+            }
+            let a=H0,b=H1,c=H2,d=H3,e=H4,f=H5,g=H6,h=H7;
+            for (let i = 0; i < 64; i++) {
+                const S1 = rr(e,6)^rr(e,11)^rr(e,25);
+                const ch = (e&f)^(~e&g);
+                const t1 = (h+S1+ch+K[i]+W[i])|0;
+                const S0 = rr(a,2)^rr(a,13)^rr(a,22);
+                const maj = (a&b)^(a&c)^(b&c);
+                const t2 = (S0+maj)|0;
+                h=g; g=f; f=e; e=(d+t1)|0; d=c; c=b; b=a; a=(t1+t2)|0;
+            }
+            H0=(H0+a)|0; H1=(H1+b)|0; H2=(H2+c)|0; H3=(H3+d)|0;
+            H4=(H4+e)|0; H5=(H5+f)|0; H6=(H6+g)|0; H7=(H7+h)|0;
+        }
+        const hex = v => (v>>>0).toString(16).padStart(8,'0');
+        return hex(H0)+hex(H1)+hex(H2)+hex(H3)+hex(H4)+hex(H5)+hex(H6)+hex(H7);
+    }
+
+    // Calcular SHA-256: usa Web Crypto API si esta disponible, sino fallback JS puro
+    async function calcularSHA256(buffer) {
+        if (window.crypto && window.crypto.subtle) {
+            const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            return '0x' + hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        }
+        // Fallback para contextos HTTP (crypto.subtle no disponible)
+        return '0x' + sha256JS(buffer);
+    }
+
     async function procesarArchivo(file) {
         // Mostrar info del archivo
         document.getElementById('file-name').textContent = file.name;
@@ -896,16 +986,14 @@
         document.getElementById('btn-verificar-archivo').disabled = true;
 
         try {
-            // Calcular SHA-256 con Web Crypto API
             const buffer = await file.arrayBuffer();
-            const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
-            const hashArray = Array.from(new Uint8Array(hashBuffer));
-            const hashHex = '0x' + hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+            const hashHex = await calcularSHA256(buffer);
 
             archivoHashCalculado = hashHex;
             document.getElementById('file-hash-value').textContent = hashHex;
             document.getElementById('btn-verificar-archivo').disabled = false;
         } catch (error) {
+            console.error('Error calculando hash:', error);
             document.getElementById('file-hash-value').textContent = 'Error al calcular hash';
             archivoHashCalculado = null;
         }
@@ -989,11 +1077,17 @@
         let html = `
             <div class="resultado-card">
                 <div class="resultado-header encontrado">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-                    <div class="resultado-header-text">
-                        <h3>Registro verificado en blockchain</h3>
-                        <p>Este hash fue sellado en la Blockchain Federal Argentina</p>
+                    <div class="resultado-header-left">
+                        <a href="https://bfa.ar/" target="_blank" rel="noopener noreferrer"><img src="img/bfa.svg" alt="BFA" class="resultado-header-logo"></a>
+                        <div class="resultado-header-text">
+                            <h3>Certificación Blockchain</h3>
+                            <p>Registro verificado en Blockchain Federal Argentina</p>
+                        </div>
                     </div>
+                    <span class="resultado-badge-verificado">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                        Verificado en BFA
+                    </span>
                 </div>
                 <div class="resultado-body">
                     <div class="resultado-grid">`;
