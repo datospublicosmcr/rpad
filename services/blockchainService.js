@@ -221,7 +221,7 @@ export async function sellarHash(hashHex, datos) {
     }
   });
 
-  return { success: true, registroId, estado: 'enviando' };
+  return { success: true, registroId, estado: 'pendiente' };
 }
 
 /**
