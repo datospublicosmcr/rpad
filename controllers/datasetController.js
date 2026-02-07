@@ -253,6 +253,15 @@ export const createDataset = async (req, res) => {
       });
     }
 
+    // Normalizar file_hash opcional (si el usuario subió archivo al crear)
+    let fileHash = null;
+    if (data.file_hash) {
+      fileHash = data.file_hash.startsWith('0x') ? data.file_hash : '0x' + data.file_hash;
+      if (!/^0x[a-fA-F0-9]{64}$/.test(fileHash)) {
+        fileHash = null; // Formato inválido, ignorar silenciosamente
+      }
+    }
+
     // Preparar datos para el cambio pendiente
     const datosNuevos = {
       titulo: data.titulo,
@@ -266,7 +275,8 @@ export const createDataset = async (req, res) => {
       url_dataset: data.url_dataset || null,
       observaciones: data.observaciones || null,
       tipo_gestion: data.tipo_gestion,
-      formatos: formatoIds
+      formatos: formatoIds,
+      ...(fileHash && { file_hash: fileHash })
     };
 
     // Crear cambio pendiente (dataset_id es null porque aún no existe)

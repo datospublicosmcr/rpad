@@ -16,6 +16,7 @@ let formatosCatalogo = [];
 let registrarActualizacionId = null;
 let registrarActualizacionDataset = null;
 let dropZoneActualizar = null;
+let dropZoneCrear = null;
 
 // =====================================================
 // Utilidades de hash y drop zone (reutilizables)
@@ -582,7 +583,28 @@ function openModal(dataset = null, andinoData = null) {
 
   // Renderizar chips de formatos
   renderizarChipsFormatos();
-  
+
+  // Drop zone de archivo: solo visible al crear, oculta al editar
+  const dropZoneCrearGroup = document.getElementById('dropZoneCrearGroup');
+  if (!dataset) {
+    dropZoneCrearGroup.classList.remove('hidden');
+    if (!dropZoneCrear) {
+      dropZoneCrear = inicializarDropZone({
+        dropZoneId: 'dropZoneCrear',
+        fileInputId: 'fileInputCrear',
+        fileInfoId: 'fileInfoCrear',
+        fileNameId: 'fileNameCrear',
+        fileSizeId: 'fileSizeCrear',
+        fileHashId: 'fileHashCrear',
+        fileChangeId: 'fileChangeCrear'
+      });
+    } else {
+      dropZoneCrear.reset();
+    }
+  } else {
+    dropZoneCrearGroup.classList.add('hidden');
+  }
+
   modal.classList.add('active');
 }
 
@@ -590,6 +612,8 @@ function closeModal() {
   document.getElementById('modal-dataset').classList.remove('active');
   currentEditDataset = null;
   andinoAreaReferencia = null;
+  // Resetear drop zone de crear si existe
+  if (dropZoneCrear) dropZoneCrear.reset();
 }
 
 async function editDataset(id) {
@@ -766,6 +790,11 @@ document.getElementById('dataset-form').addEventListener('submit', async (e) => 
     observaciones: document.getElementById('observaciones').value || null,
     tipo_gestion: document.getElementById('tipo_gestion').value
   };
+
+  // Incluir file_hash si estamos creando y hay archivo certificado
+  if (!id && dropZoneCrear && dropZoneCrear.getHash()) {
+    data.file_hash = dropZoneCrear.getHash();
+  }
 
   try {
     if (id) {
