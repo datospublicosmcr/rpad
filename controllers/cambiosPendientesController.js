@@ -368,17 +368,21 @@ export const aprobarCambio = async (req, res) => {
     const { id } = req.params;
     const revisorId = req.user?.userId;
 
-    // Obtener el cambio pendiente
+    // Iniciar transacción ANTES del SELECT para que FOR UPDATE sea efectivo
+    await connection.beginTransaction();
+
+    // Obtener el cambio pendiente con bloqueo de fila
     const [cambios] = await connection.execute(
-      'SELECT * FROM cambios_pendientes WHERE id = ? AND estado = ?',
+      'SELECT * FROM cambios_pendientes WHERE id = ? AND estado = ? FOR UPDATE',
       [id, 'pendiente']
     );
 
     if (cambios.length === 0) {
+      await connection.rollback();
       connection.release();
-      return res.status(404).json({
+      return res.status(409).json({
         success: false,
-        error: 'Cambio pendiente no encontrado o ya fue procesado'
+        error: 'Este cambio ya fue procesado'
       });
     }
 
@@ -386,6 +390,7 @@ export const aprobarCambio = async (req, res) => {
 
     // Verificar que no sea su propio cambio
     if (cambio.usuario_id === revisorId) {
+      await connection.rollback();
       connection.release();
       return res.status(403).json({
         success: false,
@@ -393,11 +398,9 @@ export const aprobarCambio = async (req, res) => {
       });
     }
 
-    const datosNuevos = typeof cambio.datos_nuevos === 'string' 
-      ? JSON.parse(cambio.datos_nuevos) 
+    const datosNuevos = typeof cambio.datos_nuevos === 'string'
+      ? JSON.parse(cambio.datos_nuevos)
       : cambio.datos_nuevos;
-
-    await connection.beginTransaction();
 
     let datasetId = cambio.dataset_id;
 
