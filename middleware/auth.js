@@ -1,6 +1,7 @@
 import jwt from 'jsonwebtoken';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'rpad-secret-key-cambiar-en-produccion';
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) { console.error('FATAL: JWT_SECRET no configurado en .env'); process.exit(1); }
 
 export const generateToken = (payload) => {
   return jwt.sign(payload, JWT_SECRET, { expiresIn: '7h' });
