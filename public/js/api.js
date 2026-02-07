@@ -294,26 +294,23 @@ async registrarActualizacion(id, datos = {}) {
 
   // === REPORTES PDF ===
   getReporteEstadoGeneralUrl() {
-    const token = Auth.getToken();
-    return `${CONFIG.API_URL}/reportes/estado-general?token=${token}`;
+    return `${CONFIG.API_URL}/reportes/estado-general`;
   },
 
   getReporteHistorialUrl(desde, hasta) {
-    const token = Auth.getToken();
-    let url = `${CONFIG.API_URL}/reportes/historial-notificaciones?token=${token}`;
-    if (desde) url += `&desde=${desde}`;
-    if (hasta) url += `&hasta=${hasta}`;
-    return url;
+    const params = new URLSearchParams();
+    if (desde) params.append('desde', desde);
+    if (hasta) params.append('hasta', hasta);
+    const qs = params.toString();
+    return `${CONFIG.API_URL}/reportes/historial-notificaciones${qs ? '?' + qs : ''}`;
   },
 
   getReportePorAreaUrl(areaId) {
-    const token = Auth.getToken();
-    return `${CONFIG.API_URL}/reportes/por-area/${areaId}?token=${token}`;
+    return `${CONFIG.API_URL}/reportes/por-area/${areaId}`;
   },
 
   getReporteCumplimientoUrl(periodo) {
-    const token = Auth.getToken();
-    return `${CONFIG.API_URL}/reportes/cumplimiento?token=${token}&periodo=${periodo}`;
+    return `${CONFIG.API_URL}/reportes/cumplimiento?periodo=${periodo}`;
   },
 
   // === BLOCKCHAIN ===
