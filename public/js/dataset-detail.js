@@ -270,8 +270,21 @@ function renderBlockchainCard(data) {
 
   html += `</div>`;
 
-  // Footer: texto explicativo + links verificar y BFA
+  // QR de verificación (entre body y footer)
   const hashParaVerificar = (ultimoCambio && ultimoCambio.hash_sellado) || (ultimoArchivo && ultimoArchivo.hash_sellado);
+  if (hashParaVerificar && typeof qrcode !== 'undefined') {
+    const verificarUrl = `${window.location.origin}/verificar.html?hash=${hashParaVerificar}`;
+    const qr = qrcode(0, 'M');
+    qr.addData(verificarUrl);
+    qr.make();
+    html += `
+      <div class="bc-qr-section">
+        ${qr.createSvgTag({ cellSize: 3, margin: 0 })}
+        <span class="bc-qr-hint">Escaneá para verificar</span>
+      </div>`;
+  }
+
+  // Footer: texto explicativo + links verificar y BFA
   const hashBFA = hashParaVerificar ? hashParaVerificar.replace('0x', '') : null;
   html += `
     <div class="bc-footer">
