@@ -35,8 +35,8 @@ app.use(cors({
   origin: process.env.CORS_ORIGIN || 'http://rpad.mcrmodernizacion.gob.ar',
   credentials: true
 }));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 
 // Servir archivos estáticos del frontend
 app.use(express.static(path.join(__dirname, 'public')));
