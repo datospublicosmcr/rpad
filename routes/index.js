@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import rateLimit from 'express-rate-limit';
 import { authMiddleware, adminOnly } from '../middleware/auth.js';
 
 // Controladores
@@ -56,6 +57,13 @@ import {
 } from '../controllers/blockchainController.js';
 
 const router = Router();
+
+// Rate limiter para endpoint de certificación blockchain
+const blockchainLimiter = rateLimit({
+  windowMs: 60_000,
+  max: 5,
+  message: { error: 'Demasiadas solicitudes de certificación. Intentá de nuevo en 1 minuto.' }
+});
 
 // =====================================================
 // Rutas públicas (sin autenticación)
@@ -128,7 +136,7 @@ router.post('/cambios-pendientes/:id/rechazar', authMiddleware, adminOnly, recha
 // Blockchain (protegidas)
 // =====================================================
 router.get('/blockchain/estado', authMiddleware, adminOnly, estadoBlockchain);
-router.post('/blockchain/certificar', authMiddleware, adminOnly, certificarArchivo);
+router.post('/blockchain/certificar', authMiddleware, adminOnly, blockchainLimiter, certificarArchivo);
 
 // =====================================================
 // Notificaciones (protegidas)
