@@ -55,14 +55,10 @@ const verificarRateLimit = (ip) => {
 };
 
 /**
- * Obtiene la IP real del cliente (considerando proxies)
+ * Obtiene la IP real del cliente (usa req.ip que respeta trust proxy)
  */
 const obtenerIP = (req) => {
-  return req.headers['x-forwarded-for']?.split(',')[0]?.trim() || 
-         req.headers['x-real-ip'] || 
-         req.connection?.remoteAddress || 
-         req.ip || 
-         'unknown';
+  return req.ip || 'unknown';
 };
 
 /**

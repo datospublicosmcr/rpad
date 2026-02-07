@@ -18,6 +18,9 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+// Trust proxy (nginx en producción) — necesario para req.ip correcto y rate limiting
+app.set('trust proxy', 1);
+
 // Middlewares
 app.use(helmet({
   contentSecurityPolicy: {
