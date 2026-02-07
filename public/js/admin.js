@@ -18,6 +18,10 @@ let registrarActualizacionDataset = null;
 let dropZoneActualizar = null;
 let dropZoneCrear = null;
 
+// Variables para modal de certificar archivo
+let certificarArchivoId = null;
+let dropZoneCertificar = null;
+
 // =====================================================
 // Utilidades de hash y drop zone (reutilizables)
 // =====================================================
@@ -409,6 +413,7 @@ function renderTable(data) {
             <div class="table-actions" style="display: flex; gap: 6px;">
             ${Auth.isAdmin() ? `
             <button onclick="marcarActualizado(${d.id})" class="btn btn-success btn-sm" style="${tienePendientes ? 'filter: grayscale(100%); opacity: 0.5; pointer-events: none;' : ''}" title="Marcar actualizado${tienePendientes ? ' (Bloqueado)' : ''}"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></button>
+            <button onclick="abrirCertificarArchivo(${d.id})" class="btn btn-secondary btn-sm" title="Certificar archivo"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></svg></button>
             <button onclick="editDataset(${d.id})" class="btn btn-secondary btn-sm" style="${tienePendientes ? 'filter: grayscale(100%); opacity: 0.5; pointer-events: none;' : ''}" title="Editar${tienePendientes ? ' (Bloqueado)' : ''}"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg></button>
             <button onclick="openDeleteModal(${d.id}, '${Utils.escapeHtml(d.titulo).replace(/'/g, "\\'")}')" class="btn btn-danger btn-sm" style="${tienePendientes ? 'filter: grayscale(100%); opacity: 0.5; pointer-events: none;' : ''}" title="Eliminar${tienePendientes ? ' (Bloqueado)' : ''}"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg></button>
             ` : '<span class="text-muted text-small">Solo lectura</span>'}
@@ -1045,7 +1050,7 @@ async function confirmarRegistrarActualizacion() {
       proxima_actualizacion: proximaActualizacion,
       file_hash: fileHash
     });
-    
+
     Utils.showSuccess('Actualización registrada correctamente');
     closeRegistrarActualizacionModal();
     await loadDatasets();
@@ -1054,5 +1059,79 @@ async function confirmarRegistrarActualizacion() {
   } finally {
     btnConfirmar.disabled = false;
     btnConfirmar.innerHTML = '<span>✔</span> Registrar';
+  }
+}
+
+// =====================================================
+// CERTIFICAR ARCHIVO (Modal — Spec 13.6)
+// =====================================================
+
+/**
+ * Abre el modal de certificación voluntaria de archivo
+ */
+async function abrirCertificarArchivo(id) {
+  try {
+    const dataset = await API.getDataset(id);
+    if (!dataset) {
+      Utils.showError('No se pudo cargar el dataset');
+      return;
+    }
+
+    certificarArchivoId = id;
+
+    // Llenar título
+    document.getElementById('certificar-dataset-titulo').textContent = dataset.titulo;
+
+    // Inicializar drop zone (lazy, una sola vez)
+    if (!dropZoneCertificar) {
+      dropZoneCertificar = inicializarDropZone({
+        dropZoneId: 'dropZoneCertificar',
+        fileInputId: 'fileInputCertificar',
+        fileInfoId: 'fileInfoCertificar',
+        fileNameId: 'fileNameCertificar',
+        fileSizeId: 'fileSizeCertificar',
+        fileHashId: 'fileHashCertificar',
+        fileChangeId: 'fileChangeCertificar'
+      });
+    } else {
+      dropZoneCertificar.reset();
+    }
+
+    // Mostrar modal
+    document.getElementById('modal-certificar-archivo').classList.add('active');
+  } catch (error) {
+    console.error('Error abriendo modal certificar:', error);
+    Utils.showError('Error al cargar datos del dataset');
+  }
+}
+
+function closeCertificarArchivoModal() {
+  document.getElementById('modal-certificar-archivo').classList.remove('active');
+  certificarArchivoId = null;
+  if (dropZoneCertificar) dropZoneCertificar.reset();
+}
+
+async function confirmarCertificarArchivo() {
+  if (!certificarArchivoId) return;
+
+  const fileHash = dropZoneCertificar ? dropZoneCertificar.getHash() : null;
+  if (!fileHash) {
+    Utils.showError('Debe seleccionar un archivo para certificar');
+    return;
+  }
+
+  const btnConfirmar = document.getElementById('btn-confirmar-certificar');
+  btnConfirmar.disabled = true;
+  btnConfirmar.innerHTML = '<span>⏳</span> Certificando...';
+
+  try {
+    await API.certificarArchivo(certificarArchivoId, { file_hash: fileHash });
+    Utils.showSuccess('Archivo enviado a certificar en blockchain');
+    closeCertificarArchivoModal();
+  } catch (error) {
+    Utils.showError(error.message);
+  } finally {
+    btnConfirmar.disabled = false;
+    btnConfirmar.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></svg> Certificar';
   }
 }

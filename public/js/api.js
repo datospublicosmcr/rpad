@@ -316,6 +316,18 @@ async registrarActualizacion(id, datos = {}) {
     return `${CONFIG.API_URL}/reportes/cumplimiento?token=${token}&periodo=${periodo}`;
   },
 
+  // === BLOCKCHAIN ===
+  async certificarArchivo(datasetId, datos = {}) {
+    const response = await fetch(`${CONFIG.API_URL}/blockchain/certificar`, {
+      method: 'POST',
+      headers: Auth.getAuthHeaders(),
+      body: JSON.stringify({ dataset_id: datasetId, ...datos })
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || 'Error al certificar archivo');
+    return data.data;
+  },
+
   // === NOTAS DOCX ===
   async generarNota(datos) {
     const response = await fetch(`${CONFIG.API_URL}/notas/generar`, {

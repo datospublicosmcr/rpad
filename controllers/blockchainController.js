@@ -4,7 +4,7 @@
  */
 
 import pool from '../config/database.js';
-import { verificarHash, obtenerSello, getEstado } from '../services/blockchainService.js';
+import { verificarHash, obtenerSello, getEstado, sellarHash } from '../services/blockchainService.js';
 
 /**
  * GET /api/blockchain/verificar/:hash
@@ -179,5 +179,70 @@ export const registrosPorDataset = async (req, res) => {
   } catch (error) {
     console.error('Error obteniendo registros por dataset:', error);
     res.status(500).json({ success: false, error: 'Error al obtener registros del dataset' });
+  }
+};
+
+/**
+ * POST /api/blockchain/certificar
+ * Protegido — Certificación voluntaria de archivo en blockchain
+ * Body: { dataset_id, file_hash }
+ */
+export const certificar = async (req, res) => {
+  try {
+    const { dataset_id, file_hash } = req.body;
+
+    // Validar dataset_id
+    if (!dataset_id) {
+      return res.status(400).json({ success: false, error: 'dataset_id es obligatorio' });
+    }
+
+    const [dsRows] = await pool.execute(
+      'SELECT id, titulo, activo FROM datasets WHERE id = ?',
+      [dataset_id]
+    );
+
+    if (dsRows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Dataset no encontrado' });
+    }
+
+    if (!dsRows[0].activo) {
+      return res.status(400).json({ success: false, error: 'Solo se pueden certificar archivos de datasets activos' });
+    }
+
+    // Validar file_hash
+    if (!file_hash || !/^(0x)?[0-9a-fA-F]{64}$/.test(file_hash)) {
+      return res.status(400).json({
+        success: false,
+        error: 'file_hash inválido. Formato esperado: 0x seguido de 64 caracteres hexadecimales'
+      });
+    }
+
+    // Normalizar con prefijo 0x
+    const hashNormalizado = file_hash.startsWith('0x') ? file_hash : `0x${file_hash}`;
+
+    // Sellar en blockchain (no-bloqueante)
+    const resultado = await sellarHash(hashNormalizado, {
+      tipo: 'certificacion_archivo',
+      referencia_id: null,
+      dataset_id,
+      metadata: { file_hash: hashNormalizado, dataset_id, timestamp: new Date().toISOString() }
+    });
+
+    if (!resultado.success) {
+      return res.status(500).json({ success: false, error: resultado.error || 'Error al registrar en blockchain' });
+    }
+
+    console.log(`✅ Certificación voluntaria: dataset #${dataset_id}, registro #${resultado.registroId}`);
+
+    res.json({
+      success: true,
+      data: {
+        registroId: resultado.registroId,
+        estado: resultado.estado
+      }
+    });
+  } catch (error) {
+    console.error('Error en certificar archivo:', error);
+    res.status(500).json({ success: false, error: 'Error al certificar el archivo' });
   }
 };

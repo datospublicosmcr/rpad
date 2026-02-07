@@ -51,7 +51,8 @@ import {
   verificar,
   estado as estadoBlockchain,
   registro,
-  registrosPorDataset
+  registrosPorDataset,
+  certificar as certificarArchivo
 } from '../controllers/blockchainController.js';
 
 const router = Router();
@@ -127,6 +128,7 @@ router.post('/cambios-pendientes/:id/rechazar', authMiddleware, rechazarCambio);
 // Blockchain (protegidas)
 // =====================================================
 router.get('/blockchain/estado', authMiddleware, estadoBlockchain);
+router.post('/blockchain/certificar', authMiddleware, certificarArchivo);
 
 // =====================================================
 // Notificaciones (protegidas)
