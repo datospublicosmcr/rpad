@@ -65,12 +65,21 @@ const blockchainLimiter = rateLimit({
   message: { error: 'Demasiadas solicitudes de certificación. Intentá de nuevo en 1 minuto.' }
 });
 
+// Rate limiter para login
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: { error: 'Demasiados intentos de login. Intentá de nuevo en 15 minutos.' },
+  standardHeaders: true,
+  legacyHeaders: false
+});
+
 // =====================================================
 // Rutas públicas (sin autenticación)
 // =====================================================
 
 // Auth
-router.post('/auth/login', login);
+router.post('/auth/login', loginLimiter, login);
 
 // Datasets (lectura)
 router.get('/datasets', getDatasets);
