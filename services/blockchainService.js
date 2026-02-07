@@ -209,8 +209,16 @@ export async function sellarHash(hashHex, datos) {
   }
 
   // Enviar sello de forma asíncrona (no bloquea la respuesta al usuario)
-  enviarSello(registroId, hashHex).catch(error => {
+  enviarSello(registroId, hashHex).catch(async (error) => {
     console.error(`❌ Blockchain: error sellando registro #${registroId}:`, error.message);
+    try {
+      await pool.execute(
+        'UPDATE blockchain_registros SET intentos = 1, error_detalle = ? WHERE id = ?',
+        [error.message, registroId]
+      );
+    } catch (dbError) {
+      console.error('Error actualizando intento fallido:', dbError.message);
+    }
   });
 
   return { success: true, registroId, estado: 'enviando' };
