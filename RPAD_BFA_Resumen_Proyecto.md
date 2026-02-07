@@ -1,8 +1,8 @@
 # RPAD v1.5.0 + Blockchain Federal Argentina (BFA)
 ## Documento de Contexto para Implementación
 
-**Fecha:** 7 de febrero de 2026 (actualizado tras auditoría de seguridad: adminOnly, JWT hardening, rate limiting, fixes B1/B3)
-**Estado:** ✅ Nodo BFA propio sincronizado (~46M bloques). Sellado real funcionando (primer sello bloque 46012604). Certificación voluntaria implementada (Spec 13.6). Card blockchain con QR y link BFA. Auditoría de seguridad completada (6 fixes).
+**Fecha:** 7 de febrero de 2026 (actualizado tras auditorías de seguridad blockchain + general)
+**Estado:** ✅ Nodo BFA propio sincronizado (~46M bloques). Sellado real funcionando (primer sello bloque 46012604). Certificación voluntaria implementada (Spec 13.6). Card blockchain con QR y link BFA. Dos auditorías completadas: blockchain (6 fixes) + general (10 fixes). Listo para deploy.
 **Autor:** Mariano Perez - Subsecretaría de Modernización, Municipalidad de Comodoro Rivadavia
 
 ---
@@ -925,7 +925,8 @@ BFA_GAS_LIMIT=2000000
 - [x] **Test flujo completo "Marcar actualizado"** — cambio pendiente → aprobar → 2 registros blockchain (cambio_dataset bloque 46023324 + certificacion_archivo bloque 46023325), ambos confirmados
 - [x] **Cola de reintentos implementada** — `MAX_REINTENTOS=10` con backoff en blockchainService.js (línea 102), sellos pendientes se reintentan automáticamente
 - [x] **Sello fundacional ejecutado** — 78 datasets, bloque 46013795, tx `0x0b5caf33...`, estado confirmado (06/02/2026)
-- [x] **Auditoría de seguridad completada** — 6 fixes aplicados (S1-S5 seguridad + B1, B3 bugs), ver sección 18 (07/02/2026)
+- [x] **Auditoría de seguridad blockchain completada** — 6 fixes aplicados (S1-S5 seguridad + B1, B3 bugs), ver sección 18.1 (07/02/2026)
+- [x] **Auditoría general de seguridad completada** — 10 fixes aplicados (C1-C3, M1-M3, M5, M11, M13, M14), ver sección 18.2 (07/02/2026)
 
 ### 🔄 EN PROGRESO
 - (nada actualmente)
@@ -947,8 +948,10 @@ BFA_GAS_LIMIT=2000000
 14. ~~**Crear sistema de reintentos**~~ → ✅ MAX_REINTENTOS=10 con backoff en blockchainService.js
 15. ~~**Ejecutar sello fundacional**~~ → ✅ 78 datasets, bloque 46013795
 16. **Testing visual de modales drag & drop** — verificar UX de dropzones en "Marcar actualizado", "Nuevo Dataset" y "Certificar archivo"
-17. **Deploy en producción (WNPower)** — subir branch, configurar .env, probar flujo completo
-18. **Presentar PoC funcionando a municipalidad** — solicitar aprobación presupuestaria
+17. **Hallazgos de auditoría pendientes** — M4 (contraseñas), M6-M10 (XSS), M12 (error messages), M15 (cron secret), B1-B12 (baja prioridad) — ver sección 18.2
+18. **Deploy en producción (WNPower)** — subir branch, configurar .env (ver sección 19), probar flujo completo
+19. **Actualizar cron jobs en producción** — cambiar de GET a POST tras fix M11
+20. **Presentar PoC funcionando a municipalidad** — solicitar aprobación presupuestaria
 
 ### ⚠️ NOTAS OPERATIVAS
 - El nodo propio se reinicia automáticamente si se cae (Docker restart policy)
@@ -975,26 +978,98 @@ Si la blockchain se cae, la operación municipal no se interrumpe.
 
 ---
 
-## 18. AUDITORÍA DE SEGURIDAD (07/02/2026)
+## 18. AUDITORÍAS DE SEGURIDAD (07/02/2026)
 
-Revisión completa de rutas, middlewares, secretos y manejo de errores. Se identificaron 5 vulnerabilidades de seguridad y 2 bugs funcionales.
+Se realizaron dos auditorías el mismo día: una enfocada en el módulo blockchain y otra general del sistema completo. Se identificaron 30+ hallazgos, de los cuales 16 fueron corregidos.
 
-### Hallazgos de seguridad corregidos
+### 18.1. Auditoría del módulo blockchain
+
+**Alcance:** blockchainController.js, blockchainService.js, rutas blockchain, middleware auth, frontend blockchain.
+**Documento completo:** `AUDITORIA_SEGURIDAD_2026-02-07.md`
+
+#### Hallazgos corregidos (6)
 
 | ID | Severidad | Hallazgo | Corrección |
 |----|-----------|----------|------------|
-| S1 | Alta | Rutas de escritura (datasets CRUD, áreas CRUD, cambios pendientes, blockchain, notificaciones) accesibles por rol `lector` — solo tenían `authMiddleware` | Agregado middleware `adminOnly` como segundo middleware en 22 rutas |
-| S2 | Alta | `GET /notificaciones/cambios-pendientes` sin ningún middleware de autenticación — ejecutaba notificaciones sin validar identidad | Agregados `authMiddleware` + `adminOnly` |
-| S3 | Alta | JWT_SECRET con fallback hardcodeado `'rpad-secret-key-cambiar-en-produccion'` — si falta la variable en .env, cualquiera puede forjar tokens | Eliminado fallback; el servidor falla al arrancar si `JWT_SECRET` no está en `.env`. Generado secret criptográfico de 128 hex chars |
-| S4 | Media | `POST /blockchain/certificar` sin rate limiting — un admin comprometido o un script podría agotar el gas de la wallet | Instalado `express-rate-limit`, límite de 5 req/min en ese endpoint |
-| S5 | Baja | `getEstado()` exponía `rpcUrl` (URL interna del nodo BFA) en la respuesta JSON | Reemplazado por `red: 'BFA Producción'` — dato informativo sin exponer infraestructura |
+| S1 | Crítico | `adminOnly` nunca se importaba ni aplicaba en rutas de escritura — rol `lector` podía aprobar cambios, sellar en blockchain, etc. | Agregado `adminOnly` como segundo middleware en 22 rutas |
+| S2 | Crítico | `GET /notificaciones/cambios-pendientes` sin autenticación — cualquiera podía disparar envío de emails | Agregados `authMiddleware` + `adminOnly` |
+| S3 | Crítico | JWT_SECRET con fallback hardcodeado `'rpad-secret-key-cambiar-en-produccion'` — si falta en .env, tokens forjables | Eliminado fallback; servidor falla al arrancar si falta. Secret criptográfico de 128 hex chars |
+| S4 | Medio | `POST /blockchain/certificar` sin rate limiting — posible agotamiento de gas de wallet | `express-rate-limit`: 5 req/min en ese endpoint |
+| S5 | Bajo | `getEstado()` exponía `rpcUrl` (URL interna del nodo BFA) | Reemplazado por `red: 'BFA Producción'` |
+| B1 | Medio | Primer fallo de sello no actualizaba `intentos` ni `error_detalle` en BD | `.catch` ahora hace UPDATE con `intentos=1` y `error_detalle` |
+| B3 | Medio | `sellarHash()` retornaba `estado: 'enviando'` pero BD tenía `'pendiente'` | Cambiado a `estado: 'pendiente'` para consistencia |
 
-### Bugs funcionales corregidos
+#### Pendientes del módulo blockchain (no urgentes)
 
-| ID | Hallazgo | Corrección |
-|----|----------|------------|
-| B1 | En `sellarHash()`, si el primer envío a blockchain fallaba, el `.catch` solo logueaba el error sin actualizar la BD — el registro quedaba con `intentos=0` y la cola de reintentos no tenía contexto del error | El `.catch` ahora actualiza `intentos=1` y `error_detalle` en `blockchain_registros` |
-| B3 | `sellarHash()` retornaba `estado: 'enviando'` cuando la BD registraba `'pendiente'` — inconsistencia entre respuesta de la API y estado real | Cambiado a `estado: 'pendiente'` para consistencia con la BD |
+| ID | Severidad | Hallazgo |
+|----|-----------|----------|
+| S6 | Bajo | Keyfile path logueado en consola (no expuesto en HTTP) |
+| S7 | Bajo | LIMIT/OFFSET por interpolación de string (no explotable, parseInt previo) |
+| S8 | Bajo | Hashes en onclick handlers sin data-attributes |
+| B2 | Medio | Registros en estado 'error' quedan estancados (falta endpoint de reintento manual) |
+| B4 | Bajo | N+1 queries en endpoint /registro |
+| B5 | Bajo | Timer de reintentos no se limpia en shutdown |
+
+#### Commits blockchain
+
+```
+993ca8a fix(security): aplicar adminOnly en rutas de escritura (S1+S2)
+f8ae395 fix(security): eliminar fallback de JWT_SECRET (S3)
+57195b5 fix(security): rate limiting en endpoint de certificación (S4)
+c3ea1d3 fix(security): no exponer RPC URL en getEstado (S5)
+fa1c255 fix: registrar primer fallo de sello en BD (B1)
+ae77062 fix: estado consistente 'pendiente' en sellarHash (B3)
+```
+
+### 18.2. Auditoría general del sistema
+
+**Alcance:** 30+ archivos entre controllers, middleware, config, routes y frontend JS (todo excepto módulo blockchain).
+**Documento completo:** `AUDITORIA_GENERAL_2026-02-07.md`
+**Resultado:** 3 críticos, 15 medios, 12 bajos.
+
+#### Hallazgos corregidos (10)
+
+| ID | Severidad | Hallazgo | Corrección |
+|----|-----------|----------|------------|
+| C1 | Crítico | Race condition en `aprobarCambio()` — SELECT sin `FOR UPDATE` ni transacción previa (TOCTOU) | Movido `beginTransaction()` antes del SELECT, agregado `FOR UPDATE` |
+| C2 | Crítico | `crearCambioPendiente()` hace DELETE + INSERT sin transacción — si INSERT falla, cambio anterior se pierde | Envuelto en transacción |
+| C3 | Crítico | JWT token expuesto en URLs de reportes PDF (`?token=<jwt>`) — visible en historial, logs, Referer | Eliminado `?token=` de 4 funciones URL builders (auth ya usa headers) |
+| M1 | Medio | Sin headers de seguridad (X-Content-Type-Options, CSP, etc.) | Instalado `helmet` con CSP configurado para CDNs |
+| M2 | Medio | `express.json()` sin límite de tamaño — posible DoS por payload grande | Limitado a 1mb: `express.json({ limit: '1mb' })` |
+| M3 | Medio | `POST /auth/login` sin rate limiting — fuerza bruta ilimitada | `express-rate-limit`: 10 intentos / 15 min por IP |
+| M5 | Medio | `trust proxy` no configurado — IP spoofeable via headers falsos, bypass de rate limiting | `app.set('trust proxy', 1)`, `obtenerIP()` usa `req.ip` |
+| M11 | Medio | Notificaciones y cron usan GET para operaciones con side-effects (envío de emails) | Cambiadas 4 rutas de GET a POST |
+| M13 | Medio | nodemailer 6.10.1 con 2 vulnerabilidades conocidas (GHSA-mm7p, GHSA-rcmh) | Actualizado a nodemailer 8.0.1, 0 vulnerabilidades |
+| M14 | Medio | `GET /cambios-pendientes/:id` captura `verificar/:datasetId` por orden de rutas | Reordenadas rutas: específicas antes de paramétrica |
+
+#### Pendientes de la auditoría general (post-deploy)
+
+| ID | Severidad | Hallazgo |
+|----|-----------|----------|
+| M4 | Medio | Política de contraseña débil (solo largo ≥ 8, sin complejidad) |
+| M6 | Medio | XSS via innerHTML en main.js (header de usuario) |
+| M7 | Medio | XSS via innerHTML en showToast() |
+| M8 | Medio | XSS via innerHTML en contacto.js |
+| M9 | Medio | XSS via innerHTML en correos.js |
+| M10 | Medio | document.write() con HTML de API en correos.js |
+| M12 | Medio | Error messages exponen detalles internos en reportes/notificaciones |
+| M15 | Medio | Cron endpoints sin fail-safe si `CRON_SECRET` falta del .env |
+| B1-B12 | Bajo | JWT expiración 7h, email sin validar formato, áreas hard delete, pool.query inconsistente, sin paginación, formatoIds sin validar, missing try/catch en verificarSMTP, XSS potencial en modals, Object URL leak, console.error en producción, sin timeout en fetch |
+
+#### Commits auditoría general
+
+```
+a76f969 fix(security): agregar FOR UPDATE en aprobarCambio para evitar race condition (C1)
+377e2da fix(security): envolver crearCambioPendiente en transacción (C2)
+dfb7a3b fix(security): eliminar JWT de URLs de reportes (C3)
+94cb6fe fix(security): agregar helmet con CSP configurado (M1)
+25eef23 fix(security): limitar body JSON a 1mb (M2)
+ae96a70 fix(security): rate limiting en login (M3)
+24053ba fix(security): configurar trust proxy y usar req.ip (M5)
+c67925c fix(security): cambiar notificaciones y cron de GET a POST (M11)
+4165936 fix(security): actualizar nodemailer 6.10.1 → 8.0.1 (M13)
+b514ec6 fix: reordenar rutas para que verificar/:datasetId sea alcanzable (M14)
+```
 
 ### Modelo de roles post-auditoría
 
@@ -1006,37 +1081,71 @@ Revisión completa de rutas, middlewares, secretos y manejo de errores. Se ident
 | Datasets CRUD, áreas CRUD | No | No | Si |
 | Cambios pendientes (todos) | No | No | Si |
 | Blockchain estado/certificar | No | No | Si |
-| Notificaciones (todas) | No | No | Si |
-| Cron endpoints | Secret | Secret | Secret |
-
-### Commits
-
-```
-993ca8a fix(security): aplicar adminOnly en rutas de escritura (S1+S2)
-f8ae395 fix(security): eliminar fallback de JWT_SECRET (S3)
-57195b5 fix(security): rate limiting en endpoint de certificación (S4)
-c3ea1d3 fix(security): no exponer RPC URL en getEstado (S5)
-fa1c255 fix: registrar primer fallo de sello en BD (B1)
-ae77062 fix: estado consistente 'pendiente' en sellarHash (B3)
-```
-
-### Archivos modificados
-
-| Archivo | Cambios |
-|---------|---------|
-| `routes/index.js` | Import `adminOnly`, agregado en 22 rutas, import + config `express-rate-limit` |
-| `middleware/auth.js` | Eliminado fallback JWT_SECRET, agregado `process.exit(1)` si falta |
-| `services/blockchainService.js` | `rpcUrl` → `red`, `.catch` con UPDATE BD, `'enviando'` → `'pendiente'` |
-| `.env` | JWT_SECRET reemplazado por valor criptográfico (128 hex chars) |
-| `package.json` | Dependencia `express-rate-limit` agregada |
+| Notificaciones (todas, ahora POST) | No | No | Si |
+| Cron endpoints (ahora POST) | Secret | Secret | Secret |
 
 ### Nota sobre JWT_SECRET
 
 Al cambiar el JWT_SECRET, **todas las sesiones activas se invalidan**. Los usuarios deben volver a iniciar sesión. Esto es esperado y no es un problema en entorno de desarrollo.
 
+### Nota sobre cron jobs (M11)
+
+Los cron jobs de producción (WNPower) deben actualizarse para usar POST en vez de GET tras el fix M11. Si el servicio cron no soporta POST, se puede usar `curl -X POST` en el comando del cron.
+
 ---
 
-## 19. LECCIONES APRENDIDAS
+## 19. VARIABLES DE ENTORNO PARA PRODUCCIÓN
+
+El `.env` de producción (WNPower) necesita 8 variables nuevas de blockchain. Las variables originales del sistema (PORT, DB_*, JWT_SECRET, CORS_ORIGIN, SMTP_*, CRON_SECRET) no cambian.
+
+### Variables nuevas a agregar
+
+```env
+# === Blockchain BFA (nuevas para v1.6) ===
+
+# Conexión al nodo BFA (OBLIGATORIA)
+BFA_RPC_URL=http://167.86.71.102:443
+
+# Contrato TSA2 en red producción (OBLIGATORIA)
+BFA_CONTRACT_ADDRESS=0x7e56220069CAaF8367EA42817EA9210296AeC7c6
+
+# Chain ID de BFA producción (OBLIGATORIA)
+BFA_CHAIN_ID=200941592
+
+# Wallet municipal — usada para verificación de sellos (OBLIGATORIA)
+BFA_WALLET_ADDRESS=0x53c4D8cb6f5Fb6BaFC3b158ae582a8Fb18dCc1C9
+
+# Keyfile para firmar transacciones (OBLIGATORIA para sellar)
+BFA_KEYFILE_PATH=/home/datospublicos/rpad/keystore/UTC--2026-02-02T23-56-25.652283700Z--53c4d8cb6f5fb6bafc3b158ae582a8fb18dcc1c9
+
+# Password del keyfile (OBLIGATORIA para sellar)
+BFA_WALLET_PASSWORD=Investigacion965!
+
+# Nombre de la red — solo informativo (OPCIONAL, default: 'produccion')
+BFA_NETWORK=produccion
+
+# Gas limit para transacciones (OPCIONAL, default: 2000000)
+BFA_GAS_LIMIT=2000000
+```
+
+### Resumen de obligatoriedad
+
+| Variable | Obligatoria | Default | Notas |
+|----------|-------------|---------|-------|
+| `BFA_RPC_URL` | Si | — | URL del nodo BFA propio via nginx proxy |
+| `BFA_CONTRACT_ADDRESS` | Si | — | Dirección del contrato TSA2 |
+| `BFA_CHAIN_ID` | Si | `200941592` | Tiene default en código pero mejor ser explícito |
+| `BFA_WALLET_ADDRESS` | Si | — | Para verificar sellos sin keyfile |
+| `BFA_KEYFILE_PATH` | Si* | — | *Sin keyfile arranca en modo lectura (verifica pero no sella) |
+| `BFA_WALLET_PASSWORD` | Si* | — | *Ídem — necesario solo para sellar |
+| `BFA_NETWORK` | No | `produccion` | Valor informativo en registros |
+| `BFA_GAS_LIMIT` | No | `2000000` | Suficiente para put() en TSA2 |
+
+**Modo degradado:** Si faltan `BFA_RPC_URL` o `BFA_CONTRACT_ADDRESS`, el módulo blockchain se deshabilita silenciosamente y RPAD funciona sin certificación. Si faltan `BFA_KEYFILE_PATH` o `BFA_WALLET_PASSWORD`, funciona en modo lectura (puede verificar sellos existentes pero no crear nuevos).
+
+---
+
+## 20. LECCIONES APRENDIDAS
 
 1. **Nodo público BFA no es para producción** — documentación no lo aclara, Roberto lo confirmó en Telegram
 2. **TSA API v1 también necesita nodo** — no es una solución mágica, es solo un wrapper REST sobre web3
@@ -1062,6 +1171,11 @@ Al cambiar el JWT_SECRET, **todas las sesiones activas se invalidan**. Los usuar
 22. **WNPower bloquea puertos no estándar** — hosting compartido no permite conexiones salientes al puerto 8545; solución: nginx proxy en puerto 443
 23. **"Connection refused" ≠ bloqueado** — "refused" significa que el paquete llegó pero no hay servicio escuchando; "timeout" sería bloqueado
 24. **Node.js en cPanel no es `node` en terminal** — `node --version` da "command not found" en SSH de cPanel, pero la versión se ve en el panel de Node.js (v22.18.0)
+29. **trust proxy es crítico detrás de nginx** — sin `app.set('trust proxy', 1)`, `req.ip` devuelve la IP del proxy, no del cliente; rate limiting y logging quedan inútiles
+30. **GET para side-effects es peligroso** — prefetch del navegador, crawlers y proxies pueden disparar envío de emails; siempre POST para operaciones con efectos secundarios
+31. **nodemailer 6→8 no rompe nada** — la API core (createTransport, sendMail, verify) es compatible; el upgrade fue directo sin cambios de código
+32. **Race conditions en doble aprobación** — SELECT + UPDATE sin FOR UPDATE ni transacción permite que dos admins aprueben el mismo cambio simultáneamente; siempre bloquear fila antes de leer
+33. **Auditar en dos pasadas** — primero el módulo nuevo (blockchain), después el sistema completo; cada pasada encuentra cosas que la otra no vería
 25. **authMiddleware no implica adminOnly** — tener autenticación no significa autorización; rutas de escritura necesitan verificación de rol explícita
 26. **JWT_SECRET con fallback es una bomba de tiempo** — si .env se pierde o falla dotenv, el servidor arranca con un secret predecible; mejor fallar rápido con `process.exit(1)`
 27. **Rate limiting por endpoint, no global** — limitar solo endpoints críticos (blockchain/certificar) evita falsos positivos en rutas de lectura frecuente
@@ -1069,7 +1183,7 @@ Al cambiar el JWT_SECRET, **todas las sesiones activas se invalidan**. Los usuar
 
 ---
 
-## 20. ARCHIVOS QUE DEBE SUBIR EL USUARIO A LA NUEVA CONVERSACIÓN
+## 21. ARCHIVOS QUE DEBE SUBIR EL USUARIO A LA NUEVA CONVERSACIÓN
 
 Para que Claude pueda implementar directamente, subir estos archivos del proyecto RPAD:
 
