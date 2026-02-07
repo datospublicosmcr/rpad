@@ -345,7 +345,7 @@ export async function getEstado() {
     inicializado: inicializadoOk,
     wallet: cuenta ? cuenta.address : null,
     modoLectura: !cuenta,
-    rpcUrl: process.env.BFA_RPC_URL || null,
+    red: 'BFA Producción',
     contractAddress: process.env.BFA_CONTRACT_ADDRESS || null,
     network: process.env.BFA_NETWORK || 'produccion'
   };
