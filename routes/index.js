@@ -150,11 +150,11 @@ router.post('/blockchain/certificar', authMiddleware, adminOnly, blockchainLimit
 // =====================================================
 // Notificaciones (protegidas)
 // =====================================================
-router.get('/notificaciones/ejecutar', authMiddleware, adminOnly, ejecutarNotificacionesDiarias);
+router.post('/notificaciones/ejecutar', authMiddleware, adminOnly, ejecutarNotificacionesDiarias);
 router.get('/notificaciones/prueba/:tipo', authMiddleware, adminOnly, pruebaNotificacion);
 router.get('/notificaciones/verificar-smtp', authMiddleware, adminOnly, verificarSMTP);
 router.get('/notificaciones/preview/:tipo', authMiddleware, adminOnly, previewEmail);
-router.get('/notificaciones/cambios-pendientes', authMiddleware, adminOnly, ejecutarNotificacionCambiosPendientes);
+router.post('/notificaciones/cambios-pendientes', authMiddleware, adminOnly, ejecutarNotificacionCambiosPendientes);
 router.get('/notificaciones/preview-cambios-pendientes', authMiddleware, adminOnly, previewCambiosPendientes);
 
 // =====================================================
@@ -173,7 +173,7 @@ router.post('/notas/generar', authMiddleware, generarNota);
 // =====================================================
 // Cron (protegido por clave secreta)
 // =====================================================
-router.get('/cron/notificaciones', (req, res, next) => {
+router.post('/cron/notificaciones', (req, res, next) => {
   const secret = req.query.secret || req.headers['x-cron-secret'];
   if (secret !== process.env.CRON_SECRET) {
     return res.status(403).json({ success: false, error: 'Acceso denegado' });
@@ -181,7 +181,7 @@ router.get('/cron/notificaciones', (req, res, next) => {
   next();
 }, ejecutarNotificacionesDiarias);
 
-router.get('/cron/cambios-pendientes', (req, res, next) => {
+router.post('/cron/cambios-pendientes', (req, res, next) => {
   const secret = req.query.secret || req.headers['x-cron-secret'];
   if (secret !== process.env.CRON_SECRET) {
     return res.status(403).json({ success: false, error: 'Acceso denegado' });
