@@ -923,6 +923,8 @@ BFA_GAS_LIMIT=2000000
 - [x] **Hash archivo usa file_hash** — no hash_sellado, semánticamente correcto
 - [x] **Fix formato 24h** — hour12: false en verificar.html y dashboard.js
 - [x] **Test flujo completo "Marcar actualizado"** — cambio pendiente → aprobar → 2 registros blockchain (cambio_dataset bloque 46023324 + certificacion_archivo bloque 46023325), ambos confirmados
+- [x] **Cola de reintentos implementada** — `MAX_REINTENTOS=10` con backoff en blockchainService.js (línea 102), sellos pendientes se reintentan automáticamente
+- [x] **Sello fundacional ejecutado** — 78 datasets, bloque 46013795, tx `0x0b5caf33...`, estado confirmado (06/02/2026)
 
 ### 🔄 EN PROGRESO
 - (nada actualmente)
@@ -941,10 +943,11 @@ BFA_GAS_LIMIT=2000000
 11. ~~**Crear `verificar.html`**~~ → ✅ Verificador + registro público
 12. ~~**Modificar `dataset.html`**~~ → ✅ Card blockchain con QR y link BFA
 13. ~~**Agregar link verificar.html al sidebar**~~ → ✅ En todas las páginas
-14. **Crear sistema de reintentos** — cola para sellos fallidos con backoff
-15. **Ejecutar sello fundacional** — script one-time al activar v1.6
-16. **Testing end-to-end en producción (WNPower)** — deploy + flujo completo
-17. **Presentar PoC funcionando a municipalidad** — solicitar aprobación presupuestaria
+14. ~~**Crear sistema de reintentos**~~ → ✅ MAX_REINTENTOS=10 con backoff en blockchainService.js
+15. ~~**Ejecutar sello fundacional**~~ → ✅ 78 datasets, bloque 46013795
+16. **Testing visual de modales drag & drop** — verificar UX de dropzones en "Marcar actualizado", "Nuevo Dataset" y "Certificar archivo"
+17. **Deploy en producción (WNPower)** — subir branch, configurar .env, probar flujo completo
+18. **Presentar PoC funcionando a municipalidad** — solicitar aprobación presupuestaria
 
 ### ⚠️ NOTAS OPERATIVAS
 - El nodo propio se reinicia automáticamente si se cae (Docker restart policy)
