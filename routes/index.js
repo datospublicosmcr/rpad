@@ -136,8 +136,8 @@ router.get('/cambios-pendientes/contador', authMiddleware, adminOnly, getContado
 router.get('/cambios-pendientes/para-revisar', authMiddleware, adminOnly, getCambiosPendientesParaRevisar);
 router.get('/cambios-pendientes/mis-cambios', authMiddleware, adminOnly, getMisCambios);
 router.get('/cambios-pendientes/datasets-bloqueados', authMiddleware, adminOnly, getDatasetsConPendientes);
-router.get('/cambios-pendientes/:id', authMiddleware, adminOnly, getCambioPendienteById);
 router.get('/cambios-pendientes/verificar/:datasetId', authMiddleware, adminOnly, verificarDatasetBloqueado);
+router.get('/cambios-pendientes/:id', authMiddleware, adminOnly, getCambioPendienteById);
 router.post('/cambios-pendientes/:id/aprobar', authMiddleware, adminOnly, aprobarCambio);
 router.post('/cambios-pendientes/:id/rechazar', authMiddleware, adminOnly, rechazarCambio);
 
