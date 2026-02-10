@@ -345,10 +345,7 @@ const Utils = {
   // Formatear fecha
   formatDate(dateString) {
     if (!dateString) return '-';
-    // Agregar T00:00:00 a fechas solo-fecha para evitar desfase UTC
-    const str = String(dateString);
-    const dateValue = /^\d{4}-\d{2}-\d{2}$/.test(str) ? str + 'T00:00:00' : str;
-    const date = new Date(dateValue);
+    const date = new Date(dateString);
     return date.toLocaleDateString('es-AR', {
       day: '2-digit',
       month: '2-digit',
