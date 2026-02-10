@@ -81,7 +81,7 @@ export const registro = async (req, res) => {
 
     // Obtener registros
     const [rows] = await pool.execute(
-      `SELECT br.id, br.tipo, br.hash_sellado, br.file_hash, br.tx_hash,
+      `SELECT br.id, br.tipo, br.hash_sellado, br.file_hash, br.filename, br.tx_hash,
               br.block_number, br.network, br.estado, br.created_at, br.confirmed_at,
               d.titulo AS dataset_titulo,
               a.nombre AS area_nombre
@@ -155,7 +155,7 @@ export const registrosPorDataset = async (req, res) => {
     const { id } = req.params;
 
     const [rows] = await pool.execute(
-      `SELECT br.id, br.tipo, br.hash_sellado, br.file_hash, br.tx_hash,
+      `SELECT br.id, br.tipo, br.hash_sellado, br.file_hash, br.filename, br.tx_hash,
               br.block_number, br.network, br.estado, br.created_at, br.confirmed_at
        FROM blockchain_registros br
        WHERE br.dataset_id = ? AND br.estado = 'confirmado'
@@ -167,12 +167,16 @@ export const registrosPorDataset = async (req, res) => {
     const ultimoCambio = rows.find(r => r.tipo === 'cambio_dataset') || null;
     const ultimoArchivo = rows.find(r => r.tipo === 'certificacion_archivo') || null;
 
+    // Todos los archivos certificados del dataset
+    const archivosCertificados = rows.filter(r => r.tipo === 'certificacion_archivo');
+
     res.json({
       success: true,
       data: {
         registros: rows,
         ultimo_cambio: ultimoCambio,
         ultimo_archivo: ultimoArchivo,
+        archivos_certificados: archivosCertificados,
         total: rows.length
       }
     });
@@ -184,12 +188,13 @@ export const registrosPorDataset = async (req, res) => {
 
 /**
  * POST /api/blockchain/certificar
- * Protegido — Certificación voluntaria de archivo en blockchain
- * Body: { dataset_id, file_hash }
+ * Protegido — Certificación voluntaria de archivo(s) en blockchain
+ * Body: { dataset_id, archivos: [{ file_hash, filename }] }
+ * Compatibilidad: también acepta { dataset_id, file_hash } (formato anterior)
  */
 export const certificar = async (req, res) => {
   try {
-    const { dataset_id, file_hash } = req.body;
+    const { dataset_id, file_hash, archivos: archivosRaw } = req.body;
 
     // Validar dataset_id
     if (!dataset_id) {
@@ -209,37 +214,70 @@ export const certificar = async (req, res) => {
       return res.status(400).json({ success: false, error: 'Solo se pueden certificar archivos de datasets activos' });
     }
 
-    // Validar file_hash
-    if (!file_hash || !/^(0x)?[0-9a-fA-F]{64}$/.test(file_hash)) {
-      return res.status(400).json({
-        success: false,
-        error: 'file_hash inválido. Formato esperado: 0x seguido de 64 caracteres hexadecimales'
+    // Compatibilidad hacia atrás: si viene file_hash en vez de archivos, convertir
+    let archivos;
+    if (archivosRaw && Array.isArray(archivosRaw)) {
+      archivos = archivosRaw;
+    } else if (file_hash) {
+      archivos = [{ file_hash, filename: null }];
+    } else {
+      return res.status(400).json({ success: false, error: 'Debe enviar archivos (array) o file_hash' });
+    }
+
+    if (archivos.length === 0) {
+      return res.status(400).json({ success: false, error: 'El array de archivos no puede estar vacío' });
+    }
+
+    // Validar cada archivo
+    for (let i = 0; i < archivos.length; i++) {
+      const archivo = archivos[i];
+      if (!archivo.file_hash || !/^(0x)?[0-9a-fA-F]{64}$/.test(archivo.file_hash)) {
+        return res.status(400).json({
+          success: false,
+          error: `file_hash inválido en archivo ${i + 1}. Formato esperado: 0x seguido de 64 caracteres hexadecimales`
+        });
+      }
+      if (archivo.filename !== undefined && archivo.filename !== null && typeof archivo.filename !== 'string') {
+        return res.status(400).json({
+          success: false,
+          error: `filename inválido en archivo ${i + 1}. Debe ser un string`
+        });
+      }
+    }
+
+    // Sellar cada archivo individualmente
+    const resultados = [];
+    for (const archivo of archivos) {
+      const hashNormalizado = archivo.file_hash.startsWith('0x') ? archivo.file_hash : `0x${archivo.file_hash}`;
+
+      const resultado = await sellarHash(hashNormalizado, {
+        tipo: 'certificacion_archivo',
+        referencia_id: null,
+        dataset_id,
+        filename: archivo.filename || null,
+        metadata: { file_hash: hashNormalizado, filename: archivo.filename || null, dataset_id, timestamp: new Date().toISOString() }
       });
+
+      resultados.push({
+        file_hash: hashNormalizado,
+        filename: archivo.filename || null,
+        registroId: resultado.registroId || null,
+        estado: resultado.estado || 'error',
+        success: resultado.success
+      });
+
+      if (resultado.success) {
+        console.log(`✅ Certificación voluntaria: dataset #${dataset_id}, archivo "${archivo.filename || 'sin nombre'}", registro #${resultado.registroId}`);
+      }
     }
 
-    // Normalizar con prefijo 0x
-    const hashNormalizado = file_hash.startsWith('0x') ? file_hash : `0x${file_hash}`;
-
-    // Sellar en blockchain (no-bloqueante)
-    const resultado = await sellarHash(hashNormalizado, {
-      tipo: 'certificacion_archivo',
-      referencia_id: null,
-      dataset_id,
-      metadata: { file_hash: hashNormalizado, dataset_id, timestamp: new Date().toISOString() }
-    });
-
-    if (!resultado.success) {
-      return res.status(500).json({ success: false, error: resultado.error || 'Error al registrar en blockchain' });
-    }
-
-    console.log(`✅ Certificación voluntaria: dataset #${dataset_id}, registro #${resultado.registroId}`);
+    const todosExitosos = resultados.every(r => r.success);
 
     res.json({
-      success: true,
-      data: {
-        registroId: resultado.registroId,
-        estado: resultado.estado
-      }
+      success: todosExitosos,
+      data: resultados.length === 1
+        ? { registroId: resultados[0].registroId, estado: resultados[0].estado }
+        : { resultados }
     });
   } catch (error) {
     console.error('Error en certificar archivo:', error);

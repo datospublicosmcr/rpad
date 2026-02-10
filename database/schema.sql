@@ -58,6 +58,7 @@ CREATE TABLE `blockchain_registros` (
   `dataset_id` int(11) DEFAULT NULL,
   `hash_sellado` varchar(66) NOT NULL,
   `file_hash` varchar(66) DEFAULT NULL,
+  `filename` varchar(255) DEFAULT NULL,
   `tx_hash` varchar(66) DEFAULT NULL,
   `block_number` bigint(20) DEFAULT NULL,
   `network` varchar(20) DEFAULT 'produccion',

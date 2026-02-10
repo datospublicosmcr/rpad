@@ -253,7 +253,7 @@ export const createDataset = async (req, res) => {
       });
     }
 
-    // Normalizar file_hash opcional (si el usuario subió archivo al crear)
+    // Normalizar file_hash opcional (compatibilidad) y archivos multi-archivo
     let fileHash = null;
     if (data.file_hash) {
       fileHash = data.file_hash.startsWith('0x') ? data.file_hash : '0x' + data.file_hash;
@@ -276,7 +276,8 @@ export const createDataset = async (req, res) => {
       observaciones: data.observaciones || null,
       tipo_gestion: data.tipo_gestion,
       formatos: formatoIds,
-      ...(fileHash && { file_hash: fileHash })
+      ...(fileHash && { file_hash: fileHash }),
+      ...(data.archivos && Array.isArray(data.archivos) && data.archivos.length > 0 && { archivos: data.archivos })
     };
 
     // Crear cambio pendiente (dataset_id es null porque aún no existe)
@@ -399,8 +400,14 @@ export const updateDataset = async (req, res) => {
       formatos: formatoIds !== null ? formatoIds : formatosActuales.map(f => f.formato_id)
     };
 
-    // Verificar si hay cambios reales
-    if (!hayCambiosReales(datosAnteriores, datosNuevos)) {
+    // Incluir archivos para certificar si se enviaron
+    if (data.archivos && Array.isArray(data.archivos) && data.archivos.length > 0) {
+      datosNuevos.archivos = data.archivos;
+    }
+
+    // Verificar si hay cambios reales (los archivos adjuntos cuentan como cambio)
+    const tieneArchivos = datosNuevos.archivos && datosNuevos.archivos.length > 0;
+    if (!hayCambiosReales(datosAnteriores, datosNuevos) && !tieneArchivos) {
       return res.status(400).json({
         success: false,
         error: 'No se detectaron cambios. El dataset no fue modificado.'
@@ -567,7 +574,7 @@ export const getEstadisticas = async (req, res) => {
 export const registrarActualizacion = async (req, res) => {
   try {
     const { id } = req.params;
-    const { fecha_actualizacion, notas, proxima_actualizacion, file_hash } = req.body;
+    const { fecha_actualizacion, notas, proxima_actualizacion, file_hash, archivos } = req.body;
     const usuarioId = req.user?.userId;
 
     // Validar file_hash obligatorio
@@ -631,12 +638,13 @@ export const registrarActualizacion = async (req, res) => {
       proxima_actualizacion: dataset.proxima_actualizacion
     };
 
-    // Datos nuevos (file_hash viaja dentro para que aprobarCambio() lo use)
+    // Datos nuevos (file_hash y archivos viajan dentro para que aprobarCambio() lo use)
     const datosNuevos = {
       ultima_actualizacion: fechaActualizacion,
       proxima_actualizacion: proximaActualizacion,
       notas: notas || null,
-      file_hash: hashNormalizado
+      file_hash: hashNormalizado,
+      ...(archivos && Array.isArray(archivos) && archivos.length > 0 && { archivos })
     };
 
     // Crear cambio pendiente con tipo 'actualizar' (distinto de 'editar' metadatos)

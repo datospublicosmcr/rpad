@@ -530,8 +530,20 @@ export const aprobarCambio = async (req, res) => {
         metadata: datosParaSellar
       });
 
-      // Hash de archivo (si hay file_hash en datos_nuevos)
-      if (datosNuevos.file_hash) {
+      // Hash de archivos (si hay array de archivos en datos_nuevos, sellar cada uno)
+      if (datosNuevos.archivos && Array.isArray(datosNuevos.archivos)) {
+        for (const archivo of datosNuevos.archivos) {
+          const archivoHash = archivo.file_hash.startsWith('0x') ? archivo.file_hash : `0x${archivo.file_hash}`;
+          await sellarHash(archivoHash, {
+            tipo: 'certificacion_archivo',
+            referencia_id: Number(id),
+            dataset_id: datasetId,
+            filename: archivo.filename || null,
+            metadata: { file_hash: archivoHash, filename: archivo.filename || null, dataset_id: datasetId, timestamp: datosParaSellar.timestamp }
+          });
+        }
+      } else if (datosNuevos.file_hash) {
+        // Compatibilidad: formato anterior con un solo file_hash
         await sellarHash(datosNuevos.file_hash, {
           tipo: 'certificacion_archivo',
           referencia_id: Number(id),

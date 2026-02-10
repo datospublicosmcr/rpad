@@ -1119,6 +1119,14 @@
                         </div>`;
         }
 
+        if (data.filename && data.tipo === 'certificacion_archivo') {
+            html += `
+                        <div class="resultado-field">
+                            <span class="resultado-label">Archivo certificado</span>
+                            <span class="resultado-value">${escapeHtml(data.filename)}</span>
+                        </div>`;
+        }
+
         html += `
                         <div class="resultado-field">
                             <span class="resultado-label">Fecha de registro</span>

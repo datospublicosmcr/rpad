@@ -257,7 +257,25 @@ function renderBlockchainCard(data) {
       </div>`;
   }
 
-  if (ultimoArchivo && ultimoArchivo.file_hash) {
+  // Mostrar todos los archivos certificados
+  const archivosCertificados = data.archivos_certificados || [];
+  if (archivosCertificados.length > 0) {
+    for (const archivo of archivosCertificados) {
+      const nombreArchivo = archivo.filename ? escapeHtml(archivo.filename) : 'Archivo sin nombre';
+      const fechaArchivo = archivo.confirmed_at
+        ? new Date(archivo.confirmed_at).toLocaleDateString('es-AR')
+        : '';
+      html += `
+      <div class="bc-hash-row">
+        <span class="bc-hash-label">Archivo: ${nombreArchivo}${fechaArchivo ? ' (' + fechaArchivo + ')' : ''}</span>
+        <span class="bc-hash-value" title="${archivo.file_hash}">${archivo.file_hash}</span>
+        <button class="bc-copy-btn" title="Copiar hash" onclick="copiarHash(this, '${archivo.file_hash}')">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+        </button>
+      </div>`;
+    }
+  } else if (ultimoArchivo && ultimoArchivo.file_hash) {
+    // Fallback para compatibilidad con datos sin archivos_certificados
     html += `
       <div class="bc-hash-row">
         <span class="bc-hash-label">Hash archivo</span>

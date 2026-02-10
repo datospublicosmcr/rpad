@@ -176,7 +176,7 @@ export function calcularHash(datos) {
  * @returns {{ success, registroId, estado }}
  */
 export async function sellarHash(hashHex, datos) {
-  const { tipo, referencia_id = null, dataset_id = null, metadata = null } = datos;
+  const { tipo, referencia_id = null, dataset_id = null, metadata = null, filename = null } = datos;
 
   // Registrar en BD como pendiente
   let registroId;
@@ -184,14 +184,15 @@ export async function sellarHash(hashHex, datos) {
     const fileHash = tipo === 'certificacion_archivo' ? hashHex : null;
     const [result] = await pool.execute(
       `INSERT INTO blockchain_registros
-       (tipo, referencia_id, dataset_id, hash_sellado, file_hash, network, estado, metadata)
-       VALUES (?, ?, ?, ?, ?, ?, 'pendiente', ?)`,
+       (tipo, referencia_id, dataset_id, hash_sellado, file_hash, filename, network, estado, metadata)
+       VALUES (?, ?, ?, ?, ?, ?, ?, 'pendiente', ?)`,
       [
         tipo,
         referencia_id,
         dataset_id,
         hashHex,
         fileHash,
+        tipo === 'certificacion_archivo' ? filename : null,
         process.env.BFA_NETWORK || 'produccion',
         metadata ? JSON.stringify(metadata) : null
       ]
@@ -278,7 +279,7 @@ export async function verificarHash(hashHex) {
  */
 export async function obtenerSello(hashHex) {
   try {
-    // Buscar en BD (por hash_sellado o file_hash)
+    // Buscar en BD (por hash_sellado, file_hash o tx_hash)
     const [rows] = await pool.execute(
       `SELECT br.*, d.titulo AS dataset_titulo, a.nombre AS area_nombre
        FROM blockchain_registros br
@@ -324,6 +325,7 @@ export async function obtenerSello(hashHex) {
       area_nombre: reg.area_nombre,
       hash_sellado: reg.hash_sellado,
       file_hash: reg.file_hash,
+      filename: reg.filename || null,
       tx_hash: reg.tx_hash,
       block_number: reg.block_number,
       network: reg.network,

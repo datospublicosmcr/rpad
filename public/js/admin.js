@@ -87,27 +87,20 @@ async function calcularHashArchivo(file) {
 }
 
 /**
- * Inicializar drop zone reutilizable.
+ * Inicializar drop zone reutilizable con soporte multi-archivo.
  * @param {Object} config - IDs de los elementos DOM
  * @param {string} config.dropZoneId - ID de la zona de drop
  * @param {string} config.fileInputId - ID del input file
- * @param {string} config.fileInfoId - ID del contenedor de info (se muestra al procesar)
- * @param {string} config.fileNameId - ID del elemento que muestra el nombre
- * @param {string} config.fileSizeId - ID del elemento que muestra el tamaño
- * @param {string} config.fileHashId - ID del elemento que muestra el hash
- * @param {string} config.fileChangeId - ID del botón "Cambiar archivo"
- * @returns {{ getHash: () => string|null, reset: () => void }}
+ * @param {string} config.fileListId - ID del contenedor de la lista de archivos
+ * @returns {{ getArchivos: () => Array, getHash: () => string|null, reset: () => void }}
  */
 function inicializarDropZone(config) {
   const dropZone = document.getElementById(config.dropZoneId);
   const fileInput = document.getElementById(config.fileInputId);
-  const fileInfo = document.getElementById(config.fileInfoId);
-  const fileName = document.getElementById(config.fileNameId);
-  const fileSize = document.getElementById(config.fileSizeId);
-  const fileHash = document.getElementById(config.fileHashId);
-  const fileChange = document.getElementById(config.fileChangeId);
+  const fileList = document.getElementById(config.fileListId);
 
-  let hashCalculado = null;
+  // Lista de archivos procesados: [{ filename, size, hash }]
+  let archivos = [];
 
   function formatSize(bytes) {
     if (bytes === 0) return '0 Bytes';
@@ -117,29 +110,64 @@ function inicializarDropZone(config) {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
   }
 
-  async function procesarArchivo(file) {
-    fileName.textContent = file.name;
-    fileSize.textContent = formatSize(file.size);
-    fileHash.textContent = 'Calculando...';
-    dropZone.classList.add('hidden');
-    fileInfo.classList.remove('hidden');
-    hashCalculado = null;
+  function renderLista() {
+    if (archivos.length === 0) {
+      fileList.classList.add('hidden');
+      dropZone.classList.remove('hidden');
+      return;
+    }
 
-    try {
-      hashCalculado = await calcularHashArchivo(file);
-      fileHash.textContent = hashCalculado;
-    } catch (error) {
-      console.error('Error calculando hash:', error);
-      fileHash.textContent = 'Error al calcular hash';
-      hashCalculado = null;
+    dropZone.classList.remove('hidden');
+    fileList.classList.remove('hidden');
+
+    fileList.innerHTML = archivos.map((a, idx) => `
+      <div class="file-list-item">
+        <div class="file-list-item-info">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/></svg>
+          <div class="file-list-item-text">
+            <span class="file-list-item-name">${Utils.escapeHtml(a.filename)}</span>
+            <span class="file-list-item-size">${formatSize(a.size)}</span>
+          </div>
+        </div>
+        <div class="file-list-item-hash">
+          <code>${a.hash || 'Calculando...'}</code>
+        </div>
+        <button type="button" class="file-list-item-remove" onclick="this.closest('.file-list-item').dispatchEvent(new CustomEvent('remove-file', { bubbles: true, detail: ${idx} }))" title="Quitar archivo">&times;</button>
+      </div>
+    `).join('');
+  }
+
+  // Listener para quitar archivos
+  fileList.addEventListener('remove-file', (e) => {
+    archivos.splice(e.detail, 1);
+    renderLista();
+  });
+
+  async function procesarArchivos(files) {
+    for (const file of files) {
+      // Evitar duplicados por nombre
+      if (archivos.some(a => a.filename === file.name && a.size === file.size)) continue;
+
+      const entrada = { filename: file.name, size: file.size, hash: null };
+      archivos.push(entrada);
+      renderLista();
+
+      try {
+        entrada.hash = await calcularHashArchivo(file);
+      } catch (error) {
+        console.error('Error calculando hash:', error);
+        entrada.hash = 'Error';
+      }
+      renderLista();
     }
   }
 
   function reset() {
-    hashCalculado = null;
+    archivos = [];
     fileInput.value = '';
+    fileList.classList.add('hidden');
+    fileList.innerHTML = '';
     dropZone.classList.remove('hidden');
-    fileInfo.classList.add('hidden');
   }
 
   // Eventos
@@ -157,17 +185,21 @@ function inicializarDropZone(config) {
   dropZone.addEventListener('drop', (e) => {
     e.preventDefault();
     dropZone.classList.remove('dragover');
-    if (e.dataTransfer.files.length > 0) procesarArchivo(e.dataTransfer.files[0]);
+    if (e.dataTransfer.files.length > 0) procesarArchivos(e.dataTransfer.files);
   });
 
   fileInput.addEventListener('change', () => {
-    if (fileInput.files.length > 0) procesarArchivo(fileInput.files[0]);
+    if (fileInput.files.length > 0) procesarArchivos(fileInput.files);
   });
 
-  fileChange.addEventListener('click', reset);
-
   return {
-    getHash: () => hashCalculado,
+    // Devuelve array de { file_hash, filename } listos para el backend
+    getArchivos: () => archivos.filter(a => a.hash && a.hash !== 'Error').map(a => ({ file_hash: a.hash, filename: a.filename })),
+    // Compatibilidad: devuelve el hash del primer archivo (para flujos que usan un solo archivo)
+    getHash: () => {
+      const validos = archivos.filter(a => a.hash && a.hash !== 'Error');
+      return validos.length > 0 ? validos[0].hash : null;
+    },
     reset
   };
 }
@@ -589,25 +621,17 @@ function openModal(dataset = null, andinoData = null) {
   // Renderizar chips de formatos
   renderizarChipsFormatos();
 
-  // Drop zone de archivo: solo visible al crear, oculta al editar
+  // Drop zone de archivos: visible al crear y editar
   const dropZoneCrearGroup = document.getElementById('dropZoneCrearGroup');
-  if (!dataset) {
-    dropZoneCrearGroup.classList.remove('hidden');
-    if (!dropZoneCrear) {
-      dropZoneCrear = inicializarDropZone({
-        dropZoneId: 'dropZoneCrear',
-        fileInputId: 'fileInputCrear',
-        fileInfoId: 'fileInfoCrear',
-        fileNameId: 'fileNameCrear',
-        fileSizeId: 'fileSizeCrear',
-        fileHashId: 'fileHashCrear',
-        fileChangeId: 'fileChangeCrear'
-      });
-    } else {
-      dropZoneCrear.reset();
-    }
+  dropZoneCrearGroup.classList.remove('hidden');
+  if (!dropZoneCrear) {
+    dropZoneCrear = inicializarDropZone({
+      dropZoneId: 'dropZoneCrear',
+      fileInputId: 'fileInputCrear',
+      fileListId: 'fileListCrear'
+    });
   } else {
-    dropZoneCrearGroup.classList.add('hidden');
+    dropZoneCrear.reset();
   }
 
   modal.classList.add('active');
@@ -796,9 +820,9 @@ document.getElementById('dataset-form').addEventListener('submit', async (e) => 
     tipo_gestion: document.getElementById('tipo_gestion').value
   };
 
-  // Incluir file_hash si estamos creando y hay archivo certificado
-  if (!id && dropZoneCrear && dropZoneCrear.getHash()) {
-    data.file_hash = dropZoneCrear.getHash();
+  // Incluir archivos para certificar (crear o editar)
+  if (dropZoneCrear && dropZoneCrear.getArchivos().length > 0) {
+    data.archivos = dropZoneCrear.getArchivos();
   }
 
   try {
@@ -983,11 +1007,7 @@ async function abrirRegistrarActualizacion(id) {
       dropZoneActualizar = inicializarDropZone({
         dropZoneId: 'dropZoneActualizar',
         fileInputId: 'fileInputActualizar',
-        fileInfoId: 'fileInfoActualizar',
-        fileNameId: 'fileNameActualizar',
-        fileSizeId: 'fileSizeActualizar',
-        fileHashId: 'fileHashActualizar',
-        fileChangeId: 'fileChangeActualizar'
+        fileListId: 'fileListActualizar'
       });
     } else {
       dropZoneActualizar.reset();
@@ -1031,9 +1051,9 @@ async function confirmarRegistrarActualizacion() {
   if (!registrarActualizacionId) return;
 
   // Validar archivo obligatorio
-  const fileHash = dropZoneActualizar ? dropZoneActualizar.getHash() : null;
-  if (!fileHash) {
-    Utils.showError('Debe seleccionar el archivo del dataset para certificar la actualización');
+  const archivosActualizar = dropZoneActualizar ? dropZoneActualizar.getArchivos() : [];
+  if (archivosActualizar.length === 0) {
+    Utils.showError('Debe seleccionar al menos un archivo del dataset para certificar la actualización');
     return;
   }
 
@@ -1048,7 +1068,8 @@ async function confirmarRegistrarActualizacion() {
     await API.registrarActualizacion(registrarActualizacionId, {
       fecha_actualizacion: fechaActualizacion,
       proxima_actualizacion: proximaActualizacion,
-      file_hash: fileHash
+      file_hash: archivosActualizar[0].file_hash,
+      archivos: archivosActualizar
     });
 
     Utils.showSuccess('Actualización registrada correctamente');
@@ -1087,11 +1108,7 @@ async function abrirCertificarArchivo(id) {
       dropZoneCertificar = inicializarDropZone({
         dropZoneId: 'dropZoneCertificar',
         fileInputId: 'fileInputCertificar',
-        fileInfoId: 'fileInfoCertificar',
-        fileNameId: 'fileNameCertificar',
-        fileSizeId: 'fileSizeCertificar',
-        fileHashId: 'fileHashCertificar',
-        fileChangeId: 'fileChangeCertificar'
+        fileListId: 'fileListCertificar'
       });
     } else {
       dropZoneCertificar.reset();
@@ -1114,19 +1131,28 @@ function closeCertificarArchivoModal() {
 async function confirmarCertificarArchivo() {
   if (!certificarArchivoId) return;
 
-  const fileHash = dropZoneCertificar ? dropZoneCertificar.getHash() : null;
-  if (!fileHash) {
-    Utils.showError('Debe seleccionar un archivo para certificar');
+  const archivosCertificar = dropZoneCertificar ? dropZoneCertificar.getArchivos() : [];
+  if (archivosCertificar.length === 0) {
+    Utils.showError('Debe seleccionar al menos un archivo para certificar');
     return;
   }
 
   const btnConfirmar = document.getElementById('btn-confirmar-certificar');
   btnConfirmar.disabled = true;
-  btnConfirmar.innerHTML = '<span>⏳</span> Certificando...';
+
+  const total = archivosCertificar.length;
+  if (total > 1) {
+    btnConfirmar.innerHTML = `<span>⏳</span> Certificando archivo 1 de ${total}...`;
+  } else {
+    btnConfirmar.innerHTML = '<span>⏳</span> Certificando...';
+  }
 
   try {
-    await API.certificarArchivo(certificarArchivoId, { file_hash: fileHash });
-    Utils.showSuccess('Archivo enviado a certificar en blockchain');
+    await API.certificarArchivo(certificarArchivoId, { archivos: archivosCertificar });
+    const msg = total > 1
+      ? `${total} archivos enviados a certificar en blockchain`
+      : 'Archivo enviado a certificar en blockchain';
+    Utils.showSuccess(msg);
     closeCertificarArchivoModal();
   } catch (error) {
     Utils.showError(error.message);
