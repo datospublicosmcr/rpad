@@ -112,7 +112,10 @@ function escapeHtml(text) {
 
 function formatDate(dateString) {
   if (!dateString) return '-';
-  const date = new Date(dateString);
+  // Agregar T00:00:00 a fechas solo-fecha para evitar desfase UTC
+  const str = String(dateString);
+  const dateValue = /^\d{4}-\d{2}-\d{2}$/.test(str) ? str + 'T00:00:00' : str;
+  const date = new Date(dateValue);
   return date.toLocaleDateString('es-AR', {
     day: '2-digit',
     month: '2-digit',
@@ -288,21 +291,73 @@ function renderBlockchainCard(data) {
 
   html += `</div>`;
 
-  // QR de verificación (entre body y footer)
-  const hashParaVerificar = (ultimoCambio && ultimoCambio.hash_sellado) || (ultimoArchivo && ultimoArchivo.hash_sellado);
-  if (hashParaVerificar && typeof qrcode !== 'undefined') {
-    const verificarUrl = `${window.location.origin}/verificar.html?hash=${hashParaVerificar}`;
-    const qr = qrcode(0, 'M');
-    qr.addData(verificarUrl);
-    qr.make();
-    html += `
-      <div class="bc-qr-section">
-        ${qr.createSvgTag({ cellSize: 3, margin: 0 })}
-        <span class="bc-qr-hint">Escaneá para verificar</span>
-      </div>`;
+  // QR de verificación — generar uno por cada hash disponible
+  if (typeof qrcode !== 'undefined') {
+    const qrItems = [];
+
+    // QR para hash de operación
+    if (ultimoCambio && ultimoCambio.hash_sellado) {
+      const fechaCambio = ultimoCambio.confirmed_at
+        ? new Date(ultimoCambio.confirmed_at).toLocaleDateString('es-AR')
+        : '';
+      qrItems.push({
+        hash: ultimoCambio.hash_sellado,
+        label: 'Hash operación',
+        fecha: fechaCambio
+      });
+    }
+
+    // QR para cada archivo certificado
+    const archivosCert = data.archivos_certificados || [];
+    if (archivosCert.length > 0) {
+      for (const archivo of archivosCert) {
+        const nombreArch = archivo.filename || 'Archivo';
+        const fechaArch = archivo.confirmed_at
+          ? new Date(archivo.confirmed_at).toLocaleDateString('es-AR')
+          : '';
+        qrItems.push({
+          hash: archivo.file_hash,
+          label: `Archivo: ${nombreArch}`,
+          fecha: fechaArch
+        });
+      }
+    } else if (ultimoArchivo && ultimoArchivo.file_hash) {
+      // Fallback: archivo único sin array
+      const fechaArch = ultimoArchivo.confirmed_at
+        ? new Date(ultimoArchivo.confirmed_at).toLocaleDateString('es-AR')
+        : '';
+      qrItems.push({
+        hash: ultimoArchivo.file_hash,
+        label: ultimoArchivo.filename ? `Archivo: ${ultimoArchivo.filename}` : 'Hash archivo',
+        fecha: fechaArch
+      });
+    }
+
+    if (qrItems.length > 0) {
+      let qrHtml = qrItems.map(item => {
+        const qr = qrcode(0, 'M');
+        qr.addData(`${window.location.origin}/verificar.html?hash=${item.hash}`);
+        qr.make();
+        return `
+          <div class="bc-qr-item">
+            ${qr.createSvgTag({ cellSize: 3, margin: 0 })}
+            <span class="bc-qr-label">${escapeHtml(item.label)}</span>
+            ${item.fecha ? `<span class="bc-qr-fecha">${item.fecha}</span>` : ''}
+          </div>
+        `;
+      }).join('');
+
+      html += `
+        <div class="bc-qr-section">
+          <div class="bc-qr-grid">
+            ${qrHtml}
+          </div>
+        </div>`;
+    }
   }
 
   // Footer: texto explicativo + links verificar y BFA
+  const hashParaVerificar = (ultimoCambio && ultimoCambio.hash_sellado) || (ultimoArchivo && ultimoArchivo.hash_sellado);
   const hashBFA = hashParaVerificar ? hashParaVerificar.replace('0x', '') : null;
   html += `
     <div class="bc-footer">

@@ -252,10 +252,11 @@ function renderCambioCard(cambio, mostrarAcciones) {
   const tipoTexto = {
     'crear': 'Creación',
     'editar': 'Edición',
-    'eliminar': 'Eliminación'
+    'eliminar': 'Eliminación',
+    'actualizar': 'Actualización'
   };
 
-  const titulo = cambio.tipo_cambio === 'crear' 
+  const titulo = cambio.tipo_cambio === 'crear'
     ? cambio.datos_nuevos?.titulo || 'Nuevo dataset'
     : cambio.dataset_titulo || 'Dataset';
 
@@ -359,7 +360,8 @@ async function verDetalle(id) {
     const tipoTexto = {
       'crear': 'Creación de Dataset',
       'editar': 'Edición de Dataset',
-      'eliminar': 'Eliminación de Dataset'
+      'eliminar': 'Eliminación de Dataset',
+      'actualizar': 'Actualización de Dataset'
     };
 
     titulo.textContent = tipoTexto[cambio.tipo_cambio];
@@ -475,50 +477,185 @@ function renderComparador(cambio) {
     `;
   }
 
-  // CASO: EDITAR - mostrar SOLO los campos que cambiaron
-  if (cambio.tipo_cambio === 'editar' && cambio.campos_modificados) {
-    if (cambio.campos_modificados.length === 0) {
-      return `
-        <div class="alert alert-info">
-          No se detectaron cambios en los campos principales.
+  // CASO: ACTUALIZAR - mostrar campos de actualización y archivos certificados
+  if (cambio.tipo_cambio === 'actualizar') {
+    const datosNuevos = cambio.datos_nuevos || {};
+    const datosAnteriores = cambio.datos_anteriores || {};
+    let htmlCambios = '';
+
+    // Campos de fecha que pueden haber cambiado
+    const camposActualizar = [
+      { key: 'ultima_actualizacion', label: 'Última actualización' },
+      { key: 'proxima_actualizacion', label: 'Próxima actualización' }
+    ];
+
+    camposActualizar.forEach(campo => {
+      const antes = datosAnteriores[campo.key];
+      const despues = datosNuevos[campo.key];
+      if (antes || despues) {
+        htmlCambios += `
+          <div style="margin-bottom: 1rem; padding: 0.75rem; background: var(--gray-50); border-radius: var(--radius);">
+            <div style="font-weight: 600; font-size: 0.8125rem; color: var(--gray-600); margin-bottom: 0.5rem;">${campo.label}</div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+              <div>
+                <div style="font-size: 0.6875rem; color: var(--danger); text-transform: uppercase; margin-bottom: 0.25rem;">Antes</div>
+                <div style="font-size: 0.875rem; color: var(--gray-700); background: #fee2e2; padding: 0.375rem 0.5rem; border-radius: 4px;">${Utils.escapeHtml(formatearFechaComparador(antes || '-'))}</div>
+              </div>
+              <div>
+                <div style="font-size: 0.6875rem; color: var(--success); text-transform: uppercase; margin-bottom: 0.25rem;">Después</div>
+                <div style="font-size: 0.875rem; color: var(--gray-700); background: #dcfce7; padding: 0.375rem 0.5rem; border-radius: 4px;">${Utils.escapeHtml(formatearFechaComparador(despues || '-'))}</div>
+              </div>
+            </div>
+          </div>
+        `;
+      }
+    });
+
+    // Notas de actualización
+    if (datosNuevos.notas) {
+      htmlCambios += `
+        <div style="margin-bottom: 1rem; padding: 0.75rem; background: var(--gray-50); border-radius: var(--radius);">
+          <div style="font-weight: 600; font-size: 0.8125rem; color: var(--gray-600); margin-bottom: 0.5rem;">Notas</div>
+          <div style="font-size: 0.875rem; color: var(--gray-700);">${Utils.escapeHtml(datosNuevos.notas)}</div>
         </div>
       `;
     }
 
-    let htmlCambios = '';
-    cambio.campos_modificados.forEach(mod => {
-      htmlCambios += `
-        <div style="margin-bottom: 1rem; padding: 0.75rem; background: var(--gray-50); border-radius: var(--radius);">
-          <div style="font-weight: 600; font-size: 0.8125rem; color: var(--gray-600); margin-bottom: 0.5rem;">${mod.campo}</div>
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-            <div>
-                <div style="font-size: 0.6875rem; color: var(--danger); text-transform: uppercase; margin-bottom: 0.25rem;">Antes</div>
-                <div style="font-size: 0.875rem; color: var(--gray-700); background: #fee2e2; padding: 0.375rem 0.5rem; border-radius: 4px;">${Utils.escapeHtml(formatearFechaComparador(mod.antes))}</div>
-            </div>
-            <div>
-                <div style="font-size: 0.6875rem; color: var(--success); text-transform: uppercase; margin-bottom: 0.25rem;">Despues</div>
-            <div style="font-size: 0.875rem; color: var(--gray-700); background: #dcfce7; padding: 0.375rem 0.5rem; border-radius: 4px;">${Utils.escapeHtml(formatearFechaComparador(mod.despues))}</div>
-            </div>
+    // Archivos certificados (array)
+    const archivos = datosNuevos.archivos || [];
+    if (archivos.length > 0) {
+      let htmlArchivos = archivos.map(a => `
+        <div style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; background: white; border: 1px solid var(--gray-200); border-radius: 4px; margin-bottom: 0.375rem;">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--info)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/></svg>
+          <div style="flex: 1; min-width: 0;">
+            <div style="font-size: 0.8125rem; font-weight: 500; color: var(--gray-700);">${Utils.escapeHtml(a.nombre || a.filename || 'Archivo')}</div>
+            <div style="font-size: 0.6875rem; color: var(--gray-400); font-family: monospace; overflow: hidden; text-overflow: ellipsis;">${Utils.escapeHtml(a.hash || a.file_hash || '')}</div>
           </div>
         </div>
+      `).join('');
+
+      htmlCambios += `
+        <div style="margin-bottom: 1rem; padding: 0.75rem; background: var(--gray-50); border-radius: var(--radius);">
+          <div style="font-weight: 600; font-size: 0.8125rem; color: var(--gray-600); margin-bottom: 0.5rem;">Archivos certificados (${archivos.length})</div>
+          ${htmlArchivos}
+        </div>
       `;
+    }
+
+    // Hash individual (sin array archivos)
+    if (!archivos.length && datosNuevos.file_hash) {
+      htmlCambios += `
+        <div style="margin-bottom: 1rem; padding: 0.75rem; background: var(--gray-50); border-radius: var(--radius);">
+          <div style="font-weight: 600; font-size: 0.8125rem; color: var(--gray-600); margin-bottom: 0.5rem;">Hash de archivo</div>
+          <div style="font-size: 0.8125rem; color: var(--gray-700); font-family: monospace; word-break: break-all;">${Utils.escapeHtml(datosNuevos.file_hash)}</div>
+        </div>
+      `;
+    }
+
+    return `
+      ${linkPortalHtml}
+      <div>
+        ${htmlCambios || '<p class="text-muted">Sin cambios detectados</p>'}
+      </div>
+    `;
+  }
+
+  // CASO: EDITAR - mostrar SOLO los campos que cambiaron
+  if (cambio.tipo_cambio === 'editar') {
+    if (cambio.campos_modificados && cambio.campos_modificados.length > 0) {
+      let htmlCambios = '';
+      cambio.campos_modificados.forEach(mod => {
+        htmlCambios += `
+          <div style="margin-bottom: 1rem; padding: 0.75rem; background: var(--gray-50); border-radius: var(--radius);">
+            <div style="font-weight: 600; font-size: 0.8125rem; color: var(--gray-600); margin-bottom: 0.5rem;">${mod.campo}</div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+              <div>
+                  <div style="font-size: 0.6875rem; color: var(--danger); text-transform: uppercase; margin-bottom: 0.25rem;">Antes</div>
+                  <div style="font-size: 0.875rem; color: var(--gray-700); background: #fee2e2; padding: 0.375rem 0.5rem; border-radius: 4px;">${Utils.escapeHtml(formatearFechaComparador(mod.antes))}</div>
+              </div>
+              <div>
+                  <div style="font-size: 0.6875rem; color: var(--success); text-transform: uppercase; margin-bottom: 0.25rem;">Después</div>
+              <div style="font-size: 0.875rem; color: var(--gray-700); background: #dcfce7; padding: 0.375rem 0.5rem; border-radius: 4px;">${Utils.escapeHtml(formatearFechaComparador(mod.despues))}</div>
+              </div>
+            </div>
+          </div>
+        `;
+      });
+
+      return `
+        ${linkPortalHtml}
+        <div>
+          <p style="font-size: 0.875rem; color: var(--gray-600); margin-bottom: 1rem;">
+            Se modificaron <strong>${cambio.campos_modificados.length}</strong> campo${cambio.campos_modificados.length > 1 ? 's' : ''}:
+          </p>
+          ${htmlCambios}
+        </div>
+      `;
+    }
+
+    // Editar sin campos_modificados: mostrar datos_nuevos vs datos_anteriores
+    const datosNuevos = cambio.datos_nuevos || {};
+    const datosAnteriores = cambio.datos_anteriores || {};
+    let htmlCambios = '';
+    camposCrearEliminar.forEach(campo => {
+      const antes = formatearValor(datosAnteriores[campo.key]);
+      const despues = formatearValor(datosNuevos[campo.key]);
+      if (antes !== despues && (antes || despues)) {
+        htmlCambios += `
+          <div style="margin-bottom: 1rem; padding: 0.75rem; background: var(--gray-50); border-radius: var(--radius);">
+            <div style="font-weight: 600; font-size: 0.8125rem; color: var(--gray-600); margin-bottom: 0.5rem;">${campo.label}</div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+              <div>
+                <div style="font-size: 0.6875rem; color: var(--danger); text-transform: uppercase; margin-bottom: 0.25rem;">Antes</div>
+                <div style="font-size: 0.875rem; color: var(--gray-700); background: #fee2e2; padding: 0.375rem 0.5rem; border-radius: 4px;">${Utils.escapeHtml(formatearFechaComparador(antes || '-'))}</div>
+              </div>
+              <div>
+                <div style="font-size: 0.6875rem; color: var(--success); text-transform: uppercase; margin-bottom: 0.25rem;">Después</div>
+                <div style="font-size: 0.875rem; color: var(--gray-700); background: #dcfce7; padding: 0.375rem 0.5rem; border-radius: 4px;">${Utils.escapeHtml(formatearFechaComparador(despues || '-'))}</div>
+              </div>
+            </div>
+          </div>
+        `;
+      }
     });
 
     return `
       ${linkPortalHtml}
       <div>
-        <p style="font-size: 0.875rem; color: var(--gray-600); margin-bottom: 1rem;">
-          Se modificaron <strong>${cambio.campos_modificados.length}</strong> campo${cambio.campos_modificados.length > 1 ? 's' : ''}:
-        </p>
-        ${htmlCambios}
+        ${htmlCambios || '<p class="text-muted">No se detectaron cambios en los campos principales.</p>'}
       </div>
     `;
   }
 
-  // Fallback si no hay campos_modificados (no deberia pasar)
+  // Fallback genérico: mostrar datos disponibles
+  const datosDisponibles = cambio.datos_nuevos || cambio.datos_anteriores;
+  if (datosDisponibles) {
+    let html = '';
+    camposCrearEliminar.forEach(campo => {
+      const valor = formatearValor(datosDisponibles[campo.key]);
+      if (valor && valor !== '-') {
+        html += `
+          <div class="comparador-field">
+            <div class="comparador-field-label">${campo.label}</div>
+            <div class="comparador-field-value">${Utils.escapeHtml(formatearFechaComparador(valor))}</div>
+          </div>
+        `;
+      }
+    });
+    if (html) {
+      return `
+        ${linkPortalHtml}
+        <div class="comparador-col" style="max-width: 100%;">
+          <div class="comparador-title">Datos del cambio</div>
+          ${html}
+        </div>
+      `;
+    }
+  }
+
   return `
     <div class="alert alert-warning">
-      No se pudo determinar los cambios realizados.
+      No hay datos disponibles para mostrar.
     </div>
   `;
 }

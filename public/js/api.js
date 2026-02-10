@@ -345,7 +345,10 @@ const Utils = {
   // Formatear fecha
   formatDate(dateString) {
     if (!dateString) return '-';
-    const date = new Date(dateString);
+    // Agregar T00:00:00 a fechas solo-fecha para evitar desfase UTC
+    const str = String(dateString);
+    const dateValue = /^\d{4}-\d{2}-\d{2}$/.test(str) ? str + 'T00:00:00' : str;
+    const date = new Date(dateValue);
     return date.toLocaleDateString('es-AR', {
       day: '2-digit',
       month: '2-digit',
@@ -361,7 +364,9 @@ const Utils = {
 
     const hoy = new Date();
     hoy.setHours(0, 0, 0, 0);
-    const proxima = new Date(proximaActualizacion);
+    const strProx = String(proximaActualizacion);
+    const proxVal = /^\d{4}-\d{2}-\d{2}$/.test(strProx) ? strProx + 'T00:00:00' : strProx;
+    const proxima = new Date(proxVal);
     proxima.setHours(0, 0, 0, 0);
 
     const diffDias = Math.floor((proxima - hoy) / (1000 * 60 * 60 * 24));
@@ -379,7 +384,9 @@ const Utils = {
     if (!proximaActualizacion) return null;
     const hoy = new Date();
     hoy.setHours(0, 0, 0, 0);
-    const proxima = new Date(proximaActualizacion);
+    const strProx = String(proximaActualizacion);
+    const proxVal = /^\d{4}-\d{2}-\d{2}$/.test(strProx) ? strProx + 'T00:00:00' : strProx;
+    const proxima = new Date(proxVal);
     proxima.setHours(0, 0, 0, 0);
     return Math.floor((proxima - hoy) / (1000 * 60 * 60 * 24));
   },
