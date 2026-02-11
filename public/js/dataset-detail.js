@@ -243,7 +243,7 @@ function renderBlockchainCard(data) {
         </div>
       </div>`;
 
-  // Hashes compactos con boton copiar
+  // Hashes compactos con boton copiar + Ver en BFA
   if (ultimoCambio && ultimoCambio.hash_sellado) {
     html += `
       <div class="bc-hash-row">
@@ -252,6 +252,10 @@ function renderBlockchainCard(data) {
         <button class="bc-copy-btn" title="Copiar hash" onclick="copiarHash(this, '${ultimoCambio.hash_sellado}')">
           <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
         </button>
+        ${ultimoCambio.tx_hash ? `<a href="https://bfa.ar/bfa/tx/${ultimoCambio.tx_hash}" target="_blank" rel="noopener noreferrer" class="bc-bfa-btn" title="Ver transacción en BFA">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>
+          BFA
+        </a>` : ''}
       </div>`;
   }
 
@@ -270,6 +274,10 @@ function renderBlockchainCard(data) {
         <button class="bc-copy-btn" title="Copiar hash" onclick="copiarHash(this, '${archivo.file_hash}')">
           <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
         </button>
+        ${archivo.tx_hash ? `<a href="https://bfa.ar/bfa/tx/${archivo.tx_hash}" target="_blank" rel="noopener noreferrer" class="bc-bfa-btn" title="Ver transacción en BFA">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>
+          BFA
+        </a>` : ''}
       </div>`;
     }
   } else if (ultimoArchivo && ultimoArchivo.file_hash) {
@@ -281,6 +289,10 @@ function renderBlockchainCard(data) {
         <button class="bc-copy-btn" title="Copiar hash" onclick="copiarHash(this, '${ultimoArchivo.file_hash}')">
           <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
         </button>
+        ${ultimoArchivo.tx_hash ? `<a href="https://bfa.ar/bfa/tx/${ultimoArchivo.tx_hash}" target="_blank" rel="noopener noreferrer" class="bc-bfa-btn" title="Ver transacción en BFA">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>
+          BFA
+        </a>` : ''}
       </div>`;
   }
 
@@ -351,18 +363,14 @@ function renderBlockchainCard(data) {
     }
   }
 
-  // Footer: texto explicativo + links verificar y BFA
+  // Footer: texto explicativo + link verificar
   const hashParaVerificar = (ultimoCambio && ultimoCambio.hash_sellado) || (ultimoArchivo && ultimoArchivo.hash_sellado);
-  const hashBFA = hashParaVerificar ? hashParaVerificar.replace('0x', '') : null;
   html += `
     <div class="bc-footer">
       <p class="bc-footer-nota">Blockchain Federal Argentina (BFA) es una red blockchain pública argentina administrada por organismos públicos. Cada operación aprobada en RPAD genera un hash SHA-256 que se sella en BFA, creando un registro inmutable y verificable públicamente. El hash no contiene datos personales ni del contenido — es una huella digital irreversible que certifica que el registro existió en un momento dado.</p>
       ${hashParaVerificar ? `<div class="bc-footer-actions"><a href="verificar.html?hash=${hashParaVerificar}" class="bc-footer-link">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></svg>
         Verificar integridad
-      </a><a href="https://bfa.escribanodigital.ar//verificar#/hash/${hashBFA}" target="_blank" rel="noopener noreferrer" class="bc-footer-link">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>
-        Ver en BFA
       </a></div>` : ''}
     </div>`;
 
