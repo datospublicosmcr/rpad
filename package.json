@@ -1,6 +1,6 @@
 {
   "name": "rpad-server",
-  "version": "1.2.0",
+  "version": "2.0.0-beta",
   "description": "Backend API para el Registro Permanente de Actualización de Datos - Municipalidad de Comodoro Rivadavia",
   "type": "module",
   "main": "app.js",
