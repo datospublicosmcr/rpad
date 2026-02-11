@@ -363,15 +363,56 @@ function renderBlockchainCard(data) {
     }
   }
 
-  // Footer: texto explicativo + link verificar
-  const hashParaVerificar = (ultimoCambio && ultimoCambio.hash_sellado) || (ultimoArchivo && ultimoArchivo.hash_sellado);
+  // Historial expandible (todos los registros)
+  const registros = data.registros || [];
+  let historialHtml = '';
+  if (registros.length > 0) {
+    historialHtml = registros.map(reg => {
+      const regFecha = reg.confirmed_at
+        ? new Date(reg.confirmed_at).toLocaleDateString('es-AR')
+        : new Date(reg.created_at).toLocaleDateString('es-AR');
+      const regTipo = tipoLabels[reg.tipo] || reg.tipo;
+      const regEstado = reg.estado || 'confirmado';
+      const regBadgeClass = regEstado === 'confirmado' ? 'confirmado' : 'pendiente';
+      let regDetalle = '';
+      if (reg.hash_sellado) {
+        regDetalle += `<div class="bc-historial-hash" title="${reg.hash_sellado}">Hash: ${reg.hash_sellado}</div>`;
+      }
+      if (reg.filename) {
+        regDetalle += `<div class="bc-historial-archivo">Archivo: ${escapeHtml(reg.filename)}</div>`;
+      }
+      if (reg.file_hash) {
+        regDetalle += `<div class="bc-historial-hash" title="${reg.file_hash}">Hash archivo: ${reg.file_hash}</div>`;
+      }
+      return `
+        <div class="bc-historial-entry">
+          <div class="bc-historial-entry-header">
+            <span class="bc-historial-tipo">${escapeHtml(regTipo)}</span>
+            <span class="bc-historial-fecha">${regFecha}</span>
+            <span class="bc-historial-badge ${regBadgeClass}">${regEstado}</span>
+          </div>
+          ${regDetalle}
+        </div>`;
+    }).join('');
+  }
+
+  // Sección de historial colapsable
+  html += `
+    <div class="bc-historial" id="bc-historial">
+      <div class="bc-historial-inner">
+        <h4 class="bc-historial-title">Historial de certificaciones (${registros.length})</h4>
+        ${historialHtml || '<p style="font-size:0.78rem;color:var(--gray-500);margin:0;">No hay registros anteriores.</p>'}
+      </div>
+    </div>`;
+
+  // Footer: texto explicativo + botón Ver historial
   html += `
     <div class="bc-footer">
       <p class="bc-footer-nota">Blockchain Federal Argentina (BFA) es una red blockchain pública argentina administrada por organismos públicos. Cada operación aprobada en RPAD genera un hash SHA-256 que se sella en BFA, creando un registro inmutable y verificable públicamente. El hash no contiene datos personales ni del contenido — es una huella digital irreversible que certifica que el registro existió en un momento dado.</p>
-      ${hashParaVerificar ? `<div class="bc-footer-actions"><a href="verificar.html?hash=${hashParaVerificar}" class="bc-footer-link">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></svg>
-        Verificar integridad
-      </a></div>` : ''}
+      ${registros.length > 0 ? `<div class="bc-footer-actions"><button onclick="toggleHistorial(this)" class="bc-footer-link" style="cursor:pointer;background:none;">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        Ver historial
+      </button></div>` : ''}
     </div>`;
 
   container.innerHTML = html;
@@ -412,4 +453,13 @@ function copiarHash(btn, hash) {
   } else {
     copiarFallback(hash);
   }
+}
+
+function toggleHistorial(btn) {
+  const historial = document.getElementById('bc-historial');
+  if (!historial) return;
+  const isOpen = historial.classList.toggle('open');
+  btn.innerHTML = isOpen
+    ? `<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Ocultar historial`
+    : `<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Ver historial`;
 }

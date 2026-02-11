@@ -473,6 +473,94 @@
             height: 13px;
         }
 
+        /* Historial de certificaciones */
+        .bc-historial {
+            border-top: 1px solid var(--border-color);
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+
+        .bc-historial.open {
+            max-height: 2000px;
+        }
+
+        .bc-historial-inner {
+            padding: 16px 20px;
+        }
+
+        .bc-historial-title {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--gray-700);
+            margin: 0 0 12px 0;
+        }
+
+        .bc-historial-entry {
+            padding: 12px;
+            margin-bottom: 10px;
+            background: var(--gray-50);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+        }
+
+        .bc-historial-entry:last-child {
+            margin-bottom: 0;
+        }
+
+        .bc-historial-entry-header {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 6px;
+        }
+
+        .bc-historial-tipo {
+            font-size: 0.78rem;
+            font-weight: 600;
+            color: var(--gray-800);
+        }
+
+        .bc-historial-fecha {
+            font-size: 0.72rem;
+            color: var(--gray-500);
+        }
+
+        .bc-historial-badge {
+            font-size: 0.65rem;
+            font-weight: 600;
+            padding: 2px 8px;
+            border-radius: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+
+        .bc-historial-badge.confirmado {
+            color: var(--success);
+            background: var(--success-light);
+        }
+
+        .bc-historial-badge.pendiente {
+            color: var(--warning);
+            background: rgba(245, 158, 11, 0.1);
+        }
+
+        .bc-historial-hash {
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.68rem;
+            color: var(--gray-500);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .bc-historial-archivo {
+            font-size: 0.72rem;
+            color: var(--gray-600);
+            margin-top: 4px;
+        }
+
         /* Empty state específico */
         .empty-state-icon {
             font-size: 4rem;
