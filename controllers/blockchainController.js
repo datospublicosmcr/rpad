@@ -156,27 +156,18 @@ export const registrosPorDataset = async (req, res) => {
 
     const [rows] = await pool.execute(
       `SELECT br.id, br.tipo, br.hash_sellado, br.file_hash, br.filename, br.tx_hash,
-              br.block_number, br.network, br.estado, br.created_at, br.confirmed_at
+              br.block_number, br.network, br.estado, br.created_at, br.confirmed_at,
+              br.referencia_id
        FROM blockchain_registros br
        WHERE br.dataset_id = ? AND br.estado = 'confirmado'
        ORDER BY br.confirmed_at DESC`,
       [id]
     );
 
-    // Separar último de cada tipo para el card de dataset.html
-    const ultimoCambio = rows.find(r => r.tipo === 'cambio_dataset') || null;
-    const ultimoArchivo = rows.find(r => r.tipo === 'certificacion_archivo') || null;
-
-    // Todos los archivos certificados del dataset
-    const archivosCertificados = rows.filter(r => r.tipo === 'certificacion_archivo');
-
     res.json({
       success: true,
       data: {
         registros: rows,
-        ultimo_cambio: ultimoCambio,
-        ultimo_archivo: ultimoArchivo,
-        archivos_certificados: archivosCertificados,
         total: rows.length
       }
     });

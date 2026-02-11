@@ -204,23 +204,31 @@ function renderBlockchainCard(data) {
   const container = document.getElementById('blockchain-card');
   if (!container) return;
 
-  const ultimoCambio = data.ultimo_cambio;
-  const ultimoArchivo = data.ultimo_archivo;
-
   const tipoLabels = {
     'cambio_dataset': 'Cambio de dataset',
     'certificacion_archivo': 'Certificacion de archivo',
     'sello_fundacional': 'Sello fundacional'
   };
 
-  const principal = ultimoCambio || ultimoArchivo;
+  const registros = data.registros || [];
+  if (registros.length === 0) return;
+
+  // Agrupar registros por referencia_id
+  const grupos = agruparPorReferencia(registros);
+  if (grupos.length === 0) return;
+
+  // El grupo más reciente es el primero (ordenado por referencia_id DESC)
+  const ultimoGrupo = grupos[0];
+  const cambio = ultimoGrupo.cambio;
+  const archivos = ultimoGrupo.archivos;
+  const principal = cambio || archivos[0];
   if (!principal) return;
 
   const fecha = principal.confirmed_at
     ? formatearFechaDB(principal.confirmed_at, true)
     : '-';
 
-  const tipoTexto = ultimoCambio ? (tipoLabels[ultimoCambio.tipo] || ultimoCambio.tipo) : '-';
+  const tipoTexto = cambio ? (tipoLabels[cambio.tipo] || cambio.tipo) : '-';
   const bloque = principal.block_number ? `#${principal.block_number.toLocaleString('es-AR')}` : '-';
 
   // Header con fondo azul oscuro y logo BFA
@@ -257,22 +265,20 @@ function renderBlockchainCard(data) {
         </div>
       </div>`;
 
-  // Hashes compactos con boton copiar
-  if (ultimoCambio && ultimoCambio.hash_sellado) {
+  // Hash de operacion
+  if (cambio && cambio.hash_sellado) {
     html += `
       <div class="bc-hash-row">
         <span class="bc-hash-label">Hash operacion</span>
-        <span class="bc-hash-value" title="${ultimoCambio.hash_sellado}">${ultimoCambio.hash_sellado}</span>
-        <button class="bc-copy-btn" title="Copiar hash" onclick="copiarHash(this, '${ultimoCambio.hash_sellado}')">
+        <span class="bc-hash-value" title="${cambio.hash_sellado}">${cambio.hash_sellado}</span>
+        <button class="bc-copy-btn" title="Copiar hash" onclick="copiarHash(this, '${cambio.hash_sellado}')">
           <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
         </button>
       </div>`;
   }
 
-  // Mostrar solo el último archivo certificado en la card principal
-  const archivosCertificados = data.archivos_certificados || [];
-  if (archivosCertificados.length > 0) {
-    const archivo = archivosCertificados[0]; // El más reciente (ordenado DESC)
+  // Todos los archivos certificados del grupo
+  for (const archivo of archivos) {
     const nombreArchivo = archivo.filename ? escapeHtml(archivo.filename) : 'Archivo sin nombre';
     const fechaArchivo = archivo.confirmed_at
       ? formatearFechaDB(archivo.confirmed_at, true)
@@ -285,58 +291,27 @@ function renderBlockchainCard(data) {
           <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
         </button>
       </div>`;
-  } else if (ultimoArchivo && ultimoArchivo.file_hash) {
-    // Fallback para compatibilidad con datos sin archivos_certificados
-    html += `
-      <div class="bc-hash-row">
-        <span class="bc-hash-label">Hash archivo</span>
-        <span class="bc-hash-value" title="${ultimoArchivo.file_hash}">${ultimoArchivo.file_hash}</span>
-        <button class="bc-copy-btn" title="Copiar hash" onclick="copiarHash(this, '${ultimoArchivo.file_hash}')">
-          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
-        </button>
-      </div>`;
   }
 
   html += `</div>`;
 
-  // QR de verificación — generar uno por cada hash disponible
+  // QR de verificación — uno por cada hash del grupo
   if (typeof qrcode !== 'undefined') {
     const qrItems = [];
 
-    // QR para hash de operación
-    if (ultimoCambio && ultimoCambio.hash_sellado) {
-      const fechaCambio = ultimoCambio.confirmed_at
-        ? formatearFechaDB(ultimoCambio.confirmed_at, true)
-        : '';
+    if (cambio && cambio.hash_sellado) {
       qrItems.push({
-        hash: ultimoCambio.hash_sellado,
+        hash: cambio.hash_sellado,
         label: 'Hash operación',
-        fecha: fechaCambio
+        fecha: cambio.confirmed_at ? formatearFechaDB(cambio.confirmed_at, true) : ''
       });
     }
 
-    // QR solo para el último archivo certificado
-    const archivosCert = data.archivos_certificados || [];
-    if (archivosCert.length > 0) {
-      const archivo = archivosCert[0]; // El más reciente
-      const nombreArch = archivo.filename || 'Archivo';
-      const fechaArch = archivo.confirmed_at
-        ? formatearFechaDB(archivo.confirmed_at, true)
-        : '';
+    for (const archivo of archivos) {
       qrItems.push({
         hash: archivo.file_hash,
-        label: `Archivo: ${nombreArch}`,
-        fecha: fechaArch
-      });
-    } else if (ultimoArchivo && ultimoArchivo.file_hash) {
-      // Fallback: archivo único sin array
-      const fechaArch = ultimoArchivo.confirmed_at
-        ? formatearFechaDB(ultimoArchivo.confirmed_at, true)
-        : '';
-      qrItems.push({
-        hash: ultimoArchivo.file_hash,
-        label: ultimoArchivo.filename ? `Archivo: ${ultimoArchivo.filename}` : 'Hash archivo',
-        fecha: fechaArch
+        label: `Archivo: ${archivo.filename || 'Archivo'}`,
+        fecha: archivo.confirmed_at ? formatearFechaDB(archivo.confirmed_at, true) : ''
       });
     }
 
@@ -363,35 +338,43 @@ function renderBlockchainCard(data) {
     }
   }
 
-  // Historial expandible (todos los registros)
-  const registros = data.registros || [];
+  // Historial expandible — agrupado por referencia_id
   let historialHtml = '';
-  if (registros.length > 0) {
-    historialHtml = registros.map(reg => {
-      const regFecha = reg.confirmed_at
-        ? formatearFechaDB(reg.confirmed_at, true)
-        : formatearFechaDB(reg.created_at, true);
-      const regTipo = tipoLabels[reg.tipo] || reg.tipo;
-      const regEstado = reg.estado || 'confirmado';
-      const regBadgeClass = regEstado === 'confirmado' ? 'confirmado' : 'pendiente';
-      let regDetalle = '';
-      if (reg.hash_sellado) {
-        regDetalle += `<div class="bc-historial-hash" title="${reg.hash_sellado}">Hash: ${reg.hash_sellado}</div>`;
+  if (grupos.length > 0) {
+    historialHtml = grupos.map(grupo => {
+      const gc = grupo.cambio;
+      const ga = grupo.archivos;
+      const gPrincipal = gc || ga[0];
+      if (!gPrincipal) return '';
+
+      const gFecha = gPrincipal.confirmed_at
+        ? formatearFechaDB(gPrincipal.confirmed_at, true)
+        : formatearFechaDB(gPrincipal.created_at, true);
+      const gTipo = gc ? (tipoLabels[gc.tipo] || gc.tipo) : (tipoLabels[gPrincipal.tipo] || gPrincipal.tipo);
+      const gEstado = gPrincipal.estado || 'confirmado';
+      const gBadgeClass = gEstado === 'confirmado' ? 'confirmado' : 'pendiente';
+
+      let detalle = '';
+      if (gc && gc.hash_sellado) {
+        detalle += `<div class="bc-historial-hash" title="${gc.hash_sellado}">Hash: ${gc.hash_sellado}</div>`;
       }
-      if (reg.filename) {
-        regDetalle += `<div class="bc-historial-archivo">Archivo: ${escapeHtml(reg.filename)}</div>`;
+      for (const a of ga) {
+        if (a.filename) {
+          detalle += `<div class="bc-historial-archivo">Archivo: ${escapeHtml(a.filename)}</div>`;
+        }
+        if (a.file_hash) {
+          detalle += `<div class="bc-historial-hash" title="${a.file_hash}">Hash archivo: ${a.file_hash}</div>`;
+        }
       }
-      if (reg.file_hash) {
-        regDetalle += `<div class="bc-historial-hash" title="${reg.file_hash}">Hash archivo: ${reg.file_hash}</div>`;
-      }
+
       return `
         <div class="bc-historial-entry">
           <div class="bc-historial-entry-header">
-            <span class="bc-historial-tipo">${escapeHtml(regTipo)}</span>
-            <span class="bc-historial-fecha">${regFecha}</span>
-            <span class="bc-historial-badge ${regBadgeClass}">${regEstado}</span>
+            <span class="bc-historial-tipo">${escapeHtml(gTipo)}</span>
+            <span class="bc-historial-fecha">${gFecha}</span>
+            <span class="bc-historial-badge ${gBadgeClass}">${gEstado}</span>
           </div>
-          ${regDetalle}
+          ${detalle}
         </div>`;
     }).join('');
   }
@@ -400,7 +383,7 @@ function renderBlockchainCard(data) {
   html += `
     <div class="bc-historial" id="bc-historial">
       <div class="bc-historial-inner">
-        <h4 class="bc-historial-title">Historial de certificaciones (${registros.length})</h4>
+        <h4 class="bc-historial-title">Historial de certificaciones (${grupos.length} operacion${grupos.length !== 1 ? 'es' : ''})</h4>
         ${historialHtml || '<p style="font-size:0.78rem;color:var(--gray-500);margin:0;">No hay registros anteriores.</p>'}
       </div>
     </div>`;
@@ -409,7 +392,7 @@ function renderBlockchainCard(data) {
   html += `
     <div class="bc-footer">
       <p class="bc-footer-nota">Blockchain Federal Argentina (BFA) es una red blockchain pública argentina administrada por organismos públicos. Cada operación aprobada en RPAD genera un hash SHA-256 que se sella en BFA, creando un registro inmutable y verificable públicamente. El hash no contiene datos personales ni del contenido — es una huella digital irreversible que certifica que el registro existió en un momento dado.</p>
-      ${registros.length > 0 ? `<div class="bc-footer-actions"><button onclick="toggleHistorial(this)" class="bc-footer-link" style="cursor:pointer;background:none;">
+      ${grupos.length > 0 ? `<div class="bc-footer-actions"><button onclick="toggleHistorial(this)" class="bc-footer-link" style="cursor:pointer;background:none;">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
         Ver historial
       </button></div>` : ''}
@@ -417,6 +400,35 @@ function renderBlockchainCard(data) {
 
   container.innerHTML = html;
   container.classList.remove('hidden');
+}
+
+// Agrupar registros por referencia_id. Devuelve array de grupos ordenados
+// por referencia_id DESC (más reciente primero). Cada grupo tiene:
+// { referencia_id, cambio (o null), archivos [] }
+// Registros sin referencia_id (ej: sello_fundacional) se agrupan individualmente.
+function agruparPorReferencia(registros) {
+  const mapaGrupos = new Map();
+  let sinRefCounter = 0;
+
+  for (const reg of registros) {
+    const key = reg.referencia_id != null ? reg.referencia_id : `_sin_ref_${sinRefCounter++}`;
+    if (!mapaGrupos.has(key)) {
+      mapaGrupos.set(key, { referencia_id: reg.referencia_id, cambio: null, archivos: [] });
+    }
+    const grupo = mapaGrupos.get(key);
+    if (reg.tipo === 'certificacion_archivo') {
+      grupo.archivos.push(reg);
+    } else {
+      grupo.cambio = reg;
+    }
+  }
+
+  // Ordenar: referencia_id numérico DESC, sin referencia al final
+  return Array.from(mapaGrupos.values()).sort((a, b) => {
+    const aRef = a.referencia_id != null ? a.referencia_id : -1;
+    const bRef = b.referencia_id != null ? b.referencia_id : -1;
+    return bRef - aRef;
+  });
 }
 
 function copiarHash(btn, hash) {
