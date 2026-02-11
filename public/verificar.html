@@ -1057,6 +1057,19 @@
 
     // --- Mostrar resultados ---
 
+    // Formatear fecha de la BD sin pasar por new Date() (evita problemas de timezone).
+    // dateStrings: true en la conexión MySQL devuelve strings como "2026-02-06 13:57:25".
+    function formatearFechaDB(fechaStr, soloFecha = false) {
+        if (!fechaStr) return '-';
+        const match = fechaStr.match(/^(\d{4})-(\d{2})-(\d{2})[\sT](\d{2}):(\d{2}):(\d{2})/);
+        if (match) {
+            const fechaFormateada = `${match[3]}/${match[2]}/${match[1]}`;
+            if (soloFecha) return fechaFormateada;
+            return `${fechaFormateada}, ${match[4]}:${match[5]}:${match[6]}`;
+        }
+        return fechaStr;
+    }
+
     function mostrarResultadoEncontrado(data, hashBuscado) {
         const container = document.getElementById('verificar-resultado');
 
@@ -1066,13 +1079,12 @@
             'sello_fundacional': 'Sello fundacional'
         };
 
-        const opcionesFechaHora = { day: 'numeric', month: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false };
         const fecha = data.confirmed_at
-            ? new Date(data.confirmed_at).toLocaleString('es-AR', opcionesFechaHora)
-            : (data.timestamp ? new Date(data.timestamp).toLocaleString('es-AR', opcionesFechaHora) : '-');
+            ? formatearFechaDB(data.confirmed_at)
+            : (data.timestamp ? formatearFechaDB(data.timestamp) : '-');
 
         const blockTimestamp = data.block_timestamp
-            ? new Date(data.block_timestamp).toLocaleString('es-AR', opcionesFechaHora)
+            ? new Date(data.block_timestamp).toLocaleString('es-AR', { day: 'numeric', month: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })
             : null;
 
         let html = `
@@ -1294,7 +1306,7 @@
 
             for (const reg of data.data) {
                 const fecha = reg.confirmed_at
-                    ? new Date(reg.confirmed_at).toLocaleDateString('es-AR')
+                    ? formatearFechaDB(reg.confirmed_at, true)
                     : '-';
 
                 const dataset = reg.dataset_titulo
