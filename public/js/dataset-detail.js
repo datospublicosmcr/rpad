@@ -243,7 +243,7 @@ function renderBlockchainCard(data) {
         </div>
       </div>`;
 
-  // Hashes compactos con boton copiar + Ver en BFA
+  // Hashes compactos con boton copiar
   if (ultimoCambio && ultimoCambio.hash_sellado) {
     html += `
       <div class="bc-hash-row">
@@ -252,10 +252,6 @@ function renderBlockchainCard(data) {
         <button class="bc-copy-btn" title="Copiar hash" onclick="copiarHash(this, '${ultimoCambio.hash_sellado}')">
           <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
         </button>
-        ${ultimoCambio.tx_hash ? `<a href="https://bfa.escribanodigital.ar//verificar#/hash/${ultimoCambio.tx_hash.replace(/^0x/, '')}" target="_blank" rel="noopener noreferrer" class="bc-bfa-btn" title="Ver transacción en BFA">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>
-          BFA
-        </a>` : ''}
       </div>`;
   }
 
@@ -274,10 +270,6 @@ function renderBlockchainCard(data) {
         <button class="bc-copy-btn" title="Copiar hash" onclick="copiarHash(this, '${archivo.file_hash}')">
           <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
         </button>
-        ${archivo.tx_hash ? `<a href="https://bfa.escribanodigital.ar//verificar#/hash/${archivo.tx_hash.replace(/^0x/, '')}" target="_blank" rel="noopener noreferrer" class="bc-bfa-btn" title="Ver transacción en BFA">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>
-          BFA
-        </a>` : ''}
       </div>`;
     }
   } else if (ultimoArchivo && ultimoArchivo.file_hash) {
@@ -289,10 +281,6 @@ function renderBlockchainCard(data) {
         <button class="bc-copy-btn" title="Copiar hash" onclick="copiarHash(this, '${ultimoArchivo.file_hash}')">
           <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
         </button>
-        ${ultimoArchivo.tx_hash ? `<a href="https://bfa.escribanodigital.ar//verificar#/hash/${ultimoArchivo.tx_hash.replace(/^0x/, '')}" target="_blank" rel="noopener noreferrer" class="bc-bfa-btn" title="Ver transacción en BFA">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>
-          BFA
-        </a>` : ''}
       </div>`;
   }
 
