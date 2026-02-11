@@ -371,12 +371,37 @@ function renderBlockchainCard(data) {
 }
 
 function copiarHash(btn, hash) {
-  navigator.clipboard.writeText(hash).then(() => {
+  const iconoOriginal = btn.innerHTML;
+
+  function mostrarCopiado() {
     btn.classList.add('copied');
     btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
     setTimeout(() => {
       btn.classList.remove('copied');
-      btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>';
+      btn.innerHTML = iconoOriginal;
     }, 1500);
-  });
+  }
+
+  // Fallback para contextos no-seguros (HTTP) donde navigator.clipboard no existe
+  function copiarFallback(texto) {
+    const textarea = document.createElement('textarea');
+    textarea.value = texto;
+    textarea.style.position = 'fixed';
+    textarea.style.opacity = '0';
+    document.body.appendChild(textarea);
+    textarea.select();
+    try {
+      document.execCommand('copy');
+      mostrarCopiado();
+    } catch (err) {
+      console.error('Error al copiar:', err);
+    }
+    document.body.removeChild(textarea);
+  }
+
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(hash).then(mostrarCopiado).catch(() => copiarFallback(hash));
+  } else {
+    copiarFallback(hash);
+  }
 }
