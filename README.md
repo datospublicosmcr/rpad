@@ -343,8 +343,8 @@ MODIFY COLUMN tipo_cambio ENUM('crear','editar','eliminar','actualizar') NOT NUL
 
 | Método | Ruta | Descripción |
 |--------|------|-------------|
-| POST | `/api/cron/notificaciones?secret=...` | Ejecutar notificaciones (cron) |
-| POST | `/api/cron/cambios-pendientes?secret=...` | Notificar cambios pendientes (cron) |
+| POST | `/api/cron/notificaciones` | Ejecutar notificaciones (cron, header `x-cron-secret`) |
+| POST | `/api/cron/cambios-pendientes` | Notificar cambios pendientes (cron, header `x-cron-secret`) |
 
 ---
 
@@ -456,10 +456,10 @@ Las notificaciones usan POST (no GET). Configurar en cPanel:
 
 ```bash
 # Notificaciones diarias (8:00 AM)
-0 8 * * * curl -s -X POST "https://tu-dominio.com/api/cron/notificaciones?secret=TU_CRON_SECRET" > /dev/null
+0 8 * * * curl -s -X POST -H "x-cron-secret: TU_CRON_SECRET" "https://tu-dominio.com/api/cron/notificaciones" > /dev/null
 
 # Notificar cambios pendientes (9:00 AM)
-0 9 * * * curl -s -X POST "https://tu-dominio.com/api/cron/cambios-pendientes?secret=TU_CRON_SECRET" > /dev/null
+0 9 * * * curl -s -X POST -H "x-cron-secret: TU_CRON_SECRET" "https://tu-dominio.com/api/cron/cambios-pendientes" > /dev/null
 ```
 
 ---

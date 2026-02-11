@@ -90,8 +90,8 @@ export const registro = async (req, res) => {
        LEFT JOIN areas a ON d.area_id = a.id
        ${whereClause}
        ORDER BY br.confirmed_at DESC
-       LIMIT ${limit} OFFSET ${offset}`,
-      params
+       LIMIT ? OFFSET ?`,
+      [...params, limit, offset]
     );
 
     // Para cada cambio_dataset, buscar si tiene certificacion_archivo asociada
@@ -226,6 +226,14 @@ export const certificar = async (req, res) => {
 
     if (archivos.length === 0) {
       return res.status(400).json({ success: false, error: 'El array de archivos no puede estar vacío' });
+    }
+
+    const MAX_ARCHIVOS_POR_REQUEST = 20;
+    if (archivos.length > MAX_ARCHIVOS_POR_REQUEST) {
+      return res.status(400).json({
+        success: false,
+        error: `Máximo ${MAX_ARCHIVOS_POR_REQUEST} archivos por solicitud`
+      });
     }
 
     // Validar cada archivo
