@@ -375,7 +375,8 @@ function renderCalendarChart(datasets) {
   const vencimientosPorMes = meses.map(m => {
     return datasets.filter(d => {
       if (!d.proxima_actualizacion || d.frecuencia_dias === null) return false;
-      const fechaVenc = new Date(d.proxima_actualizacion);
+      const partes = d.proxima_actualizacion.split('T')[0].split('-');
+      const fechaVenc = new Date(partes[0], partes[1] - 1, partes[2]);
       return fechaVenc >= m.inicio && fechaVenc <= m.fin;
     }).length;
   });

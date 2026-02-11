@@ -84,12 +84,10 @@ function getSaludo() {
  */
 function formatDate(dateString) {
     if (!dateString) return '-';
-    const date = new Date(dateString);
-    return date.toLocaleDateString('es-AR', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric'
-    });
+    const str = String(dateString).substring(0, 10);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(str)) return dateString;
+    const [y, m, d] = str.split('-');
+    return d + '/' + m + '/' + y;
 }
 
 // =====================================================
