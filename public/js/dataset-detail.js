@@ -172,6 +172,19 @@ function getTipoGestionTexto(tipo) {
 // Card de certificación blockchain
 // =====================================================
 
+// Formatear fecha de la BD sin pasar por new Date() (evita problemas de timezone).
+// dateStrings: true en la conexión MySQL devuelve strings como "2026-02-06 13:57:25".
+function formatearFechaDB(fechaStr, soloFecha = false) {
+  if (!fechaStr) return '-';
+  const match = fechaStr.match(/^(\d{4})-(\d{2})-(\d{2})[\sT](\d{2}):(\d{2}):(\d{2})/);
+  if (match) {
+    const fechaFormateada = `${match[3]}/${match[2]}/${match[1]}`;
+    if (soloFecha) return fechaFormateada;
+    return `${fechaFormateada}, ${match[4]}:${match[5]}:${match[6]}`;
+  }
+  return fechaStr;
+}
+
 async function cargarBlockchainCard(datasetId) {
   try {
     const response = await fetch(`${CONFIG.API_URL}/blockchain/dataset/${datasetId}`);
@@ -203,7 +216,7 @@ function renderBlockchainCard(data) {
   if (!principal) return;
 
   const fecha = principal.confirmed_at
-    ? new Date(principal.confirmed_at).toLocaleDateString('es-AR')
+    ? formatearFechaDB(principal.confirmed_at, true)
     : '-';
 
   const tipoTexto = ultimoCambio ? (tipoLabels[ultimoCambio.tipo] || ultimoCambio.tipo) : '-';
@@ -255,15 +268,15 @@ function renderBlockchainCard(data) {
       </div>`;
   }
 
-  // Mostrar todos los archivos certificados
+  // Mostrar solo el último archivo certificado en la card principal
   const archivosCertificados = data.archivos_certificados || [];
   if (archivosCertificados.length > 0) {
-    for (const archivo of archivosCertificados) {
-      const nombreArchivo = archivo.filename ? escapeHtml(archivo.filename) : 'Archivo sin nombre';
-      const fechaArchivo = archivo.confirmed_at
-        ? new Date(archivo.confirmed_at).toLocaleDateString('es-AR')
-        : '';
-      html += `
+    const archivo = archivosCertificados[0]; // El más reciente (ordenado DESC)
+    const nombreArchivo = archivo.filename ? escapeHtml(archivo.filename) : 'Archivo sin nombre';
+    const fechaArchivo = archivo.confirmed_at
+      ? formatearFechaDB(archivo.confirmed_at, true)
+      : '';
+    html += `
       <div class="bc-hash-row">
         <span class="bc-hash-label">Archivo: ${nombreArchivo}${fechaArchivo ? ' (' + fechaArchivo + ')' : ''}</span>
         <span class="bc-hash-value" title="${archivo.file_hash}">${archivo.file_hash}</span>
@@ -271,7 +284,6 @@ function renderBlockchainCard(data) {
           <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
         </button>
       </div>`;
-    }
   } else if (ultimoArchivo && ultimoArchivo.file_hash) {
     // Fallback para compatibilidad con datos sin archivos_certificados
     html += `
@@ -293,7 +305,7 @@ function renderBlockchainCard(data) {
     // QR para hash de operación
     if (ultimoCambio && ultimoCambio.hash_sellado) {
       const fechaCambio = ultimoCambio.confirmed_at
-        ? new Date(ultimoCambio.confirmed_at).toLocaleDateString('es-AR')
+        ? formatearFechaDB(ultimoCambio.confirmed_at, true)
         : '';
       qrItems.push({
         hash: ultimoCambio.hash_sellado,
@@ -302,24 +314,23 @@ function renderBlockchainCard(data) {
       });
     }
 
-    // QR para cada archivo certificado
+    // QR solo para el último archivo certificado
     const archivosCert = data.archivos_certificados || [];
     if (archivosCert.length > 0) {
-      for (const archivo of archivosCert) {
-        const nombreArch = archivo.filename || 'Archivo';
-        const fechaArch = archivo.confirmed_at
-          ? new Date(archivo.confirmed_at).toLocaleDateString('es-AR')
-          : '';
-        qrItems.push({
-          hash: archivo.file_hash,
-          label: `Archivo: ${nombreArch}`,
-          fecha: fechaArch
-        });
-      }
+      const archivo = archivosCert[0]; // El más reciente
+      const nombreArch = archivo.filename || 'Archivo';
+      const fechaArch = archivo.confirmed_at
+        ? formatearFechaDB(archivo.confirmed_at, true)
+        : '';
+      qrItems.push({
+        hash: archivo.file_hash,
+        label: `Archivo: ${nombreArch}`,
+        fecha: fechaArch
+      });
     } else if (ultimoArchivo && ultimoArchivo.file_hash) {
       // Fallback: archivo único sin array
       const fechaArch = ultimoArchivo.confirmed_at
-        ? new Date(ultimoArchivo.confirmed_at).toLocaleDateString('es-AR')
+        ? formatearFechaDB(ultimoArchivo.confirmed_at, true)
         : '';
       qrItems.push({
         hash: ultimoArchivo.file_hash,
@@ -357,8 +368,8 @@ function renderBlockchainCard(data) {
   if (registros.length > 0) {
     historialHtml = registros.map(reg => {
       const regFecha = reg.confirmed_at
-        ? new Date(reg.confirmed_at).toLocaleDateString('es-AR')
-        : new Date(reg.created_at).toLocaleDateString('es-AR');
+        ? formatearFechaDB(reg.confirmed_at, true)
+        : formatearFechaDB(reg.created_at, true);
       const regTipo = tipoLabels[reg.tipo] || reg.tipo;
       const regEstado = reg.estado || 'confirmado';
       const regBadgeClass = regEstado === 'confirmado' ? 'confirmado' : 'pendiente';
