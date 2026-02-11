@@ -1057,8 +1057,9 @@
 
     // --- Mostrar resultados ---
 
-    // Formatear fecha de la BD sin pasar por new Date() (evita problemas de timezone).
-    // dateStrings: true en la conexión MySQL devuelve strings como "2026-02-06 13:57:25".
+    // Formatear fecha de la BD parseando el string directamente (sin new Date()).
+    // dateStrings: true en la conexión MySQL devuelve strings como "2026-02-06 13:57:25"
+    // sin timezone — new Date() los interpreta de forma inconsistente entre navegadores.
     function formatearFechaDB(fechaStr, soloFecha = false) {
         if (!fechaStr) return '-';
         const match = fechaStr.match(/^(\d{4})-(\d{2})-(\d{2})[\sT](\d{2}):(\d{2}):(\d{2})/);
