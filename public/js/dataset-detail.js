@@ -352,18 +352,37 @@ function renderBlockchainCard(data) {
         : formatearFechaDB(gPrincipal.created_at, true);
       const gTipo = gc ? (tipoLabels[gc.tipo] || gc.tipo) : (tipoLabels[gPrincipal.tipo] || gPrincipal.tipo);
       const gEstado = gPrincipal.estado || 'confirmado';
-      const gBadgeClass = gEstado === 'confirmado' ? 'confirmado' : 'pendiente';
+      const gBadgeClass = gEstado === 'confirmado' ? 'confirmado' : (gEstado === 'error' ? 'error' : 'pendiente');
+
+      // Ícono de candado para hash de operación
+      const lockIcon = '<svg class="bc-historial-hash-icon" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>';
+      // Ícono de documento para archivos
+      const fileIcon = '<svg class="bc-historial-archivo-icon" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>';
+      // Ícono de copiar
+      const copyIcon = '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
 
       let detalle = '';
       if (gc && gc.hash_sellado) {
-        detalle += `<div class="bc-historial-hash" title="${gc.hash_sellado}">Hash: ${gc.hash_sellado}</div>`;
+        const truncHash = truncarHash(gc.hash_sellado);
+        detalle += `<div class="bc-historial-hash-row">
+          ${lockIcon}
+          <span class="bc-historial-hash-label">Hash:</span>
+          <span class="bc-historial-hash-value" title="${gc.hash_sellado}">${truncHash}</span>
+          <button class="bc-historial-copy-btn" onclick="copiarHash(this, '${gc.hash_sellado}')" title="Copiar hash">${copyIcon}</button>
+        </div>`;
       }
       for (const a of ga) {
         if (a.filename) {
-          detalle += `<div class="bc-historial-archivo">Archivo: ${escapeHtml(a.filename)}</div>`;
+          detalle += `<div class="bc-historial-archivo-row">${fileIcon}<span class="bc-historial-archivo">${escapeHtml(a.filename)}</span></div>`;
         }
         if (a.file_hash) {
-          detalle += `<div class="bc-historial-hash" title="${a.file_hash}">Hash archivo: ${a.file_hash}</div>`;
+          const truncFileHash = truncarHash(a.file_hash);
+          detalle += `<div class="bc-historial-hash-row">
+            ${fileIcon}
+            <span class="bc-historial-hash-label">Hash archivo:</span>
+            <span class="bc-historial-hash-value" title="${a.file_hash}">${truncFileHash}</span>
+            <button class="bc-historial-copy-btn" onclick="copiarHash(this, '${a.file_hash}')" title="Copiar hash">${copyIcon}</button>
+          </div>`;
         }
       }
 
@@ -384,7 +403,9 @@ function renderBlockchainCard(data) {
     <div class="bc-historial" id="bc-historial">
       <div class="bc-historial-inner">
         <h4 class="bc-historial-title">Historial de certificaciones (${grupos.length} operacion${grupos.length !== 1 ? 'es' : ''})</h4>
-        ${historialHtml || '<p style="font-size:0.78rem;color:var(--gray-500);margin:0;">No hay registros anteriores.</p>'}
+        <div class="bc-historial-timeline">
+          ${historialHtml || '<p style="font-size:0.78rem;color:var(--gray-500);margin:0;">No hay registros anteriores.</p>'}
+        </div>
       </div>
     </div>`;
 
@@ -429,6 +450,12 @@ function agruparPorReferencia(registros) {
     const bRef = b.referencia_id != null ? b.referencia_id : -1;
     return bRef - aRef;
   });
+}
+
+// Truncar hash para mostrar solo inicio y final
+function truncarHash(hash) {
+  if (!hash || hash.length <= 16) return hash;
+  return hash.slice(0, 10) + '...' + hash.slice(-6);
 }
 
 function copiarHash(btn, hash) {
