@@ -331,12 +331,31 @@ export async function obtenerSello(hashHex) {
       network: reg.network,
       estado: reg.estado,
       timestamp: reg.created_at,
-      confirmed_at: reg.confirmed_at
+      confirmed_at: reg.confirmed_at,
+      referencia_id: reg.referencia_id || null
     };
 
     // Si está confirmado, intentar obtener timestamp del bloque
     if (reg.estado === 'confirmado' && reg.block_number && inicializadoOk) {
       resultado.block_timestamp = await obtenerTimestampBloque(BigInt(reg.block_number));
+    }
+
+    // Si tiene referencia_id, buscar todos los registros del mismo grupo
+    if (reg.referencia_id) {
+      try {
+        const [grupoRows] = await pool.execute(
+          `SELECT br.id, br.tipo, br.hash_sellado, br.file_hash, br.filename, br.estado, br.confirmed_at
+           FROM blockchain_registros br
+           WHERE br.referencia_id = ? AND br.id != ?
+           ORDER BY br.tipo ASC, br.created_at ASC`,
+          [reg.referencia_id, reg.id]
+        );
+        if (grupoRows.length > 0) {
+          resultado.grupo = grupoRows;
+        }
+      } catch (grupoError) {
+        console.error('Error obteniendo grupo de registros:', grupoError.message);
+      }
     }
 
     return resultado;

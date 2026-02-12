@@ -335,6 +335,127 @@
             line-height: 1.5;
         }
 
+        /* Operacion completa (acordeon) */
+        .operacion-completa-toggle {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.82rem;
+            font-weight: 500;
+            color: var(--primary);
+            background: none;
+            border: 1px solid var(--primary);
+            border-radius: var(--border-radius);
+            padding: 6px 14px;
+            cursor: pointer;
+            transition: var(--transition);
+            margin-top: 16px;
+        }
+
+        .operacion-completa-toggle:hover {
+            background: var(--primary);
+            color: #fff;
+        }
+
+        .operacion-completa-toggle svg {
+            width: 14px;
+            height: 14px;
+            transition: transform 0.2s;
+        }
+
+        .operacion-completa-toggle.open svg {
+            transform: rotate(180deg);
+        }
+
+        .operacion-completa-panel {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+
+        .operacion-completa-panel.open {
+            max-height: 1000px;
+        }
+
+        .operacion-completa-inner {
+            padding: 16px 0 0 0;
+        }
+
+        .operacion-completa-inner p {
+            font-size: 0.82rem;
+            color: var(--gray-600);
+            margin-bottom: 10px;
+        }
+
+        .operacion-completa-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            border-radius: var(--border-radius);
+            margin-bottom: 4px;
+            font-size: 0.82rem;
+            background: var(--gray-50);
+            border: 1px solid var(--border-color);
+        }
+
+        .operacion-completa-item.destacado {
+            background: var(--info-light);
+            border-color: var(--primary);
+        }
+
+        .operacion-completa-item .oc-label {
+            font-weight: 500;
+            color: var(--gray-700);
+            white-space: nowrap;
+        }
+
+        .operacion-completa-item .oc-hash {
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.75rem;
+            color: var(--gray-500);
+        }
+
+        .operacion-completa-item .oc-badge {
+            font-size: 0.65rem;
+            font-weight: 600;
+            padding: 2px 6px;
+            border-radius: 4px;
+            white-space: nowrap;
+        }
+
+        .oc-copy-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 24px;
+            height: 24px;
+            border: none;
+            background: none;
+            color: var(--gray-400);
+            cursor: pointer;
+            border-radius: 4px;
+            flex-shrink: 0;
+            padding: 0;
+            transition: var(--transition);
+        }
+
+        .oc-copy-btn:hover {
+            background: var(--gray-100);
+            color: var(--primary);
+        }
+
+        .oc-copy-btn.copied {
+            background: var(--success-light);
+            color: var(--success);
+        }
+
+        @media (max-width: 768px) {
+            .operacion-completa-item {
+                flex-wrap: wrap;
+            }
+        }
+
         /* Seccion registro de operaciones */
         .registro-section {
             margin-top: 48px;
@@ -1201,12 +1322,133 @@
         }
 
         html += `
-                    </div>
+                    </div>`;
+
+        // Operacion completa: si hay grupo con misma referencia_id
+        if (data.grupo && data.grupo.length > 0) {
+            html += renderOperacionCompleta(data, hashBuscado);
+        }
+
+        html += `
                 </div>
             </div>`;
 
         container.innerHTML = html;
         container.classList.remove('hidden');
+    }
+
+    function renderOperacionCompleta(data, hashBuscado) {
+        const tipoLabelsCortos = {
+            'cambio_dataset': 'Cambio de dataset',
+            'certificacion_archivo': 'Certificacion de archivo',
+            'sello_fundacional': 'Sello fundacional'
+        };
+
+        const copyIcon = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>';
+
+        // Construir lista: primero el registro verificado, luego los del grupo
+        const registroActual = {
+            tipo: data.tipo,
+            hash_sellado: data.hash_sellado,
+            file_hash: data.file_hash,
+            filename: data.filename,
+            esVerificado: true
+        };
+
+        const todos = [registroActual, ...data.grupo.map(g => ({
+            tipo: g.tipo,
+            hash_sellado: g.hash_sellado,
+            file_hash: g.file_hash,
+            filename: g.filename,
+            esVerificado: false
+        }))];
+
+        // Ordenar: cambio_dataset primero, luego certificacion_archivo
+        todos.sort((a, b) => {
+            if (a.tipo === 'cambio_dataset' && b.tipo !== 'cambio_dataset') return -1;
+            if (a.tipo !== 'cambio_dataset' && b.tipo === 'cambio_dataset') return 1;
+            return 0;
+        });
+
+        let html = `
+                    <div style="margin-top: 16px; border-top: 1px solid var(--border-color); padding-top: 16px;">
+                        <button class="operacion-completa-toggle" onclick="toggleOperacionCompleta(this)">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                            Ver operacion completa
+                        </button>
+                        <div class="operacion-completa-panel" id="operacion-completa-panel">
+                            <div class="operacion-completa-inner">
+                                <p>Esta certificacion es parte de una operacion que incluye:</p>`;
+
+        for (const reg of todos) {
+            const hash = reg.file_hash || reg.hash_sellado || '';
+            const hashTruncado = truncarHashVerificar(hash);
+            const label = reg.tipo === 'certificacion_archivo' && reg.filename
+                ? escapeHtml(reg.filename)
+                : (tipoLabelsCortos[reg.tipo] || reg.tipo);
+            const destacado = reg.esVerificado ? ' destacado' : '';
+            const badgeHtml = reg.esVerificado
+                ? '<span class="oc-badge" style="color:var(--primary);background:var(--info-light);">verificado</span>'
+                : '';
+
+            html += `
+                                <div class="operacion-completa-item${destacado}">
+                                    <span class="oc-label">${label}</span>
+                                    <span class="oc-hash" title="${hash}">${hashTruncado}</span>
+                                    <button class="oc-copy-btn" title="Copiar hash" onclick="copiarHashVerificar(this, '${hash}')">${copyIcon}</button>
+                                    ${badgeHtml}
+                                </div>`;
+        }
+
+        html += `
+                            </div>
+                        </div>
+                    </div>`;
+
+        return html;
+    }
+
+    function toggleOperacionCompleta(btn) {
+        const panel = document.getElementById('operacion-completa-panel');
+        if (!panel) return;
+        const isOpen = panel.classList.toggle('open');
+        btn.classList.toggle('open', isOpen);
+        btn.innerHTML = isOpen
+            ? '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg> Ocultar operacion completa'
+            : '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg> Ver operacion completa';
+    }
+
+    function truncarHashVerificar(hash) {
+        if (!hash || hash.length <= 16) return hash;
+        return hash.slice(0, 10) + '...' + hash.slice(-6);
+    }
+
+    function copiarHashVerificar(btn, hash) {
+        if (!hash) return;
+        const iconoOriginal = btn.innerHTML;
+
+        function mostrarCopiado() {
+            btn.classList.add('copied');
+            btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+            setTimeout(() => {
+                btn.classList.remove('copied');
+                btn.innerHTML = iconoOriginal;
+            }, 1500);
+        }
+
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(hash).then(mostrarCopiado).catch(() => {});
+        } else {
+            const ta = document.createElement('textarea');
+            ta.value = hash;
+            ta.style.position = 'fixed';
+            ta.style.opacity = '0';
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand('copy');
+            document.body.removeChild(ta);
+            mostrarCopiado();
+        }
     }
 
     function mostrarResultadoNoEncontrado(hash) {
