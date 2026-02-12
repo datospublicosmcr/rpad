@@ -557,23 +557,30 @@
             background: var(--danger-light);
         }
 
-        /* Hash con truncado y botón copiar */
-        .bc-historial-hash-row {
-            display: flex;
-            align-items: center;
-            gap: 6px;
+        /* Bloque de operación: texto descriptivo + hash indentado */
+        .bc-historial-operacion-block {
             margin-top: 6px;
         }
 
-        .bc-historial-hash-icon {
+        .bc-historial-operacion-desc {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.72rem;
+            color: var(--gray-600);
+        }
+
+        .bc-historial-operacion-desc svg {
             flex-shrink: 0;
             color: var(--gray-400);
         }
 
-        .bc-historial-hash-label {
-            font-size: 0.68rem;
-            color: var(--gray-500);
-            flex-shrink: 0;
+        .bc-historial-operacion-hash {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-top: 4px;
+            padding-left: 20px;
         }
 
         .bc-historial-hash-value {
@@ -619,11 +626,14 @@
         }
 
         /* Archivo certificado */
+        .bc-historial-archivo-block {
+            margin-top: 6px;
+        }
+
         .bc-historial-archivo-row {
             display: flex;
             align-items: center;
             gap: 6px;
-            margin-top: 6px;
         }
 
         .bc-historial-archivo-icon {
@@ -653,8 +663,8 @@
                 height: 8px;
             }
 
-            .bc-historial-hash-row {
-                flex-wrap: wrap;
+            .bc-historial-operacion-hash {
+                padding-left: 10px;
             }
         }
 

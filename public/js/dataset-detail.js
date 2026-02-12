@@ -355,7 +355,7 @@ function renderBlockchainCard(data) {
       const gBadgeClass = gEstado === 'confirmado' ? 'confirmado' : (gEstado === 'error' ? 'error' : 'pendiente');
 
       // Ícono de candado para hash de operación
-      const lockIcon = '<svg class="bc-historial-hash-icon" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>';
+      const lockIcon = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>';
       // Ícono de documento para archivos
       const fileIcon = '<svg class="bc-historial-archivo-icon" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>';
       // Ícono de copiar
@@ -364,26 +364,30 @@ function renderBlockchainCard(data) {
       let detalle = '';
       if (gc && gc.hash_sellado) {
         const truncHash = truncarHash(gc.hash_sellado);
-        detalle += `<div class="bc-historial-hash-row">
-          ${lockIcon}
-          <span class="bc-historial-hash-label">Hash:</span>
-          <span class="bc-historial-hash-value" title="${gc.hash_sellado}">${truncHash}</span>
-          <button class="bc-historial-copy-btn" onclick="copiarHash(this, '${gc.hash_sellado}')" title="Copiar hash">${copyIcon}</button>
+        // Extraer hora HH:MM del confirmed_at
+        const horaMatch = gc.confirmed_at ? gc.confirmed_at.match(/(\d{2}):(\d{2}):\d{2}/) : null;
+        const horaTexto = horaMatch ? ` — ${horaMatch[1]}:${horaMatch[2]} hs` : '';
+        detalle += `<div class="bc-historial-operacion-block">
+          <div class="bc-historial-operacion-desc">${lockIcon}<span>Cambio validado por doble verificación${horaTexto}</span></div>
+          <div class="bc-historial-operacion-hash">
+            <span class="bc-historial-hash-value" title="${gc.hash_sellado}">${truncHash}</span>
+            <button class="bc-historial-copy-btn" onclick="copiarHash(this, '${gc.hash_sellado}')" title="Copiar hash">${copyIcon}</button>
+          </div>
         </div>`;
       }
       for (const a of ga) {
+        detalle += `<div class="bc-historial-archivo-block">`;
         if (a.filename) {
           detalle += `<div class="bc-historial-archivo-row">${fileIcon}<span class="bc-historial-archivo">${escapeHtml(a.filename)}</span></div>`;
         }
         if (a.file_hash) {
           const truncFileHash = truncarHash(a.file_hash);
-          detalle += `<div class="bc-historial-hash-row">
-            ${fileIcon}
-            <span class="bc-historial-hash-label">Hash archivo:</span>
+          detalle += `<div class="bc-historial-operacion-hash">
             <span class="bc-historial-hash-value" title="${a.file_hash}">${truncFileHash}</span>
             <button class="bc-historial-copy-btn" onclick="copiarHash(this, '${a.file_hash}')" title="Copiar hash">${copyIcon}</button>
           </div>`;
         }
+        detalle += `</div>`;
       }
 
       return `
