@@ -7,21 +7,22 @@ const API = {
     if (filtros.frecuencia) params.append('frecuencia', filtros.frecuencia);
     if (filtros.estado) params.append('estado', filtros.estado);
     if (filtros.busqueda) params.append('busqueda', filtros.busqueda);
+    params.append('_t', Date.now());
 
-    const url = `${CONFIG.API_URL}/datasets${params.toString() ? '?' + params.toString() : ''}`;
-    const response = await fetch(url);
+    const url = `${CONFIG.API_URL}/datasets?${params.toString()}`;
+    const response = await fetch(url, { cache: 'no-store' });
     const data = await response.json();
     return data.data || [];
   },
 
   async getDataset(id) {
-    const response = await fetch(`${CONFIG.API_URL}/datasets/${id}`);
+    const response = await fetch(`${CONFIG.API_URL}/datasets/${id}?_t=${Date.now()}`, { cache: 'no-store' });
     const data = await response.json();
     return data.data;
   },
 
   async getEstadisticas() {
-    const response = await fetch(`${CONFIG.API_URL}/datasets/estadisticas`);
+    const response = await fetch(`${CONFIG.API_URL}/datasets/estadisticas?_t=${Date.now()}`, { cache: 'no-store' });
     const data = await response.json();
     return data.data;
   },
@@ -71,32 +72,32 @@ async registrarActualizacion(id, datos = {}) {
 
   // === CATÁLOGOS ===
   async getTemas() {
-    const response = await fetch(`${CONFIG.API_URL}/catalogos/temas`);
+    const response = await fetch(`${CONFIG.API_URL}/catalogos/temas?_t=${Date.now()}`, { cache: 'no-store' });
     const data = await response.json();
     return data.data || [];
   },
 
   async getFrecuencias() {
-    const response = await fetch(`${CONFIG.API_URL}/catalogos/frecuencias`);
+    const response = await fetch(`${CONFIG.API_URL}/catalogos/frecuencias?_t=${Date.now()}`, { cache: 'no-store' });
     const data = await response.json();
     return data.data || [];
   },
 
   async getFormatos() {
-    const response = await fetch(`${CONFIG.API_URL}/catalogos/formatos`);
+    const response = await fetch(`${CONFIG.API_URL}/catalogos/formatos?_t=${Date.now()}`, { cache: 'no-store' });
     const data = await response.json();
     return data.data || [];
   },
 
   // === ÁREAS ===
   async getAreas() {
-    const response = await fetch(`${CONFIG.API_URL}/areas`);
+    const response = await fetch(`${CONFIG.API_URL}/areas?_t=${Date.now()}`, { cache: 'no-store' });
     const data = await response.json();
     return data.data || [];
   },
 
   async getArea(id) {
-    const response = await fetch(`${CONFIG.API_URL}/areas/${id}`);
+    const response = await fetch(`${CONFIG.API_URL}/areas/${id}?_t=${Date.now()}`, { cache: 'no-store' });
     const data = await response.json();
     return data.data;
   },

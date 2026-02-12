@@ -47,6 +47,15 @@ app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 // Servir archivos estáticos del frontend
 app.use(express.static(path.join(__dirname, 'public')));
 
+// Deshabilitar cache en respuestas API para que los datos se reflejen inmediatamente
+app.use('/api', (req, res, next) => {
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.set('Pragma', 'no-cache');
+  res.set('Expires', '0');
+  res.set('Surrogate-Control', 'no-store');
+  next();
+});
+
 // Rutas de la API
 app.use('/api', routes);
 
