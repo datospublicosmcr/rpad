@@ -316,23 +316,31 @@
         .info-box {
             display: flex;
             align-items: flex-start;
-            gap: 12px;
-            padding: 16px;
-            background: var(--info-light);
+            gap: 20px;
+            padding: 20px 24px;
+            background: #e8f2fb;
             border-radius: var(--border-radius);
             margin-top: 24px;
         }
 
-        .info-box svg {
+        .info-box-logo {
             flex-shrink: 0;
-            color: var(--info);
-            margin-top: 2px;
+            width: 90px;
+            height: auto;
         }
 
         .info-box p {
             font-size: 0.85rem;
             color: var(--gray-700);
             line-height: 1.5;
+        }
+
+        @media (max-width: 768px) {
+            .info-box {
+                flex-direction: column;
+                align-items: center;
+                text-align: center;
+            }
         }
 
         /* Operacion completa (acordeon) */
@@ -873,20 +881,13 @@
 
             <!-- Info box -->
             <div class="info-box">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
+                <img src="img/bfa.svg" alt="Blockchain Federal Argentina" class="info-box-logo">
                 <div>
+                    <h5 style="margin:0 0 8px 0;font-size:0.95rem;font-weight:600;color:var(--gray-800);">¿Qué es esto?</h5>
                     <p>
-                        <strong style="display:inline-flex;align-items:center;gap:6px;">
-                            <img src="img/bfa.svg" alt="BFA" style="height:18px;width:18px;vertical-align:middle;">
-                            ¿Que es esto?
-                        </strong>
-                    </p>
-                    <p style="margin-top: 8px;">
                         Cuando se aprueba un cambio en RPAD, el sistema genera una huella digital unica (hash) y la registra en la
                         <strong>Blockchain Federal Argentina (BFA)</strong> — una plataforma publica, abierta y auditable,
                         administrada por organismos del Estado, universidades y la sociedad civil.
-                    </p>
-                    <p style="margin-top: 8px;">
                         Funciona como un escribano digital: certifica que un registro existio en un momento determinado,
                         sin que nadie pueda alterarlo despues. El hash no contiene datos personales ni el contenido del
                         archivo — es solo una huella que permite verificar su autenticidad.
