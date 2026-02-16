@@ -2,6 +2,10 @@
 
 # RPAD - Registro Permanente de Actualización de Datasets
 
+![Versión](https://img.shields.io/badge/version-2.0.0-blue.svg)
+![Node](https://img.shields.io/badge/node-v22.18.0-green.svg)
+![License](https://img.shields.io/badge/License-CC%20BY--SA%204.0-blue)
+
 Sistema de gestión y certificación blockchain del catálogo de datos abiertos de la Municipalidad de Comodoro Rivadavia.
 
 **Versión actual:** 2.0.0
