@@ -1,0 +1,104 @@
+# RPAD - Registro Permanente de Actualización de Datasets
+
+Sistema de gestión de datos abiertos para la Municipalidad de Comodoro Rivadavia. Registra datasets, controla frecuencias de actualización, genera reportes PDF/DOCX, y envía notificaciones por email.
+
+## Tech Stack
+- **Backend:** Node.js 22, Express 4.18, ES Modules
+- **Base de datos:** MariaDB 10.6+ (mysql2/promise, pool de 10 conexiones)
+- **Auth:** JWT (7h expiración), bcryptjs
+- **Frontend:** HTML5, CSS3, vanilla JS (sin frameworks)
+- **PDF:** PDFKit | **DOCX:** docx | **Email:** Nodemailer
+- **CDN:** Lucide Icons, Chart.js, FullCalendar
+
+## Comandos
+- `npm start` — Inicia el servidor (puerto 3001)
+- `npm run setup-admin` — Crea usuario administrador
+- Migraciones: ejecutar manualmente con `mysql -u root -p < database/updates/migracion-vX-vY.sql`
+
+## Estructura del proyecto
+```
+app.js                    # Entry point Express
+config/database.js        # Pool MySQL
+controllers/              # 10 controladores (lógica de negocio)
+services/                 # emailService, emailTemplates
+middleware/auth.js         # JWT middleware
+routes/index.js           # Todas las rutas (~190 líneas)
+database/schema.sql       # Schema completo
+database/updates/         # Migraciones SQL
+scripts/setup-admin.js    # Setup inicial
+public/                   # Frontend SPA
+  js/config.js            # API_URL, localStorage keys
+  js/auth.js              # Manejo de sesión JWT
+  js/api.js               # Capa centralizada de fetch
+  js/main.js              # Layout, sidebar, header
+  css/styles.css           # Estilos principales
+```
+
+## Convenciones de código
+
+### General
+- ES Modules (import/export), NO CommonJS
+- async/await para operaciones async
+- Arrow functions preferidas
+- Idioma: español en variables, comentarios y UI
+
+### Backend
+- Respuestas API: `{ success: boolean, data?, error?, message? }`
+- Queries SQL: SIEMPRE parametrizadas con `?`, NUNCA concatenar strings
+- Transacciones: `beginTransaction()` / `commit()` / `rollback()` para operaciones multi-tabla
+- Soft deletes: campo `activo` (TRUE/FALSE), no borrar registros
+- Controladores en `controllers/*Controller.js`, servicios en `services/*Service.js`
+
+### Frontend
+- Vanilla JS, sin frameworks
+- Cada página carga: config.js → auth.js → api.js → página.js
+- API calls centralizadas en `api.js` (objeto `API`)
+- Utilidades en `api.js` (objeto `Utils`: formatDate, calcularEstado, escapeHtml, etc.)
+- Iconos: Lucide SVG embebidos en main.js (objeto `Icons`)
+- Toast notifications: `showToast(message, type)`
+
+### CSS
+- Variables CSS: `--primary: #1a365d`, `--success: #10b981`, `--warning: #f59e0b`, `--danger: #ef4444`
+- Clases: `.btn-primary`, `.btn-secondary`, `.dataset-card`, `.badge-*`, `.alert-*`
+- Fuentes: Inter (texto), Outfit (títulos) via Google Fonts
+
+## Arquitectura clave
+
+### Doble verificación (CRÍTICO)
+Todo cambio a datasets pasa por doble verificación:
+1. Un admin propone el cambio → se crea registro en `cambios_pendientes`
+2. Un admin DIFERENTE aprueba o rechaza → se aplica al dataset
+- Un usuario NO puede aprobar sus propios cambios
+- Si un dataset tiene cambio pendiente, queda bloqueado para nuevas ediciones
+
+### Roles
+- **admin:** CRUD datasets, áreas, aprobación de cambios, reportes, notificaciones
+- **lector:** solo lectura de datos públicos + perfil
+
+### Base de datos
+- 10 tablas: usuarios, datasets, areas, cambios_pendientes, formatos, dataset_formatos, temas, frecuencias, historial_actualizaciones, notificaciones_log
+- Campos JSON validados en `cambios_pendientes` (datos_nuevos, datos_anteriores)
+- Foreign keys con CASCADE en deletes relevantes
+
+### Estados de dataset
+Calculados dinámicamente según `proxima_actualizacion`:
+- `actualizado` — al día
+- `proximo` — próximo a vencer
+- `atrasado` / `sin-respuesta` — vencido (según tipo_gestion interna/externa)
+- `sin-fecha` — sin fecha de próxima actualización
+
+## Seguridad
+- JWT_SECRET obligatorio al iniciar (process.exit(1) si falta)
+- Rate limiting: login (10/15min), contacto (5/hora por IP)
+- Helmet CSP configurado
+- Passwords hasheadas con bcrypt
+- SQL injection prevenido con queries parametrizadas
+- XSS prevenido con `Utils.escapeHtml()` en frontend
+
+## Variables de entorno requeridas
+```
+PORT, CORS_ORIGIN
+DB_HOST, DB_USER, DB_PASSWORD, DB_NAME, DB_PORT
+JWT_SECRET (obligatorio), CRON_SECRET
+SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS
+```
