@@ -8,9 +8,13 @@ let chartTemas = null;
 let chartFrecuencias = null;
 let editandoProyectoId = null;
 let editandoHitoId = null;
+let editandoLogroId = null;
 let proyectoDetalleId = null;
 let vistaActual = 'lista';
 let hitoDropZoneInstance = null;
+let logroDropZoneInstance = null;
+let timelineData = [];
+let proyectosCache = [];
 
 const MESES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
 const MESES_FULL = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
@@ -58,6 +62,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (metricasSection) metricasSection.style.display = '';
     const btnNuevo = document.getElementById('btn-nuevo-proyecto');
     if (btnNuevo) btnNuevo.style.display = '';
+    const btnLogro = document.getElementById('btn-nuevo-logro');
+    if (btnLogro) btnLogro.style.display = '';
   }
 
   // Setear año/mes actuales en el form de métricas manuales
@@ -397,6 +403,7 @@ async function cargarProyectos() {
 function renderProyectosLista(proyectos) {
   const container = document.getElementById('proyectos-lista');
   if (!container) return;
+  proyectosCache = proyectos;
 
   if (proyectos.length === 0) {
     container.innerHTML = '<p style="color:var(--gray-500);text-align:center;padding:40px;">No hay proyectos registrados</p>';
@@ -418,19 +425,42 @@ function renderProyectosLista(proyectos) {
     html += `<div class="categoria-header">${CATEGORIA_LABELS[cat]}</div>`;
     html += '<div class="proyectos-grid">';
     for (const p of grupos[cat]) {
+      const color = Utils.escapeHtml(p.color || '#3b82f6');
+      const totalHitos = p.cantidad_hitos || 0;
+      const completados = p.hitos_completados || 0;
+      const porcentaje = totalHitos > 0 ? Math.round((completados / totalHitos) * 100) : 0;
+      const areasHtml = p.areas && p.areas.length > 0
+        ? `<div class="proyecto-card-areas">${p.areas.map(a => `<span class="area-chip">${Utils.escapeHtml(a.nombre)}</span>`).join('')}</div>`
+        : '';
+      const responsableHtml = p.responsable
+        ? `<div class="proyecto-card-responsable">${Icons.user.replace(/width="\d+"/, 'width="12"').replace(/height="\d+"/, 'height="12"')} ${Utils.escapeHtml(p.responsable)}</div>`
+        : '';
+
       html += `
         <div class="proyecto-card" onclick="verProyecto(${p.id})">
-          <div class="proyecto-card-top" style="background:${Utils.escapeHtml(p.color || '#3b82f6')}"></div>
+          <div class="proyecto-card-top" style="background:${color}"></div>
           <div class="proyecto-card-body">
             <div class="proyecto-card-header">
-              <h4>${Utils.escapeHtml(p.nombre)}</h4>
+              <div class="proyecto-card-icon" style="background:${color}">
+                ${getIconSvg(p.icono, 20)}
+              </div>
+              <div style="flex:1;min-width:0;margin-left:12px;">
+                <h4>${Utils.escapeHtml(p.nombre)}</h4>
+                ${p.descripcion ? `<p style="margin:4px 0 0;">${Utils.escapeHtml(Utils.truncate(p.descripcion, 80))}</p>` : ''}
+              </div>
             </div>
-            ${p.descripcion ? `<p>${Utils.escapeHtml(Utils.truncate(p.descripcion, 100))}</p>` : ''}
+            ${totalHitos > 0 ? `
+              <div class="proyecto-progress-bar">
+                <div class="proyecto-progress-fill" style="width:${porcentaje}%;background:${color}"></div>
+              </div>
+              <div class="proyecto-progress-text">${completados}/${totalHitos} hitos (${porcentaje}%)</div>
+            ` : ''}
             <div class="proyecto-meta">
               <span class="badge badge-estado-${p.estado}">${ESTADO_LABELS[p.estado] || p.estado}</span>
               <span class="badge badge-prioridad-${p.prioridad}">${PRIORIDAD_LABELS[p.prioridad] || p.prioridad}</span>
-              <span class="badge badge-hitos">${p.cantidad_hitos || 0} hitos</span>
             </div>
+            ${areasHtml}
+            ${responsableHtml}
           </div>
         </div>`;
     }
@@ -449,9 +479,24 @@ async function cargarTimeline() {
     const result = await response.json();
     if (!result.success) return;
 
-    renderTimeline(result.data);
+    timelineData = result.data;
+    renderTimeline(timelineData);
+
+    // Render logros area (hitos sin proyecto)
+    const logros = timelineData.filter(h => !h.proyecto_id);
+    renderLogrosArea(logros);
   } catch (error) {
     console.error('Error cargando timeline:', error);
+  }
+}
+
+function filtrarTimeline(filtro) {
+  if (!filtro || filtro === 'todos') {
+    renderTimelineItems(timelineData);
+  } else if (filtro === 'logros') {
+    renderTimelineItems(timelineData.filter(h => !h.proyecto_id));
+  } else if (filtro === 'proyectos') {
+    renderTimelineItems(timelineData.filter(h => h.proyecto_id));
   }
 }
 
@@ -464,16 +509,131 @@ function renderTimeline(hitos) {
     return;
   }
 
-  let html = '<div class="timeline">';
+  let html = `
+    <div class="timeline-filter">
+      <label>Filtrar:</label>
+      <select class="form-select" style="max-width:180px;font-size:0.85rem;" onchange="filtrarTimeline(this.value)">
+        <option value="todos">Todos</option>
+        <option value="proyectos">Solo proyectos</option>
+        <option value="logros">Solo logros</option>
+      </select>
+    </div>`;
+  html += '<div id="timeline-items-container"></div>';
+  container.innerHTML = html;
+
+  renderTimelineItems(hitos);
+}
+
+function renderTimelineItems(hitos) {
+  const container = document.getElementById('timeline-items-container');
+  if (!container) return;
+
+  if (hitos.length === 0) {
+    container.innerHTML = '<p style="color:var(--gray-500);text-align:center;padding:20px;">No hay hitos para este filtro</p>';
+    return;
+  }
+
+  // Agrupar por mes/año
+  const grupos = {};
   for (const h of hitos) {
-    const color = h.proyecto_color || '#3b82f6';
+    const d = new Date(h.fecha);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    if (!grupos[key]) grupos[key] = [];
+    grupos[key].push(h);
+  }
+
+  let html = '';
+  const sortedKeys = Object.keys(grupos).sort().reverse();
+
+  for (const key of sortedKeys) {
+    const [anio, mes] = key.split('-');
+    html += `<div class="timeline-separator">${MESES_FULL[parseInt(mes) - 1]} ${anio}</div>`;
+    html += '<div class="timeline">';
+
+    for (const h of grupos[key]) {
+      const isLogro = !h.proyecto_id;
+      const color = isLogro ? '#8b5cf6' : (h.proyecto_color || '#3b82f6');
+      const itemClass = isLogro ? 'timeline-item-logro' : 'timeline-item-proyecto';
+      const iconSvg = isLogro ? Icons.award : getIconSvg(h.proyecto_icono, 14);
+      const proyectoLabel = isLogro
+        ? 'Logro del Área'
+        : `${Utils.escapeHtml(h.proyecto_nombre || '')} - ${CATEGORIA_LABELS[h.categoria] || h.categoria || ''}`;
+
+      // Archivos como chips
+      let archivosHtml = '';
+      if (h.archivos && h.archivos.length > 0) {
+        archivosHtml = '<div style="margin-top:8px;">' + h.archivos.map(a =>
+          `<span class="timeline-archivo-chip" onclick="event.stopPropagation(); previewArchivo(${h.id}, ${a.id}, '${Utils.escapeHtml(a.nombre_archivo)}', ${a.tamano}, '${Utils.escapeHtml(a.mime_type || '')}')" title="${Utils.escapeHtml(a.nombre_archivo)}">
+            ${getFileExtIcon(a.nombre_archivo)} ${Utils.escapeHtml(Utils.truncate(a.nombre_archivo, 20))}
+          </span>`
+        ).join('') + '</div>';
+      }
+
+      html += `
+        <div class="timeline-item ${itemClass}" style="border-left: 3px solid ${color};">
+          <div class="timeline-item-icon" style="background:${color};color:white;">
+            ${iconSvg}
+          </div>
+          <div class="timeline-date">${formatDate(h.fecha)}</div>
+          <div class="timeline-title">${Utils.escapeHtml(h.titulo)}</div>
+          <div class="timeline-proyecto">${proyectoLabel}</div>
+          ${h.descripcion ? `<div class="timeline-desc">${Utils.escapeHtml(h.descripcion)}</div>` : ''}
+          ${h.evidencia_url ? `<a href="${Utils.escapeHtml(h.evidencia_url)}" target="_blank" style="font-size:0.8rem;margin-top:4px;display:inline-block;">Ver evidencia</a>` : ''}
+          ${archivosHtml}
+        </div>`;
+    }
+    html += '</div>';
+  }
+
+  container.innerHTML = html;
+}
+
+function renderLogrosArea(logros) {
+  const container = document.getElementById('logros-area');
+  if (!container) return;
+
+  if (logros.length === 0) {
+    container.innerHTML = '';
+    return;
+  }
+
+  const isAdmin = Auth.isAdmin();
+  let html = `
+    <div class="logros-section-header">
+      <h3>${Icons.award} Logros del Área</h3>
+    </div>`;
+
+  html += '<div class="timeline">';
+  for (const h of logros) {
+    let archivosHtml = '';
+    if (h.archivos && h.archivos.length > 0) {
+      archivosHtml = '<div style="margin-top:6px;">' + h.archivos.map(a =>
+        `<span class="timeline-archivo-chip" onclick="event.stopPropagation(); previewArchivo(${h.id}, ${a.id}, '${Utils.escapeHtml(a.nombre_archivo)}', ${a.tamano}, '${Utils.escapeHtml(a.mime_type || '')}')" title="${Utils.escapeHtml(a.nombre_archivo)}">
+          ${getFileExtIcon(a.nombre_archivo)} ${Utils.escapeHtml(Utils.truncate(a.nombre_archivo, 20))}
+        </span>`
+      ).join('') + '</div>';
+    }
+
     html += `
-      <div class="timeline-item">
-        <style>.timeline-item::before { background: ${color} !important; }</style>
-        <div class="timeline-date">${formatDate(h.fecha)}</div>
-        <div class="timeline-title">${Utils.escapeHtml(h.titulo)}</div>
-        <div class="timeline-proyecto">${Utils.escapeHtml(h.proyecto_nombre)} - ${CATEGORIA_LABELS[h.categoria] || h.categoria}</div>
-        ${h.descripcion ? `<div class="timeline-desc">${Utils.escapeHtml(h.descripcion)}</div>` : ''}
+      <div class="timeline-item timeline-item-logro" style="border-left: 3px solid #8b5cf6;">
+        <div class="timeline-item-icon" style="background:#8b5cf6;color:white;">
+          ${Icons.award.replace(/width="\d+"/, 'width="14"').replace(/height="\d+"/, 'height="14"')}
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+          <div>
+            <div class="timeline-date">${formatDate(h.fecha)}</div>
+            <div class="timeline-title">${Utils.escapeHtml(h.titulo)}</div>
+            ${h.descripcion ? `<div class="timeline-desc">${Utils.escapeHtml(h.descripcion)}</div>` : ''}
+            ${h.evidencia_url ? `<a href="${Utils.escapeHtml(h.evidencia_url)}" target="_blank" style="font-size:0.8rem;margin-top:4px;display:inline-block;">Ver evidencia</a>` : ''}
+            ${archivosHtml}
+          </div>
+          ${isAdmin ? `
+            <div style="display:flex;gap:4px;flex-shrink:0;">
+              <button class="btn btn-secondary btn-sm" style="padding:2px 6px;font-size:0.7rem;" onclick="editarLogro(${h.id})">Editar</button>
+              <button class="btn btn-secondary btn-sm" style="padding:2px 6px;font-size:0.7rem;color:#ef4444;" onclick="eliminarLogro(${h.id})">Eliminar</button>
+            </div>
+          ` : ''}
+        </div>
       </div>`;
   }
   html += '</div>';
@@ -488,15 +648,18 @@ function setVistaProyectos(vista) {
   const lista = document.getElementById('proyectos-lista');
   const timeline = document.getElementById('proyectos-timeline');
   const detalle = document.getElementById('proyecto-detalle');
+  const logrosArea = document.getElementById('logros-area');
 
   if (vista === 'lista') {
     lista.style.display = '';
     timeline.style.display = 'none';
     if (detalle) detalle.style.display = 'none';
+    if (logrosArea) logrosArea.style.display = '';
   } else {
     lista.style.display = 'none';
     timeline.style.display = '';
     if (detalle) detalle.style.display = 'none';
+    if (logrosArea) logrosArea.style.display = 'none';
   }
 }
 
@@ -524,120 +687,115 @@ function renderProyectoDetalle(p) {
   const container = document.getElementById('proyecto-detalle');
   const lista = document.getElementById('proyectos-lista');
   const timeline = document.getElementById('proyectos-timeline');
+  const logrosArea = document.getElementById('logros-area');
 
   lista.style.display = 'none';
   timeline.style.display = 'none';
+  if (logrosArea) logrosArea.style.display = 'none';
   container.style.display = '';
 
   const isAdmin = Auth.isAdmin();
   const areasText = p.areas && p.areas.length > 0 ? p.areas.map(a => a.nombre).join(', ') : '-';
+  const color = Utils.escapeHtml(p.color || '#3b82f6');
+
+  // Calcular progreso por fecha
+  const hoy = new Date().toISOString().split('T')[0];
+  const totalHitos = p.hitos ? p.hitos.length : 0;
+  const hitosCompletados = p.hitos ? p.hitos.filter(h => String(h.fecha).substring(0, 10) <= hoy).length : 0;
+  const porcentaje = totalHitos > 0 ? Math.round((hitosCompletados / totalHitos) * 100) : 0;
 
   let html = `
-    <div class="detail-panel">
-      <div class="detail-header">
-        <h2 style="display:flex;align-items:center;gap:8px;">
-          <span style="width:12px;height:12px;border-radius:50%;background:${Utils.escapeHtml(p.color || '#3b82f6')};display:inline-block;"></span>
-          ${Utils.escapeHtml(p.nombre)}
-        </h2>
-        <div style="display:flex;gap:8px;">
-          <button class="btn btn-secondary btn-sm" onclick="volverALista()">Volver</button>
-          ${isAdmin ? `
-            <button class="btn btn-primary btn-sm" onclick="editarProyecto(${p.id})">Editar</button>
-            <button class="btn btn-secondary btn-sm" style="color:#ef4444;" onclick="eliminarProyecto(${p.id})">Eliminar</button>
-          ` : ''}
+    <div style="border-radius:var(--border-radius-lg);box-shadow:var(--shadow);overflow:hidden;margin-bottom:24px;">
+      <!-- Hero Header -->
+      <div class="proyecto-hero" style="background:${color};">
+        <div class="proyecto-hero-overlay"></div>
+        <div class="proyecto-hero-content">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+            <div>
+              <div class="proyecto-hero-icon">${getIconSvg(p.icono, 28)}</div>
+              <h2>${Utils.escapeHtml(p.nombre)}</h2>
+              ${p.descripcion ? `<p style="margin:6px 0 0;opacity:0.9;font-size:0.9rem;">${Utils.escapeHtml(p.descripcion)}</p>` : ''}
+              <div class="proyecto-hero-badges">
+                <span class="badge">${ESTADO_LABELS[p.estado]}</span>
+                <span class="badge">${PRIORIDAD_LABELS[p.prioridad]}</span>
+                <span class="badge">${CATEGORIA_LABELS[p.categoria]}</span>
+                ${totalHitos > 0 ? `<span class="badge">${hitosCompletados}/${totalHitos} hitos (${porcentaje}%)</span>` : ''}
+              </div>
+            </div>
+            <div style="display:flex;gap:8px;flex-shrink:0;">
+              <button class="btn btn-secondary btn-sm" style="background:rgba(255,255,255,0.2);color:white;border-color:rgba(255,255,255,0.3);" onclick="volverALista()">Volver</button>
+              ${isAdmin ? `
+                <button class="btn btn-primary btn-sm" style="background:rgba(255,255,255,0.3);border-color:rgba(255,255,255,0.3);" onclick="editarProyecto(${p.id})">Editar</button>
+                <button class="btn btn-secondary btn-sm" style="background:rgba(239,68,68,0.3);color:white;border-color:rgba(239,68,68,0.3);" onclick="eliminarProyecto(${p.id})">Eliminar</button>
+              ` : ''}
+            </div>
+          </div>
         </div>
       </div>
-      ${p.descripcion ? `<p style="color:var(--gray-600);margin-bottom:16px;">${Utils.escapeHtml(p.descripcion)}</p>` : ''}
-      <div class="detail-info">
-        <div class="detail-field"><label>Estado</label><span class="badge badge-estado-${p.estado}">${ESTADO_LABELS[p.estado]}</span></div>
-        <div class="detail-field"><label>Prioridad</label><span class="badge badge-prioridad-${p.prioridad}">${PRIORIDAD_LABELS[p.prioridad]}</span></div>
-        <div class="detail-field"><label>Categoría</label><span>${CATEGORIA_LABELS[p.categoria]}</span></div>
-        <div class="detail-field"><label>Fecha inicio</label><span>${formatDate(p.fecha_inicio)}</span></div>
-        <div class="detail-field"><label>Responsable</label><span>${Utils.escapeHtml(p.responsable || '-')}</span></div>
-        <div class="detail-field"><label>Áreas</label><span>${Utils.escapeHtml(areasText)}</span></div>
-        ${p.enlace_externo ? `<div class="detail-field"><label>Enlace</label><span><a href="${Utils.escapeHtml(p.enlace_externo)}" target="_blank">${Utils.escapeHtml(Utils.truncate(p.enlace_externo, 50))}</a></span></div>` : ''}
+
+      <!-- Tabs -->
+      <div class="proyecto-tabs">
+        <button class="proyecto-tab active" onclick="switchProyectoTab('info', this)">Info</button>
+        <button class="proyecto-tab" onclick="switchProyectoTab('hitos', this)">Hitos (${totalHitos})</button>
+        <button class="proyecto-tab" onclick="switchProyectoTab('documentos', this)">Documentos (${p.documentos ? p.documentos.length : 0})</button>
       </div>
-    </div>
 
-    <!-- Panel de Documentos -->
-    <div class="detail-panel">
-      <div class="detail-header">
-        <h3 style="margin:0;">Documentos</h3>
-        ${isAdmin ? `<button class="btn btn-primary btn-sm" onclick="toggleDropZoneProyecto(${p.id})">Subir Archivo</button>` : ''}
+      <!-- Tab: Info -->
+      <div class="proyecto-tab-content active" id="ptab-info">
+        <div class="detail-info">
+          <div class="detail-field"><label>Estado</label><span class="badge badge-estado-${p.estado}">${ESTADO_LABELS[p.estado]}</span></div>
+          <div class="detail-field"><label>Prioridad</label><span class="badge badge-prioridad-${p.prioridad}">${PRIORIDAD_LABELS[p.prioridad]}</span></div>
+          <div class="detail-field"><label>Categoría</label><span>${CATEGORIA_LABELS[p.categoria]}</span></div>
+          <div class="detail-field"><label>Fecha inicio</label><span>${formatDate(p.fecha_inicio)}</span></div>
+          <div class="detail-field"><label>Responsable</label><span>${Utils.escapeHtml(p.responsable || '-')}</span></div>
+          <div class="detail-field"><label>Áreas</label><span>${Utils.escapeHtml(areasText)}</span></div>
+          ${p.enlace_externo ? `<div class="detail-field"><label>Enlace</label><span><a href="${Utils.escapeHtml(p.enlace_externo)}" target="_blank">${Utils.escapeHtml(Utils.truncate(p.enlace_externo, 50))}</a></span></div>` : ''}
+        </div>
+        ${totalHitos > 0 ? `
+          <div style="margin-top:16px;">
+            <label style="font-size:0.75rem;color:var(--gray-500);text-transform:uppercase;letter-spacing:0.5px;">Progreso</label>
+            <div class="proyecto-progress-bar" style="height:8px;margin-top:4px;">
+              <div class="proyecto-progress-fill" style="width:${porcentaje}%;background:${color}"></div>
+            </div>
+            <div class="proyecto-progress-text">${hitosCompletados} de ${totalHitos} hitos completados (${porcentaje}%)</div>
+          </div>
+        ` : ''}
       </div>
-      <div id="proyecto-drop-zone-container" style="display:none; margin-bottom: 12px;">
-        <div class="file-drop-zone" id="proyecto-drop-zone">
-          <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
-          <p>Arrastrá archivos aquí o hacé clic para seleccionar</p>
-          <p class="drop-hint">PDF, DOCX, XLSX, CSV, imágenes, ZIP (máx. 10 MB)</p>
-          <input type="file" id="proyecto-file-input" multiple accept=".pdf,.docx,.xlsx,.csv,.odt,.ods,.jpg,.jpeg,.png,.gif,.webp,.zip,.rar,.7z" style="display:none;">
-        </div>
-        <div class="file-list-container" id="proyecto-file-list"></div>
-        <div style="margin-top:8px; text-align:right;">
-          <button class="btn btn-primary btn-sm" onclick="ejecutarSubidaProyecto(${p.id})">Subir</button>
-          <button class="btn btn-secondary btn-sm" onclick="toggleDropZoneProyecto()">Cancelar</button>
-        </div>
-      </div>`;
 
-  // Documentos existentes
-  if (p.documentos && p.documentos.length > 0) {
-    for (const doc of p.documentos) {
-      html += `
-      <div class="doc-item">
-        <div class="file-icon">${getFileExtIcon(doc.nombre_archivo)}</div>
-        <div class="file-info">
-          <div class="file-name" title="${Utils.escapeHtml(doc.nombre_archivo)}">${Utils.escapeHtml(doc.nombre_archivo)}</div>
-          <div class="file-size">${formatFileSize(doc.tamano)}</div>
-        </div>
-        <div class="file-actions" style="display:flex;gap:4px;">
-          <button class="btn btn-secondary btn-sm" style="padding:2px 8px;font-size:0.75rem;" onclick="descargarDocumento(${p.id}, ${doc.id}, '${Utils.escapeHtml(doc.nombre_archivo)}')">Descargar</button>
-          ${isAdmin ? `<button class="btn btn-secondary btn-sm" style="padding:2px 8px;font-size:0.75rem;color:#ef4444;" onclick="eliminarDocumento(${p.id}, ${doc.id})">Eliminar</button>` : ''}
-        </div>
-      </div>`;
-    }
-  } else {
-    html += '<p style="color:var(--gray-500);font-size:0.85rem;">No hay documentos adjuntos</p>';
-  }
-
-  html += `</div>
-
-    <div class="detail-panel">
-      <div class="detail-header">
-        <h3 style="margin:0;">Hitos</h3>
-        ${isAdmin ? `<button class="btn btn-primary btn-sm" onclick="abrirModalHito(${p.id})">Nuevo Hito</button>` : ''}
-      </div>`;
+      <!-- Tab: Hitos -->
+      <div class="proyecto-tab-content" id="ptab-hitos">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+          <h3 style="margin:0;font-size:1rem;">Hitos del proyecto</h3>
+          ${isAdmin ? `<button class="btn btn-primary btn-sm" onclick="abrirModalHito(${p.id})">Nuevo Hito</button>` : ''}
+        </div>`;
 
   if (p.hitos && p.hitos.length > 0) {
     html += '<div class="timeline">';
     for (const h of p.hitos) {
+      const completado = String(h.fecha).substring(0, 10) <= hoy;
       html += `
-        <div class="timeline-item" style="border-left: 3px solid ${Utils.escapeHtml(p.color || '#3b82f6')};">
+        <div class="timeline-item" style="border-left: 3px solid ${color};">
+          <div class="timeline-item-icon" style="background:${completado ? color : 'var(--gray-300)'};color:white;">
+            ${completado ? Icons.checkCircle.replace(/width="\d+"/, 'width="14"').replace(/height="\d+"/, 'height="14"') : Icons.clock.replace(/width="\d+"/, 'width="14"').replace(/height="\d+"/, 'height="14"')}
+          </div>
           <div style="display:flex;justify-content:space-between;align-items:flex-start;">
-            <div>
-              <div class="timeline-date">${formatDate(h.fecha)}</div>
+            <div style="flex:1;min-width:0;">
+              <div class="timeline-date">${formatDate(h.fecha)} ${completado ? '<span style="color:#10b981;font-weight:600;">Completado</span>' : '<span style="color:var(--gray-400);">Pendiente</span>'}</div>
               <div class="timeline-title">${Utils.escapeHtml(h.titulo)}</div>
               ${h.descripcion ? `<div class="timeline-desc">${Utils.escapeHtml(h.descripcion)}</div>` : ''}
               ${h.evidencia_url ? `<a href="${Utils.escapeHtml(h.evidencia_url)}" target="_blank" style="font-size:0.8rem;margin-top:4px;display:inline-block;">Ver evidencia</a>` : ''}
               ${h.archivos && h.archivos.length > 0 ? `
                 <div style="margin-top:8px;">
                   ${h.archivos.map(a => `
-                    <div class="doc-item" style="margin-bottom:4px;">
-                      <div class="file-icon">${getFileExtIcon(a.nombre_archivo)}</div>
-                      <div class="file-info">
-                        <div class="file-name" title="${Utils.escapeHtml(a.nombre_archivo)}">${Utils.escapeHtml(a.nombre_archivo)}</div>
-                        <div class="file-size">${formatFileSize(a.tamano)}</div>
-                      </div>
-                      <div class="file-actions" style="display:flex;gap:4px;">
-                        <button class="btn btn-secondary btn-sm" style="padding:2px 8px;font-size:0.7rem;" onclick="descargarHitoArchivo(${h.id}, ${a.id}, '${Utils.escapeHtml(a.nombre_archivo)}')">Descargar</button>
-                        ${isAdmin ? `<button class="btn btn-secondary btn-sm" style="padding:2px 8px;font-size:0.7rem;color:#ef4444;" onclick="eliminarHitoArchivo(${h.id}, ${a.id}, ${p.id})">Eliminar</button>` : ''}
-                      </div>
-                    </div>
+                    <span class="timeline-archivo-chip" onclick="previewArchivo(${h.id}, ${a.id}, '${Utils.escapeHtml(a.nombre_archivo)}', ${a.tamano}, '${Utils.escapeHtml(a.mime_type || '')}')" title="${Utils.escapeHtml(a.nombre_archivo)}">
+                      ${getFileExtIcon(a.nombre_archivo)} ${Utils.escapeHtml(Utils.truncate(a.nombre_archivo, 25))}
+                    </span>
                   `).join('')}
                 </div>
               ` : ''}
             </div>
             ${isAdmin ? `
-              <div style="display:flex;gap:4px;">
+              <div style="display:flex;gap:4px;flex-shrink:0;margin-left:8px;">
                 <button class="btn btn-secondary btn-sm" style="padding:2px 6px;font-size:0.7rem;" onclick="editarHito(${h.id}, ${p.id})">Editar</button>
                 <button class="btn btn-secondary btn-sm" style="padding:2px 6px;font-size:0.7rem;color:#ef4444;" onclick="eliminarHito(${h.id}, ${p.id})">Eliminar</button>
               </div>
@@ -650,13 +808,65 @@ function renderProyectoDetalle(p) {
     html += '<p style="color:var(--gray-500);font-size:0.9rem;">No hay hitos registrados</p>';
   }
 
-  html += '</div>';
+  html += `</div>
+
+      <!-- Tab: Documentos -->
+      <div class="proyecto-tab-content" id="ptab-documentos">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+          <h3 style="margin:0;font-size:1rem;">Documentos del proyecto</h3>
+          ${isAdmin ? `<button class="btn btn-primary btn-sm" onclick="toggleDropZoneProyecto(${p.id})">Subir Archivo</button>` : ''}
+        </div>
+        <div id="proyecto-drop-zone-container" style="display:none; margin-bottom: 12px;">
+          <div class="file-drop-zone" id="proyecto-drop-zone">
+            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
+            <p>Arrastrá archivos aquí o hacé clic para seleccionar</p>
+            <p class="drop-hint">PDF, DOCX, XLSX, CSV, imágenes, ZIP (máx. 10 MB)</p>
+            <input type="file" id="proyecto-file-input" multiple accept=".pdf,.docx,.xlsx,.csv,.odt,.ods,.jpg,.jpeg,.png,.gif,.webp,.zip,.rar,.7z" style="display:none;">
+          </div>
+          <div class="file-list-container" id="proyecto-file-list"></div>
+          <div style="margin-top:8px; text-align:right;">
+            <button class="btn btn-primary btn-sm" onclick="ejecutarSubidaProyecto(${p.id})">Subir</button>
+            <button class="btn btn-secondary btn-sm" onclick="toggleDropZoneProyecto()">Cancelar</button>
+          </div>
+        </div>`;
+
+  if (p.documentos && p.documentos.length > 0) {
+    for (const doc of p.documentos) {
+      html += `
+      <div class="doc-item">
+        <div class="file-icon">${getFileExtIcon(doc.nombre_archivo)}</div>
+        <div class="file-info">
+          <div class="file-name" title="${Utils.escapeHtml(doc.nombre_archivo)}">${Utils.escapeHtml(doc.nombre_archivo)}</div>
+          <div class="file-size">${formatFileSize(doc.tamano)}</div>
+        </div>
+        <div class="file-actions" style="display:flex;gap:4px;">
+          <button class="btn btn-secondary btn-sm" style="padding:2px 8px;font-size:0.75rem;" onclick="previewDocumentoProyecto(${p.id}, ${doc.id}, '${Utils.escapeHtml(doc.nombre_archivo)}', ${doc.tamano}, '${Utils.escapeHtml(doc.mime_type || '')}')">Ver</button>
+          <button class="btn btn-secondary btn-sm" style="padding:2px 8px;font-size:0.75rem;" onclick="descargarDocumento(${p.id}, ${doc.id}, '${Utils.escapeHtml(doc.nombre_archivo)}')">Descargar</button>
+          ${isAdmin ? `<button class="btn btn-secondary btn-sm" style="padding:2px 8px;font-size:0.75rem;color:#ef4444;" onclick="eliminarDocumento(${p.id}, ${doc.id})">Eliminar</button>` : ''}
+        </div>
+      </div>`;
+    }
+  } else {
+    html += '<p style="color:var(--gray-500);font-size:0.85rem;">No hay documentos adjuntos</p>';
+  }
+
+  html += '</div></div>';
   container.innerHTML = html;
+}
+
+function switchProyectoTab(tab, btn) {
+  document.querySelectorAll('.proyecto-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.proyecto-tab-content').forEach(c => c.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  const tabContent = document.getElementById(`ptab-${tab}`);
+  if (tabContent) tabContent.classList.add('active');
 }
 
 function volverALista() {
   const container = document.getElementById('proyecto-detalle');
   container.style.display = 'none';
+  const logrosArea = document.getElementById('logros-area');
+  if (logrosArea) logrosArea.style.display = '';
   proyectoDetalleId = null;
   setVistaProyectos(vistaActual);
   cargarProyectos();
@@ -706,6 +916,28 @@ async function ejecutarSubidaProyecto(proyectoId) {
 // CRUD PROYECTOS
 // =====================================================
 
+function renderIconSelector(selectedIcon) {
+  const container = document.getElementById('proy-icono-selector');
+  if (!container) return;
+
+  const icons = Object.keys(ICON_SELECTOR_MAP);
+  container.innerHTML = icons.map(name => {
+    const isSelected = name === selectedIcon;
+    return `<div class="icon-selector-item ${isSelected ? 'selected' : ''}" onclick="seleccionarIcono('${name}')" title="${name}">
+      ${getIconSvg(name, 20)}
+    </div>`;
+  }).join('');
+}
+
+function seleccionarIcono(name) {
+  document.getElementById('proy-icono').value = name;
+  document.querySelectorAll('.icon-selector-item').forEach(el => el.classList.remove('selected'));
+  const items = document.querySelectorAll('.icon-selector-item');
+  const icons = Object.keys(ICON_SELECTOR_MAP);
+  const idx = icons.indexOf(name);
+  if (idx >= 0 && items[idx]) items[idx].classList.add('selected');
+}
+
 function abrirModalProyecto(proyectoData = null) {
   editandoProyectoId = proyectoData ? proyectoData.id : null;
   document.getElementById('modal-proyecto-titulo').textContent = proyectoData ? 'Editar Proyecto' : 'Nuevo Proyecto';
@@ -717,8 +949,15 @@ function abrirModalProyecto(proyectoData = null) {
   document.getElementById('proy-categoria').value = proyectoData?.categoria || 'tecnologia';
   document.getElementById('proy-fecha-inicio').value = proyectoData?.fecha_inicio ? String(proyectoData.fecha_inicio).substring(0, 10) : '';
   document.getElementById('proy-responsable').value = proyectoData?.responsable || '';
-  document.getElementById('proy-color').value = proyectoData?.color || '#3b82f6';
+  const colorVal = proyectoData?.color || '#3b82f6';
+  document.getElementById('proy-color').value = colorVal;
+  const colorPreview = document.getElementById('proy-color-preview');
+  if (colorPreview) colorPreview.style.background = colorVal;
   document.getElementById('proy-enlace').value = proyectoData?.enlace_externo || '';
+  document.getElementById('proy-icono').value = proyectoData?.icono || '';
+
+  // Render icon selector
+  renderIconSelector(proyectoData?.icono || '');
 
   // Seleccionar áreas
   const areasSelect = document.getElementById('proy-areas');
@@ -768,6 +1007,7 @@ async function guardarProyecto() {
       fecha_inicio: document.getElementById('proy-fecha-inicio').value || null,
       responsable: document.getElementById('proy-responsable').value.trim() || null,
       color: document.getElementById('proy-color').value,
+      icono: document.getElementById('proy-icono').value || null,
       enlace_externo: document.getElementById('proy-enlace').value.trim() || null,
       areas
     };
@@ -980,6 +1220,153 @@ async function eliminarHito(hitoId, proyectoId) {
     await verProyecto(proyectoId);
   } catch (error) {
     Utils.showError(error.message || 'Error al eliminar hito');
+  }
+}
+
+// =====================================================
+// CRUD LOGROS
+// =====================================================
+
+function abrirModalLogro(logroData = null) {
+  editandoLogroId = logroData ? logroData.id : null;
+  document.getElementById('modal-logro-titulo').textContent = logroData ? 'Editar Logro' : 'Registrar Logro';
+
+  document.getElementById('logro-titulo').value = logroData?.titulo || '';
+  document.getElementById('logro-fecha').value = logroData?.fecha ? String(logroData.fecha).substring(0, 10) : '';
+  document.getElementById('logro-descripcion').value = logroData?.descripcion || '';
+  document.getElementById('logro-evidencia-tipo').value = logroData?.evidencia_tipo || 'ninguno';
+  document.getElementById('logro-evidencia-url').value = logroData?.evidencia_url || '';
+
+  // Archivos existentes
+  const archivosExistentes = document.getElementById('logro-archivos-existentes');
+  archivosExistentes.innerHTML = '';
+  const existingCount = logroData?.archivos?.length || 0;
+  if (logroData && logroData.archivos && logroData.archivos.length > 0) {
+    archivosExistentes.innerHTML = logroData.archivos.map(a => `
+      <div class="doc-item" style="margin-bottom:4px;">
+        <div class="file-icon">${getFileExtIcon(a.nombre_archivo)}</div>
+        <div class="file-info">
+          <div class="file-name" title="${Utils.escapeHtml(a.nombre_archivo)}">${Utils.escapeHtml(a.nombre_archivo)}</div>
+          <div class="file-size">${formatFileSize(a.tamano)}</div>
+        </div>
+        <div class="file-actions" style="display:flex;gap:4px;">
+          <button class="btn btn-secondary btn-sm" style="padding:2px 6px;font-size:0.7rem;" type="button" onclick="descargarHitoArchivo(${logroData.id}, ${a.id}, '${Utils.escapeHtml(a.nombre_archivo)}')">Descargar</button>
+          <button class="btn btn-secondary btn-sm" style="padding:2px 6px;font-size:0.7rem;color:#ef4444;" type="button" onclick="eliminarLogroArchivo(${logroData.id}, ${a.id})">Eliminar</button>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  // Inicializar drop zone
+  logroDropZoneInstance = inicializarDropZone({
+    dropZoneId: 'logro-drop-zone',
+    fileInputId: 'logro-file-input',
+    fileListId: 'logro-file-list',
+    maxFiles: 3,
+    existingCount
+  });
+
+  document.getElementById('modal-logro').classList.add('active');
+}
+
+function cerrarModalLogro() {
+  document.getElementById('modal-logro').classList.remove('active');
+  editandoLogroId = null;
+  logroDropZoneInstance = null;
+}
+
+async function guardarLogro() {
+  try {
+    const titulo = document.getElementById('logro-titulo').value.trim();
+    const fecha = document.getElementById('logro-fecha').value;
+    if (!titulo || !fecha) {
+      Utils.showError('Título y fecha son requeridos');
+      return;
+    }
+
+    const data = {
+      titulo,
+      fecha,
+      descripcion: document.getElementById('logro-descripcion').value.trim() || null,
+      evidencia_tipo: document.getElementById('logro-evidencia-tipo').value,
+      evidencia_url: document.getElementById('logro-evidencia-url').value.trim() || null
+    };
+
+    let url, method;
+    if (editandoLogroId) {
+      url = `${CONFIG.API_URL}/gestion/hitos/${editandoLogroId}`;
+      method = 'PUT';
+    } else {
+      url = `${CONFIG.API_URL}/gestion/logros`;
+      method = 'POST';
+    }
+
+    const response = await fetch(url, { method, headers: Auth.getAuthHeaders(), body: JSON.stringify(data) });
+    const result = await response.json();
+    if (!result.success) throw new Error(result.error);
+
+    // Subir archivos pendientes
+    const logroId = editandoLogroId || result.data.id;
+    if (logroDropZoneInstance) {
+      const pendingFiles = logroDropZoneInstance.getFiles();
+      if (pendingFiles.length > 0) {
+        await subirArchivosHito(logroId, pendingFiles);
+      }
+    }
+
+    showToast(result.message || 'Logro guardado', 'success');
+    cerrarModalLogro();
+    await cargarTimeline();
+    await cargarProyectos();
+  } catch (error) {
+    Utils.showError(error.message || 'Error al guardar logro');
+  }
+}
+
+async function editarLogro(hitoId) {
+  // Buscar el logro en timelineData
+  const logro = timelineData.find(h => h.id === hitoId && !h.proyecto_id);
+  if (logro) {
+    abrirModalLogro(logro);
+  } else {
+    Utils.showError('Logro no encontrado');
+  }
+}
+
+async function eliminarLogro(hitoId) {
+  if (!confirm('¿Eliminar este logro?')) return;
+  try {
+    const response = await fetch(`${CONFIG.API_URL}/gestion/hitos/${hitoId}`, {
+      method: 'DELETE',
+      headers: Auth.getAuthHeaders()
+    });
+    const result = await response.json();
+    if (!result.success) throw new Error(result.error);
+
+    showToast('Logro eliminado', 'success');
+    await cargarTimeline();
+  } catch (error) {
+    Utils.showError(error.message || 'Error al eliminar logro');
+  }
+}
+
+async function eliminarLogroArchivo(hitoId, archivoId) {
+  if (!confirm('¿Eliminar este archivo?')) return;
+  try {
+    const response = await fetch(`${CONFIG.API_URL}/gestion/hitos/${hitoId}/archivos/${archivoId}`, {
+      method: 'DELETE',
+      headers: Auth.getAuthHeaders()
+    });
+    const result = await response.json();
+    if (!result.success) throw new Error(result.error);
+
+    showToast('Archivo eliminado', 'success');
+    // Recargar timeline y re-abrir modal
+    await cargarTimeline();
+    const logro = timelineData.find(h => h.id === hitoId && !h.proyecto_id);
+    if (logro) abrirModalLogro(logro);
+  } catch (error) {
+    Utils.showError(error.message || 'Error al eliminar archivo');
   }
 }
 
@@ -1217,4 +1604,132 @@ async function eliminarHitoArchivo(hitoId, archivoId, proyectoId) {
   } catch (error) {
     Utils.showError(error.message || 'Error al eliminar archivo');
   }
+}
+
+// =====================================================
+// PREVIEW DE ARCHIVOS (Modal Lightbox)
+// =====================================================
+
+async function previewArchivo(hitoId, archivoId, nombre, tamano, mimeType) {
+  const modal = document.getElementById('modal-preview-archivo');
+  const body = document.getElementById('modal-preview-body');
+  const footer = document.getElementById('modal-preview-footer');
+  const titulo = document.getElementById('modal-preview-nombre');
+
+  titulo.textContent = nombre;
+  body.innerHTML = '<p style="color:var(--gray-500);">Cargando...</p>';
+
+  const ext = nombre.split('.').pop().toLowerCase();
+  const isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext);
+  const isPDF = ext === 'pdf';
+
+  footer.innerHTML = `
+    <span style="font-size:0.8rem;color:var(--gray-500);">${formatFileSize(tamano)} &middot; ${ext.toUpperCase()}</span>
+    <button class="btn btn-primary btn-sm" onclick="descargarHitoArchivo(${hitoId}, ${archivoId}, '${Utils.escapeHtml(nombre)}')">
+      ${Icons.download.replace(/width="\d+"/, 'width="16"').replace(/height="\d+"/, 'height="16"')} Descargar
+    </button>`;
+
+  modal.classList.add('active');
+
+  if (isImage || isPDF) {
+    try {
+      const token = Auth.getToken();
+      const response = await fetch(`${CONFIG.API_URL}/gestion/hitos/${hitoId}/archivos/${archivoId}/descargar`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!response.ok) throw new Error('Error al cargar archivo');
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+
+      if (isImage) {
+        body.innerHTML = `<img src="${url}" alt="${Utils.escapeHtml(nombre)}" style="max-width:100%;max-height:70vh;border-radius:8px;">`;
+      } else {
+        body.innerHTML = `<iframe src="${url}" style="width:100%;height:70vh;border:none;border-radius:4px;"></iframe>`;
+      }
+      body.dataset.blobUrl = url;
+    } catch (error) {
+      body.innerHTML = `<div class="preview-placeholder">
+        ${Icons.fileText.replace(/width="\d+"/, 'width="64"').replace(/height="\d+"/, 'height="64"')}
+        <p style="font-weight:600;">${Utils.escapeHtml(nombre)}</p>
+        <p>Error al cargar vista previa</p>
+      </div>`;
+    }
+  } else {
+    body.innerHTML = `<div class="preview-placeholder">
+      ${Icons.fileText.replace(/width="\d+"/, 'width="64"').replace(/height="\d+"/, 'height="64"')}
+      <p style="font-weight:600;font-size:1.1rem;">${Utils.escapeHtml(nombre)}</p>
+      <p>${formatFileSize(tamano)} &middot; ${ext.toUpperCase()}</p>
+      <p style="margin-top:12px;color:var(--gray-400);">Vista previa no disponible para este tipo de archivo</p>
+    </div>`;
+  }
+}
+
+async function previewDocumentoProyecto(proyectoId, docId, nombre, tamano, mimeType) {
+  const modal = document.getElementById('modal-preview-archivo');
+  const body = document.getElementById('modal-preview-body');
+  const footer = document.getElementById('modal-preview-footer');
+  const titulo = document.getElementById('modal-preview-nombre');
+
+  titulo.textContent = nombre;
+  body.innerHTML = '<p style="color:var(--gray-500);">Cargando...</p>';
+
+  const ext = nombre.split('.').pop().toLowerCase();
+  const isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext);
+  const isPDF = ext === 'pdf';
+
+  footer.innerHTML = `
+    <span style="font-size:0.8rem;color:var(--gray-500);">${formatFileSize(tamano)} &middot; ${ext.toUpperCase()}</span>
+    <button class="btn btn-primary btn-sm" onclick="descargarDocumento(${proyectoId}, ${docId}, '${Utils.escapeHtml(nombre)}')">
+      ${Icons.download.replace(/width="\d+"/, 'width="16"').replace(/height="\d+"/, 'height="16"')} Descargar
+    </button>`;
+
+  modal.classList.add('active');
+
+  if (isImage || isPDF) {
+    try {
+      const token = Auth.getToken();
+      const response = await fetch(`${CONFIG.API_URL}/gestion/proyectos/${proyectoId}/documentos/${docId}/descargar`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!response.ok) throw new Error('Error al cargar archivo');
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+
+      if (isImage) {
+        body.innerHTML = `<img src="${url}" alt="${Utils.escapeHtml(nombre)}" style="max-width:100%;max-height:70vh;border-radius:8px;">`;
+      } else {
+        body.innerHTML = `<iframe src="${url}" style="width:100%;height:70vh;border:none;border-radius:4px;"></iframe>`;
+      }
+      body.dataset.blobUrl = url;
+    } catch (error) {
+      body.innerHTML = `<div class="preview-placeholder">
+        ${Icons.fileText.replace(/width="\d+"/, 'width="64"').replace(/height="\d+"/, 'height="64"')}
+        <p style="font-weight:600;">${Utils.escapeHtml(nombre)}</p>
+        <p>Error al cargar vista previa</p>
+      </div>`;
+    }
+  } else {
+    body.innerHTML = `<div class="preview-placeholder">
+      ${Icons.fileText.replace(/width="\d+"/, 'width="64"').replace(/height="\d+"/, 'height="64"')}
+      <p style="font-weight:600;font-size:1.1rem;">${Utils.escapeHtml(nombre)}</p>
+      <p>${formatFileSize(tamano)} &middot; ${ext.toUpperCase()}</p>
+      <p style="margin-top:12px;color:var(--gray-400);">Vista previa no disponible para este tipo de archivo</p>
+    </div>`;
+  }
+}
+
+function cerrarPreviewArchivo() {
+  const modal = document.getElementById('modal-preview-archivo');
+  const body = document.getElementById('modal-preview-body');
+
+  // Limpiar blob URL
+  if (body.dataset.blobUrl) {
+    URL.revokeObjectURL(body.dataset.blobUrl);
+    delete body.dataset.blobUrl;
+  }
+
+  body.innerHTML = '';
+  modal.classList.remove('active');
 }

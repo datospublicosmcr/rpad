@@ -262,6 +262,159 @@
         }
         .categoria-header:first-child { margin-top: 0; }
 
+        /* Icon Selector */
+        .icon-selector-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 6px;
+            margin-top: 8px;
+        }
+        .icon-selector-item {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 44px;
+            height: 44px;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            cursor: pointer;
+            background: var(--bg-card);
+            transition: all 0.15s;
+            color: var(--gray-600);
+        }
+        .icon-selector-item:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+            background: #eff6ff;
+        }
+        .icon-selector-item.selected {
+            border-color: var(--primary);
+            background: var(--primary);
+            color: white;
+        }
+        .icon-selector-item svg { width: 20px; height: 20px; }
+
+        /* Project Card Icon */
+        .proyecto-card-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            color: white;
+        }
+        .proyecto-card-icon svg { width: 20px; height: 20px; }
+
+        /* Project Progress Bar */
+        .proyecto-progress-bar {
+            width: 100%;
+            height: 6px;
+            background: var(--gray-200, #e5e7eb);
+            border-radius: 3px;
+            overflow: hidden;
+            margin: 10px 0 6px;
+        }
+        .proyecto-progress-fill {
+            height: 100%;
+            border-radius: 3px;
+            transition: width 0.5s ease;
+        }
+        .proyecto-progress-text {
+            font-size: 0.7rem;
+            color: var(--gray-500);
+            margin-bottom: 10px;
+        }
+
+        /* Project Card Areas & Responsable */
+        .proyecto-card-areas {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            margin-top: 8px;
+        }
+        .proyecto-card-areas .area-chip {
+            font-size: 0.65rem;
+            padding: 1px 6px;
+            border-radius: 8px;
+            background: #f0f4f8;
+            color: var(--gray-600);
+        }
+        .proyecto-card-responsable {
+            font-size: 0.75rem;
+            color: var(--gray-500);
+            margin-top: 6px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .proyecto-card-responsable svg { width: 12px; height: 12px; }
+
+        /* Project Hero Header */
+        .proyecto-hero {
+            border-radius: var(--border-radius-lg) var(--border-radius-lg) 0 0;
+            padding: 32px 24px;
+            position: relative;
+            overflow: hidden;
+            color: white;
+        }
+        .proyecto-hero-overlay {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, rgba(0,0,0,0.3), rgba(0,0,0,0.1));
+        }
+        .proyecto-hero-content {
+            position: relative;
+            z-index: 1;
+        }
+        .proyecto-hero-icon {
+            width: 56px;
+            height: 56px;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255,255,255,0.2);
+            margin-bottom: 12px;
+        }
+        .proyecto-hero-icon svg { width: 28px; height: 28px; }
+        .proyecto-hero h2 { margin: 0; font-size: 1.4rem; font-weight: 700; }
+        .proyecto-hero-badges { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+        .proyecto-hero-badges .badge {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            backdrop-filter: blur(4px);
+        }
+
+        /* Project Tabs */
+        .proyecto-tabs {
+            display: flex;
+            border-bottom: 2px solid var(--border-color);
+            background: var(--bg-card);
+            padding: 0 24px;
+        }
+        .proyecto-tab {
+            padding: 12px 20px;
+            border: none;
+            background: none;
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: var(--gray-500);
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -2px;
+            transition: all 0.2s;
+        }
+        .proyecto-tab:hover { color: var(--gray-700); }
+        .proyecto-tab.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+            font-weight: 600;
+        }
+        .proyecto-tab-content { display: none; padding: 24px; background: var(--bg-card); }
+        .proyecto-tab-content.active { display: block; }
+
         /* Timeline */
         .timeline {
             position: relative;
@@ -314,6 +467,156 @@
             color: var(--gray-600);
             margin-top: 6px;
         }
+
+        /* Timeline Separator */
+        .timeline-separator {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin: 24px 0 16px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--gray-400);
+        }
+        .timeline-separator::before, .timeline-separator::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--border-color);
+        }
+
+        /* Timeline Item Icon */
+        .timeline-item-icon {
+            width: 24px;
+            height: 24px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: absolute;
+            left: -32px;
+            top: 18px;
+            z-index: 1;
+        }
+        .timeline-item-icon svg { width: 14px; height: 14px; }
+
+        /* Timeline Logro vs Proyecto */
+        .timeline-item-logro {
+            border-left: 3px solid #8b5cf6;
+        }
+        .timeline-item-logro::before { background: #8b5cf6 !important; }
+        .timeline-item-proyecto { }
+
+        /* Timeline Filter */
+        .timeline-filter {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+        .timeline-filter label {
+            font-size: 0.85rem;
+            color: var(--gray-600);
+            font-weight: 500;
+        }
+
+        /* Timeline Archivo Chips */
+        .timeline-archivo-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 0.72rem;
+            background: #f0f4f8;
+            color: var(--gray-600);
+            cursor: pointer;
+            border: 1px solid var(--border-color);
+            transition: all 0.15s;
+            margin: 2px;
+        }
+        .timeline-archivo-chip:hover {
+            background: #e0e7ff;
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+        .timeline-archivo-chip svg { width: 12px; height: 12px; }
+
+        /* Logros Section */
+        .logros-section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin: 32px 0 16px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid var(--border-color);
+        }
+        .logros-section-header h3 {
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--gray-700);
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .logros-section-header h3 svg { width: 20px; height: 20px; color: #8b5cf6; }
+
+        /* Modal Section Title */
+        .modal-section-title {
+            font-size: 0.8rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--gray-500);
+            margin: 16px 0 8px;
+            padding-bottom: 4px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .modal-section-title:first-child { margin-top: 0; }
+
+        /* Color Preview */
+        .color-preview-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .color-preview-swatch {
+            width: 24px;
+            height: 24px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            flex-shrink: 0;
+        }
+
+        /* Preview Modal */
+        #modal-preview-archivo .modal { max-width: 900px; }
+        #modal-preview-archivo .modal-body {
+            min-height: 300px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        #modal-preview-archivo .modal-body img {
+            max-width: 100%;
+            max-height: 70vh;
+            border-radius: 8px;
+        }
+        #modal-preview-archivo .modal-body iframe {
+            width: 100%;
+            height: 70vh;
+            border: none;
+            border-radius: 4px;
+        }
+        .preview-placeholder {
+            text-align: center;
+            padding: 40px;
+            color: var(--gray-500);
+        }
+        .preview-placeholder svg { width: 64px; height: 64px; margin-bottom: 16px; color: var(--gray-300); }
+        .preview-placeholder p { margin: 4px 0; }
 
         /* Modal */
         .modal-overlay {
@@ -723,6 +1026,10 @@
                         <button class="vista-btn" onclick="setVistaProyectos('timeline')">Timeline</button>
                     </div>
                     <div class="spacer"></div>
+                    <button class="btn btn-secondary btn-sm" id="btn-nuevo-logro" style="display:none" onclick="abrirModalLogro()">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/></svg>
+                        Registrar Logro
+                    </button>
                     <button class="btn btn-primary btn-sm" id="btn-nuevo-proyecto" style="display:none" onclick="abrirModalProyecto()">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
                         Nuevo Proyecto
@@ -731,6 +1038,9 @@
 
                 <!-- Vista lista -->
                 <div id="proyectos-lista"></div>
+
+                <!-- Logros del Área -->
+                <div id="logros-area"></div>
 
                 <!-- Vista timeline -->
                 <div id="proyectos-timeline" style="display:none"></div>
@@ -828,8 +1138,16 @@
                     </div>
                     <div class="form-group">
                         <label class="form-label">Color</label>
-                        <input type="color" id="proy-color" class="form-input" value="#3b82f6" style="height:38px; padding:4px;">
+                        <div class="color-preview-row">
+                            <input type="color" id="proy-color" class="form-input" value="#3b82f6" style="height:38px; padding:4px; flex:1;" onchange="document.getElementById('proy-color-preview').style.background=this.value">
+                            <div class="color-preview-swatch" id="proy-color-preview" style="background:#3b82f6;"></div>
+                        </div>
                     </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Icono</label>
+                    <input type="hidden" id="proy-icono" value="">
+                    <div class="icon-selector-grid" id="proy-icono-selector"></div>
                 </div>
                 <div class="form-group">
                     <label class="form-label">Enlace externo</label>
@@ -898,6 +1216,75 @@
             <div class="modal-footer">
                 <button class="btn btn-secondary" onclick="cerrarModalHito()">Cancelar</button>
                 <button class="btn btn-primary" onclick="guardarHito()">Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Logro -->
+    <div class="modal-overlay" id="modal-logro">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 id="modal-logro-titulo">Registrar Logro</h3>
+                <button class="modal-close" onclick="cerrarModalLogro()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="modal-section-title">Información del Logro</div>
+                <div class="form-group">
+                    <label class="form-label">Título *</label>
+                    <input type="text" id="logro-titulo" class="form-input" placeholder="Ej: Reunión con Secretaría de Gobierno">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Fecha *</label>
+                    <input type="date" id="logro-fecha" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Descripción</label>
+                    <textarea id="logro-descripcion" class="form-input" rows="3" placeholder="Descripción del logro o evento"></textarea>
+                </div>
+                <div class="modal-section-title">Evidencia</div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                    <div class="form-group">
+                        <label class="form-label">Tipo de evidencia</label>
+                        <select id="logro-evidencia-tipo" class="form-select">
+                            <option value="ninguno">Ninguno</option>
+                            <option value="url">URL</option>
+                            <option value="archivo">Archivo</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">URL de evidencia</label>
+                        <input type="url" id="logro-evidencia-url" class="form-input" placeholder="https://...">
+                    </div>
+                </div>
+                <div class="modal-section-title">Archivos adjuntos</div>
+                <div class="form-group">
+                    <div id="logro-archivos-existentes"></div>
+                    <div class="file-drop-zone" id="logro-drop-zone">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
+                        <p>Arrastrá archivos aquí o hacé clic para seleccionar</p>
+                        <p class="drop-hint">PDF, DOCX, XLSX, imágenes, ZIP (máx. 3 archivos, 10 MB c/u)</p>
+                        <input type="file" id="logro-file-input" multiple accept=".pdf,.docx,.xlsx,.csv,.odt,.ods,.jpg,.jpeg,.png,.gif,.webp,.zip,.rar,.7z" style="display:none;">
+                    </div>
+                    <div class="file-list-container" id="logro-file-list"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="cerrarModalLogro()">Cancelar</button>
+                <button class="btn btn-primary" onclick="guardarLogro()">Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Preview Archivo -->
+    <div class="modal-overlay" id="modal-preview-archivo">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 id="modal-preview-nombre">Vista previa</h3>
+                <button class="modal-close" onclick="cerrarPreviewArchivo()">&times;</button>
+            </div>
+            <div class="modal-body" id="modal-preview-body">
+            </div>
+            <div class="modal-footer" id="modal-preview-footer">
             </div>
         </div>
     </div>
