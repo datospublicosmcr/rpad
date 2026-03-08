@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authMiddleware } from '../middleware/auth.js';
+import { authMiddleware, adminOnly } from '../middleware/auth.js';
 
 // Controladores
 import { login, verifySession, changePassword, updateProfile, getProfile } from '../controllers/authController.js';
@@ -47,6 +47,22 @@ import {
   getDatasetsConPendientes
 } from '../controllers/cambiosPendientesController.js';
 import { enviarContacto } from '../controllers/contactoController.js';
+import {
+  getMetricasAutomaticas,
+  getMetricasManuales,
+  createMetricaManual,
+  deleteMetricaManual,
+  getProyectos,
+  getProyectoById,
+  createProyecto,
+  updateProyecto,
+  deleteProyecto,
+  createHito,
+  updateHito,
+  deleteHito,
+  getTimeline,
+  exportarMetricasCSV
+} from '../controllers/gestionController.js';
 
 const router = Router();
 
@@ -153,5 +169,31 @@ router.get('/cron/cambios-pendientes', (req, res, next) => {
   }
   next();
 }, ejecutarNotificacionCambiosPendientes);
+
+// =====================================================
+// Gestión: Métricas y Proyectos (protegidas)
+// =====================================================
+
+// Métricas (lectura: todos los autenticados; escritura: solo admin)
+router.get('/gestion/metricas', authMiddleware, getMetricasAutomaticas);
+router.get('/gestion/metricas/csv', authMiddleware, exportarMetricasCSV);
+router.get('/gestion/metricas-manuales', authMiddleware, getMetricasManuales);
+router.post('/gestion/metricas-manuales', authMiddleware, adminOnly, createMetricaManual);
+router.delete('/gestion/metricas-manuales/:id', authMiddleware, adminOnly, deleteMetricaManual);
+
+// Proyectos (lectura: todos los autenticados; escritura: solo admin)
+router.get('/gestion/proyectos', authMiddleware, getProyectos);
+router.get('/gestion/proyectos/:id', authMiddleware, getProyectoById);
+router.post('/gestion/proyectos', authMiddleware, adminOnly, createProyecto);
+router.put('/gestion/proyectos/:id', authMiddleware, adminOnly, updateProyecto);
+router.delete('/gestion/proyectos/:id', authMiddleware, adminOnly, deleteProyecto);
+
+// Hitos (solo admin)
+router.post('/gestion/proyectos/:proyecto_id/hitos', authMiddleware, adminOnly, createHito);
+router.put('/gestion/hitos/:id', authMiddleware, adminOnly, updateHito);
+router.delete('/gestion/hitos/:id', authMiddleware, adminOnly, deleteHito);
+
+// Timeline (todos los autenticados)
+router.get('/gestion/timeline', authMiddleware, getTimeline);
 
 export default router;
