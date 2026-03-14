@@ -2,6 +2,8 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
+import fs from 'fs';
+import helmet from 'helmet';
 import { fileURLToPath } from 'url';
 import { testConnection } from './config/database.js';
 import routes from './routes/index.js';
@@ -13,27 +15,60 @@ dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Crear directorio de uploads si no existe
+const uploadsDir = path.join(__dirname, 'uploads');
+fs.mkdirSync(uploadsDir, { recursive: true });
+
 const app = express();
 const PORT = process.env.PORT || 3001;
+
+// Trust proxy (necesario para rate limiting detrás de reverse proxy)
+app.set('trust proxy', 1);
+
+// Helmet — seguridad HTTP headers + CSP
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdn.jsdelivr.net"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com"],
+      imgSrc: ["'self'", "data:", "blob:"],
+      connectSrc: ["'self'"],
+      frameSrc: ["'self'", "blob:"],
+      objectSrc: ["'none'"],
+      upgradeInsecureRequests: []
+    }
+  },
+  crossOriginEmbedderPolicy: false
+}));
 
 // Middlewares
 app.use(cors({
   origin: process.env.CORS_ORIGIN || 'http://rpad.mcrmodernizacion.gob.ar',
   credentials: true
 }));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 
 // Servir archivos estáticos del frontend
 app.use(express.static(path.join(__dirname, 'public')));
+
+// No-cache para respuestas de API
+app.use('/api', (req, res, next) => {
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.set('Pragma', 'no-cache');
+  res.set('Expires', '0');
+  next();
+});
 
 // Rutas de la API
 app.use('/api', routes);
 
 // Ruta de health check
 app.get('/api/health', (req, res) => {
-  res.json({ 
-    status: 'ok', 
+  res.json({
+    status: 'ok',
     timestamp: new Date().toISOString(),
     service: 'RPAD API'
   });
@@ -67,7 +102,7 @@ app.use((err, req, res, next) => {
 // Iniciar servidor
 const startServer = async () => {
   const dbConnected = await testConnection();
-  
+
   if (!dbConnected) {
     console.error('❌ No se pudo conectar a la base de datos.');
     process.exit(1);

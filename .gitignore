@@ -2,6 +2,7 @@ node_modules/
 .env
 *.log
 debug.log
+uploads/
 
 # Documentos internos - no subir al repo
 AUDITORIA_*.md
