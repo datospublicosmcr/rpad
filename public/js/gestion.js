@@ -766,8 +766,6 @@ function renderProyectoDetalle(p) {
   // Calcular progreso por fecha
   const hoy = new Date().toISOString().split('T')[0];
   const totalHitos = p.hitos ? p.hitos.length : 0;
-  const hitosCompletados = p.hitos ? p.hitos.filter(h => String(h.fecha).substring(0, 10) <= hoy).length : 0;
-  const porcentaje = totalHitos > 0 ? Math.round((hitosCompletados / totalHitos) * 100) : 0;
 
   let html = `
     <div style="border-radius:var(--border-radius-lg);box-shadow:var(--shadow);overflow:hidden;margin-bottom:24px;">
@@ -781,10 +779,9 @@ function renderProyectoDetalle(p) {
               <h2>${Utils.escapeHtml(p.nombre)}</h2>
               ${p.descripcion ? `<p style="margin:6px 0 0;opacity:0.9;font-size:0.9rem;">${Utils.escapeHtml(p.descripcion)}</p>` : ''}
               <div class="proyecto-hero-badges">
-                <span class="badge">${ESTADO_LABELS[p.estado]}</span>
-                <span class="badge">${PRIORIDAD_LABELS[p.prioridad]}</span>
-                <span class="badge">${CATEGORIA_LABELS[p.categoria]}</span>
-                ${totalHitos > 0 ? `<span class="badge">${hitosCompletados}/${totalHitos} hitos (${porcentaje}%)</span>` : ''}
+                <span class="badge proyecto-hero-estado-badge">
+                  ${ESTADO_ICONS[p.estado] || ''} ${ESTADO_LABELS[p.estado]}
+                </span>
               </div>
             </div>
             <div style="display:flex;gap:8px;flex-shrink:0;">
@@ -811,20 +808,21 @@ function renderProyectoDetalle(p) {
           <div class="detail-field"><label>Estado</label><span class="badge badge-estado-${p.estado}">${ESTADO_LABELS[p.estado]}</span></div>
           <div class="detail-field"><label>Prioridad</label><span class="badge badge-prioridad-${p.prioridad}">${PRIORIDAD_LABELS[p.prioridad]}</span></div>
           <div class="detail-field"><label>Categoría</label><span>${CATEGORIA_LABELS[p.categoria]}</span></div>
-          <div class="detail-field"><label>Fecha inicio</label><span>${formatDate(p.fecha_inicio)}</span></div>
-          <div class="detail-field"><label>Responsable</label><span>${Utils.escapeHtml(p.responsable || '-')}</span></div>
+          <div class="detail-field"><label>Fecha de elevación</label><span>${formatDate(p.fecha_inicio)}</span></div>
+          <div class="detail-field"><label>Autor</label><span>${Utils.escapeHtml(p.responsable || '-')}</span></div>
           <div class="detail-field"><label>Áreas</label><span>${Utils.escapeHtml(areasText)}</span></div>
-          ${p.enlace_externo ? `<div class="detail-field"><label>Enlace</label><span><a href="${Utils.escapeHtml(p.enlace_externo)}" target="_blank">${Utils.escapeHtml(Utils.truncate(p.enlace_externo, 50))}</a></span></div>` : ''}
+          ${p.enlace_externo ? (() => {
+            const isGoogle = /drive\.google\.com|docs\.google\.com/.test(p.enlace_externo);
+            if (isGoogle) {
+              return `<div class="detail-field"><label>Borrador</label><span>
+                <button class="btn-borrador-preview" data-url="${Utils.escapeHtml(p.enlace_externo)}">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/></svg>
+                  Ver borrador
+                </button></span></div>`;
+            }
+            return `<div class="detail-field"><label>Enlace</label><span><a href="${Utils.escapeHtml(p.enlace_externo)}" target="_blank">${Utils.escapeHtml(Utils.truncate(p.enlace_externo, 50))}</a></span></div>`;
+          })() : ''}
         </div>
-        ${totalHitos > 0 ? `
-          <div style="margin-top:16px;">
-            <label style="font-size:0.75rem;color:var(--gray-500);text-transform:uppercase;letter-spacing:0.5px;">Progreso</label>
-            <div class="proyecto-progress-bar" style="height:8px;margin-top:4px;">
-              <div class="proyecto-progress-fill" style="width:${porcentaje}%;background:${color}"></div>
-            </div>
-            <div class="proyecto-progress-text">${hitosCompletados} de ${totalHitos} hitos completados (${porcentaje}%)</div>
-          </div>
-        ` : ''}
       </div>
 
       <!-- Tab: Hitos -->
@@ -1796,3 +1794,46 @@ function cerrarPreviewArchivo() {
   body.innerHTML = '';
   modal.classList.remove('active');
 }
+
+// ==================== Borrador Google Drive ====================
+
+function esGoogleDriveUrl(url) {
+  return /drive\.google\.com|docs\.google\.com/.test(url);
+}
+
+function abrirBorrador(url) {
+  let previewUrl = url;
+
+  // drive.google.com/file/d/ID/view → /preview
+  if (/drive\.google\.com\/file\/d\/[^/]+\/view/.test(url)) {
+    previewUrl = url.replace(/\/view.*$/, '/preview');
+  }
+  // docs.google.com/document/d/ID/edit → /preview
+  else if (/docs\.google\.com\/document\/d\/[^/]+\/edit/.test(url)) {
+    previewUrl = url.replace(/\/edit.*$/, '/preview');
+  }
+  // docs.google.com/spreadsheets/d/ID/edit → /preview
+  else if (/docs\.google\.com\/spreadsheets\/d\/[^/]+\/edit/.test(url)) {
+    previewUrl = url.replace(/\/edit.*$/, '/preview');
+  }
+  // drive.google.com/open?id=ID → drive.google.com/file/d/ID/preview
+  else if (/drive\.google\.com\/open\?id=/.test(url)) {
+    const id = new URL(url).searchParams.get('id');
+    if (id) previewUrl = `https://drive.google.com/file/d/${id}/preview`;
+  }
+
+  document.getElementById('modal-borrador-iframe').src = previewUrl;
+  document.getElementById('modal-borrador-link').href = url;
+  document.getElementById('modal-borrador').classList.add('active');
+}
+
+function cerrarModalBorrador() {
+  document.getElementById('modal-borrador-iframe').src = '';
+  document.getElementById('modal-borrador').classList.remove('active');
+}
+
+// Event delegation para botón borrador
+document.addEventListener('click', (e) => {
+  const btn = e.target.closest('.btn-borrador-preview');
+  if (btn) abrirBorrador(btn.dataset.url);
+});
