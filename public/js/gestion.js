@@ -60,10 +60,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (Auth.isAdmin()) {
     const metricasSection = document.getElementById('metricas-manuales-section');
     if (metricasSection) metricasSection.style.display = '';
-    const btnNuevo = document.getElementById('btn-nuevo-proyecto');
-    if (btnNuevo) btnNuevo.style.display = '';
-    const btnLogro = document.getElementById('btn-nuevo-logro');
-    if (btnLogro) btnLogro.style.display = '';
   }
 
   // Setear año/mes actuales en el form de métricas manuales
@@ -73,8 +69,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (anioInput) anioInput.value = now.getFullYear();
   if (mesSelect) mesSelect.value = now.getMonth() + 1;
 
-  await cargarMetricas();
   await cargarAreasSelect();
+  await cargarProyectos();
+  setVistaProyectos(vistaActual);
 });
 
 // =====================================================
@@ -90,6 +87,8 @@ function switchTab(tab) {
 
   if (tab === 'proyectos') {
     cargarProyectos();
+  } else if (tab === 'metricas') {
+    cargarMetricas();
   }
 }
 
@@ -649,17 +648,31 @@ function setVistaProyectos(vista) {
   const timeline = document.getElementById('proyectos-timeline');
   const detalle = document.getElementById('proyecto-detalle');
   const logrosArea = document.getElementById('logros-area');
+  const btnNuevoProyecto = document.getElementById('btn-nuevo-proyecto');
+  const btnNuevoLogro = document.getElementById('btn-nuevo-logro');
+  const isAdmin = Auth.isAdmin();
 
   if (vista === 'lista') {
     lista.style.display = '';
     timeline.style.display = 'none';
     if (detalle) detalle.style.display = 'none';
+    if (logrosArea) logrosArea.style.display = 'none';
+    if (isAdmin && btnNuevoProyecto) btnNuevoProyecto.style.display = '';
+    if (btnNuevoLogro) btnNuevoLogro.style.display = 'none';
+  } else if (vista === 'logros') {
+    lista.style.display = 'none';
+    timeline.style.display = 'none';
+    if (detalle) detalle.style.display = 'none';
     if (logrosArea) logrosArea.style.display = '';
+    if (btnNuevoProyecto) btnNuevoProyecto.style.display = 'none';
+    if (isAdmin && btnNuevoLogro) btnNuevoLogro.style.display = '';
   } else {
     lista.style.display = 'none';
     timeline.style.display = '';
     if (detalle) detalle.style.display = 'none';
     if (logrosArea) logrosArea.style.display = 'none';
+    if (btnNuevoProyecto) btnNuevoProyecto.style.display = 'none';
+    if (btnNuevoLogro) btnNuevoLogro.style.display = 'none';
   }
 }
 
@@ -865,8 +878,6 @@ function switchProyectoTab(tab, btn) {
 function volverALista() {
   const container = document.getElementById('proyecto-detalle');
   container.style.display = 'none';
-  const logrosArea = document.getElementById('logros-area');
-  if (logrosArea) logrosArea.style.display = '';
   proyectoDetalleId = null;
   setVistaProyectos(vistaActual);
   cargarProyectos();
