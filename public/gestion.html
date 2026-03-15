@@ -876,6 +876,14 @@
             width: 100%;
         }
 
+        /* Detalle proyecto max-width */
+        #proyecto-detalle {
+            max-width: 80%;
+            margin-left: auto;
+            margin-right: auto;
+            width: 100%;
+        }
+
         @media (max-width: 768px) {
             .charts-grid { grid-template-columns: 1fr; }
             .kpi-grid { grid-template-columns: repeat(2, 1fr); }
@@ -888,6 +896,9 @@
             #repositorio-categoria { min-width: 0; width: 100%; }
             #logros-area,
             #proyectos-timeline {
+                max-width: 100%;
+            }
+            #proyecto-detalle {
                 max-width: 100%;
             }
         }
