@@ -16,7 +16,12 @@ let logroDropZoneInstance = null;
 let timelineData = [];
 let proyectosCache = [];
 let paginaActual = 1;
+let paginaLogros = 1;
+let paginaTimeline = 1;
+let logrosCache = [];
+let timelineItemsCache = [];
 const PROYECTOS_POR_PAGINA = 20;
+const ITEMS_POR_PAGINA = 20;
 
 const MESES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
 const MESES_FULL = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
@@ -512,6 +517,31 @@ function cambiarPagina(dir) {
   document.getElementById('proyectos-lista')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
+function renderPaginacionGeneral(containerId, paginaActualVal, totalItems, itemsPorPagina, onCambiarFn) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  if (totalItems <= itemsPorPagina) { el.style.display = 'none'; return; }
+  const totalPaginas = Math.ceil(totalItems / itemsPorPagina);
+  el.style.display = '';
+  el.innerHTML = `
+    <button class="pag-btn" ${paginaActualVal <= 1 ? 'disabled' : ''} onclick="${onCambiarFn}(-1)">&larr; Anterior</button>
+    <span class="pag-info">Página ${paginaActualVal} de ${totalPaginas}</span>
+    <button class="pag-btn" ${paginaActualVal >= totalPaginas ? 'disabled' : ''} onclick="${onCambiarFn}(1)">Siguiente &rarr;</button>
+  `;
+}
+
+function cambiarPaginaLogros(dir) {
+  paginaLogros += dir;
+  renderLogrosArea(logrosCache);
+  document.getElementById('logros-area')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function cambiarPaginaTimeline(dir) {
+  paginaTimeline += dir;
+  renderTimelineItems(timelineItemsCache);
+  document.getElementById('proyectos-timeline')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
 async function cargarTimeline() {
   try {
     const response = await fetch(`${CONFIG.API_URL}/gestion/timeline`, {
@@ -533,6 +563,7 @@ async function cargarTimeline() {
 }
 
 function filtrarTimeline(filtro) {
+  paginaTimeline = 1;
   if (!filtro || filtro === 'todos') {
     renderTimelineItems(timelineData);
   } else if (filtro === 'logros') {
@@ -570,14 +601,21 @@ function renderTimelineItems(hitos) {
   const container = document.getElementById('timeline-items-container');
   if (!container) return;
 
+  timelineItemsCache = hitos;
+
   if (hitos.length === 0) {
     container.innerHTML = '<p style="color:var(--gray-500);text-align:center;padding:20px;">No hay hitos para este filtro</p>';
+    renderPaginacionGeneral('timeline-paginacion', 1, 0, ITEMS_POR_PAGINA, 'cambiarPaginaTimeline');
     return;
   }
 
+  // Paginar antes de agrupar
+  const inicio = (paginaTimeline - 1) * ITEMS_POR_PAGINA;
+  const hitosPagina = hitos.slice(inicio, inicio + ITEMS_POR_PAGINA);
+
   // Agrupar por mes/año
   const grupos = {};
-  for (const h of hitos) {
+  for (const h of hitosPagina) {
     const d = new Date(h.fecha);
     const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
     if (!grupos[key]) grupos[key] = [];
@@ -628,16 +666,23 @@ function renderTimelineItems(hitos) {
   }
 
   container.innerHTML = html;
+  renderPaginacionGeneral('timeline-paginacion', paginaTimeline, hitos.length, ITEMS_POR_PAGINA, 'cambiarPaginaTimeline');
 }
 
 function renderLogrosArea(logros) {
   const container = document.getElementById('logros-area');
   if (!container) return;
 
+  logrosCache = logros;
+
   if (logros.length === 0) {
     container.innerHTML = '';
+    renderPaginacionGeneral('logros-paginacion', 1, 0, ITEMS_POR_PAGINA, 'cambiarPaginaLogros');
     return;
   }
+
+  const inicio = (paginaLogros - 1) * ITEMS_POR_PAGINA;
+  const logrosPagina = logros.slice(inicio, inicio + ITEMS_POR_PAGINA);
 
   const isAdmin = Auth.isAdmin();
   let html = `
@@ -646,7 +691,7 @@ function renderLogrosArea(logros) {
     </div>`;
 
   html += '<div class="timeline">';
-  for (const h of logros) {
+  for (const h of logrosPagina) {
     let archivosHtml = '';
     if (h.archivos && h.archivos.length > 0) {
       archivosHtml = '<div style="margin-top:6px;">' + h.archivos.map(a =>
@@ -680,6 +725,7 @@ function renderLogrosArea(logros) {
   }
   html += '</div>';
   container.innerHTML = html;
+  renderPaginacionGeneral('logros-paginacion', paginaLogros, logros.length, ITEMS_POR_PAGINA, 'cambiarPaginaLogros');
 }
 
 function setVistaProyectos(vista) {
@@ -695,6 +741,8 @@ function setVistaProyectos(vista) {
   const btnNuevoLogro = document.getElementById('btn-nuevo-logro');
   const toolbar = document.getElementById('repositorio-toolbar');
   const paginacion = document.getElementById('proyectos-paginacion');
+  const logrosPaginacion = document.getElementById('logros-paginacion');
+  const timelinePaginacion = document.getElementById('timeline-paginacion');
   const isAdmin = Auth.isAdmin();
 
   if (vista === 'lista') {
@@ -705,6 +753,8 @@ function setVistaProyectos(vista) {
     if (isAdmin && btnNuevoProyecto) btnNuevoProyecto.style.display = '';
     if (btnNuevoLogro) btnNuevoLogro.style.display = 'none';
     if (toolbar) toolbar.style.display = '';
+    if (logrosPaginacion) logrosPaginacion.style.display = 'none';
+    if (timelinePaginacion) timelinePaginacion.style.display = 'none';
     paginaActual = 1;
     filtrarYRenderizar();
   } else if (vista === 'logros') {
@@ -716,6 +766,9 @@ function setVistaProyectos(vista) {
     if (isAdmin && btnNuevoLogro) btnNuevoLogro.style.display = '';
     if (toolbar) toolbar.style.display = 'none';
     if (paginacion) paginacion.style.display = 'none';
+    if (timelinePaginacion) timelinePaginacion.style.display = 'none';
+    paginaLogros = 1;
+    renderLogrosArea(logrosCache);
   } else {
     lista.style.display = 'none';
     timeline.style.display = '';
@@ -725,6 +778,9 @@ function setVistaProyectos(vista) {
     if (btnNuevoLogro) btnNuevoLogro.style.display = 'none';
     if (toolbar) toolbar.style.display = 'none';
     if (paginacion) paginacion.style.display = 'none';
+    if (logrosPaginacion) logrosPaginacion.style.display = 'none';
+    paginaTimeline = 1;
+    renderTimelineItems(timelineItemsCache);
   }
 }
 
