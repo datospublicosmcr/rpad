@@ -299,9 +299,9 @@ function renderPaginacion(totalItems) {
   el.innerHTML = `
     <span class="pag-info">Mostrando ${inicio}–${fin} de ${totalItems}</span>
     <div class="pag-controls">
-      <button class="btn btn-outline btn-sm" ${paginaActual <= 1 ? 'disabled' : ''} onclick="cambiarPagina(-1)">← Anterior</button>
-      <span class="pag-pagina">Página ${paginaActual} de ${totalPaginas}</span>
-      <button class="btn btn-outline btn-sm" ${paginaActual >= totalPaginas ? 'disabled' : ''} onclick="cambiarPagina(1)">Siguiente →</button>
+      <button class="pag-btn" ${paginaActual <= 1 ? 'disabled' : ''} onclick="cambiarPagina(-1)">&#8249; Anterior</button>
+      <span class="pag-pagina">Pag. ${paginaActual} de ${totalPaginas}</span>
+      <button class="pag-btn" ${paginaActual >= totalPaginas ? 'disabled' : ''} onclick="cambiarPagina(1)">Siguiente &#8250;</button>
     </div>
   `;
 }
