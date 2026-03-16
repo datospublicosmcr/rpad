@@ -3,6 +3,11 @@ let allDatasets = [];
 let temas = [];
 let frecuencias = [];
 
+// Paginación
+let paginaActual = 1;
+const ITEMS_POR_PAGINA = 25;
+let ultimosDatosFiltrados = [];
+
 document.addEventListener('DOMContentLoaded', async () => {
   // El header ahora se maneja desde main.js
   await loadCatalogos();
@@ -134,6 +139,7 @@ function applyFilters() {
   const newUrl = params.toString() ? `?${params.toString()}` : window.location.pathname;
   history.replaceState(null, '', newUrl);
 
+  paginaActual = 1;
   renderDatasets(filtered);
 }
 
@@ -143,27 +149,38 @@ function limpiarFiltros() {
   document.getElementById('filter-frecuencia').value = '';
   document.getElementById('filter-estado').value = '';
   history.replaceState(null, '', window.location.pathname);
+  paginaActual = 1;
   renderDatasets(allDatasets);
 }
 
 function renderDatasets(datasets) {
   const container = document.getElementById('datasets-grid');
   const emptyState = document.getElementById('empty-state');
+  ultimosDatosFiltrados = datasets;
 
   if (!datasets.length) {
     container.classList.add('hidden');
     emptyState.classList.remove('hidden');
+    renderPaginacion(0);
     return;
   }
 
   container.classList.remove('hidden');
   emptyState.classList.add('hidden');
 
+  // Paginación
+  const totalPaginas = Math.ceil(datasets.length / ITEMS_POR_PAGINA);
+  if (paginaActual > totalPaginas) paginaActual = totalPaginas || 1;
+  const inicio = (paginaActual - 1) * ITEMS_POR_PAGINA;
+  const paginaItems = datasets.slice(inicio, inicio + ITEMS_POR_PAGINA);
+
+  renderPaginacion(datasets.length);
+
   // Iconos Lucide
   const iconArea = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/></svg>';
   const iconFrecuencia = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></svg>';
 
-  container.innerHTML = datasets.map(d => {
+  container.innerHTML = paginaItems.map(d => {
     const estado = calcularEstado(d.proxima_actualizacion, d.frecuencia_dias, d.tipo_gestion);
     const estadoTexto = getEstadoTexto(estado);
     const estadoClase = getEstadoClase(estado);
@@ -202,6 +219,25 @@ function renderDatasets(datasets) {
       </div>
     `;
   }).join('');
+}
+
+function renderPaginacion(totalItems) {
+  const el = document.getElementById('datasets-paginacion');
+  if (!el) return;
+  if (totalItems <= ITEMS_POR_PAGINA) { el.style.display = 'none'; return; }
+  el.style.display = 'flex';
+  const totalPaginas = Math.ceil(totalItems / ITEMS_POR_PAGINA);
+  el.innerHTML = `
+    <button class="pag-btn" ${paginaActual <= 1 ? 'disabled' : ''} onclick="cambiarPagina(-1)">← Anterior</button>
+    <span class="pag-info">Página ${paginaActual} de ${totalPaginas}</span>
+    <button class="pag-btn" ${paginaActual >= totalPaginas ? 'disabled' : ''} onclick="cambiarPagina(1)">Siguiente →</button>
+  `;
+}
+
+function cambiarPagina(dir) {
+  paginaActual += dir;
+  renderDatasets(ultimosDatosFiltrados);
+  document.getElementById('datasets-grid').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 function exportarCSV() {

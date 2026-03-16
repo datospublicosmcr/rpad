@@ -8,6 +8,11 @@ let currentEditDataset = null;
 let andinoAreaReferencia = null; // Área de referencia importada de Andino
 let datasetsConPendientes = []; // IDs de datasets con cambios pendientes
 
+// Paginación
+let paginaActual = 1;
+const ITEMS_POR_PAGINA = 25;
+let ultimosDatosFiltrados = [];
+
 // Sistema de formatos (chips)
 let formatosSeleccionados = new Set();
 let formatosCatalogo = [];
@@ -190,6 +195,7 @@ async function loadDatasets() {
     datasets = await API.getDatasets();
     // Ordenana alfabéticamente por título
     datasets.sort((a, b) => a.titulo.localeCompare(b.titulo));
+    paginaActual = 1;
     renderTable(datasets);
   } catch (error) {
     console.error('Error cargando datasets:', error);
@@ -204,10 +210,11 @@ function setupSearch() {
     clearTimeout(debounceTimer);
     debounceTimer = setTimeout(() => {
       const term = searchInput.value.toLowerCase();
-      const filtered = datasets.filter(d => 
+      const filtered = datasets.filter(d =>
         d.titulo.toLowerCase().includes(term) ||
         (d.area_nombre && d.area_nombre.toLowerCase().includes(term))
       );
+      paginaActual = 1;
       renderTable(filtered);
     }, 300);
   });
@@ -215,13 +222,23 @@ function setupSearch() {
 
 function renderTable(data) {
   const tbody = document.getElementById('datasets-tbody');
-  
+  ultimosDatosFiltrados = data;
+
   if (!data.length) {
     tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted" style="padding: 2rem;">No hay datasets</td></tr>';
+    renderPaginacion(0);
     return;
   }
 
-  tbody.innerHTML = data.map(d => {
+  // Paginación
+  const totalPaginas = Math.ceil(data.length / ITEMS_POR_PAGINA);
+  if (paginaActual > totalPaginas) paginaActual = totalPaginas || 1;
+  const inicio = (paginaActual - 1) * ITEMS_POR_PAGINA;
+  const pagina = data.slice(inicio, inicio + ITEMS_POR_PAGINA);
+
+  renderPaginacion(data.length);
+
+  tbody.innerHTML = pagina.map(d => {
     const estado = Utils.calcularEstado(d.proxima_actualizacion, d.frecuencia_dias, d.tipo_gestion);
     const estadoTexto = Utils.getEstadoTexto(estado);
     const estadoClase = Utils.getEstadoClase(estado);
@@ -265,6 +282,29 @@ function renderTable(data) {
       </tr>
     `;
   }).join('');
+}
+
+// =====================================================
+// PAGINACIÓN
+// =====================================================
+
+function renderPaginacion(totalItems) {
+  const el = document.getElementById('datasets-paginacion');
+  if (!el) return;
+  if (totalItems <= ITEMS_POR_PAGINA) { el.style.display = 'none'; return; }
+  el.style.display = 'flex';
+  const totalPaginas = Math.ceil(totalItems / ITEMS_POR_PAGINA);
+  el.innerHTML = `
+    <button class="pag-btn" ${paginaActual <= 1 ? 'disabled' : ''} onclick="cambiarPagina(-1)">← Anterior</button>
+    <span class="pag-info">Página ${paginaActual} de ${totalPaginas}</span>
+    <button class="pag-btn" ${paginaActual >= totalPaginas ? 'disabled' : ''} onclick="cambiarPagina(1)">Siguiente →</button>
+  `;
+}
+
+function cambiarPagina(dir) {
+  paginaActual += dir;
+  renderTable(ultimosDatosFiltrados);
+  document.querySelector('.table-container').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 // =====================================================
